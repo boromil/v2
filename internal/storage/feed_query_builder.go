@@ -6,10 +6,12 @@ package storage // import "miniflux.app/v2/internal/storage"
 import (
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 
 	"github.com/lib/pq"
+	"miniflux.app/v2/internal/database/dialect"
 	"miniflux.app/v2/internal/model"
 	"miniflux.app/v2/internal/timezone"
 )
@@ -17,6 +19,7 @@ import (
 // feedQueryBuilder builds a SQL query to fetch feeds.
 type feedQueryBuilder struct {
 	db                *sql.DB
+	dialect           dialect.Dialect
 	args              []any
 	conditions        []string
 	sortExpressions   []string
@@ -32,6 +35,7 @@ type feedQueryBuilder struct {
 func (s *Storage) NewFeedQueryBuilder(userID int64) *feedQueryBuilder {
 	return &feedQueryBuilder{
 		db:                s.db,
+		dialect:           s.dialect,
 		args:              []any{userID},
 		conditions:        []string{"f.user_id = $1"},
 		counterArgs:       []any{userID, model.EntryStatusRead, model.EntryStatusUnread},
@@ -102,6 +106,11 @@ func (f *feedQueryBuilder) buildSorting() string {
 	var parts string
 
 	if len(f.sortExpressions) > 0 {
+		for i, expr := range f.sortExpressions {
+			if !strings.ContainsAny(expr, ".(") {
+				f.sortExpressions[i] = "f." + expr
+			}
+		}
 		parts += " ORDER BY " + strings.Join(f.sortExpressions, ", ")
 	}
 
@@ -148,8 +157,8 @@ func (f *feedQueryBuilder) GetFeeds() (model.Feeds, error) {
 			f.etag_header,
 			f.last_modified_header,
 			f.user_id,
-			f.checked_at at time zone u.timezone,
-			f.next_check_at at time zone u.timezone,
+			%s,
+			%s,
 			f.parsing_error_count,
 			f.parsing_error_msg,
 			f.scraper_rules,
@@ -200,7 +209,10 @@ func (f *feedQueryBuilder) GetFeeds() (model.Feeds, error) {
 		%s
 	`
 
-	query = fmt.Sprintf(query, f.buildCondition(), f.buildSorting())
+	query = fmt.Sprintf(query,
+		f.dialect.TimezoneConvert("f.checked_at", "u.timezone"),
+		f.dialect.TimezoneConvert("f.next_check_at", "u.timezone"),
+		f.buildCondition(), f.buildSorting())
 
 	readCounters, unreadCounters, err := f.fetchFeedCounter()
 	if err != nil {
@@ -219,6 +231,7 @@ func (f *feedQueryBuilder) GetFeeds() (model.Feeds, error) {
 		var iconID sql.NullInt64
 		var externalIconID sql.NullString
 		var tz string
+		var checkedAtVal, nextCheckAtVal any
 		feed.Category = &model.Category{}
 
 		err := rows.Scan(
@@ -231,8 +244,8 @@ func (f *feedQueryBuilder) GetFeeds() (model.Feeds, error) {
 			&feed.EtagHeader,
 			&feed.LastModifiedHeader,
 			&feed.UserID,
-			&feed.CheckedAt,
-			&feed.NextCheckAt,
+			&checkedAtVal,
+			&nextCheckAtVal,
 			&feed.ParsingErrorCount,
 			&feed.ParsingErrorMsg,
 			&feed.ScraperRules,
@@ -272,6 +285,25 @@ func (f *feedQueryBuilder) GetFeeds() (model.Feeds, error) {
 		)
 		if err != nil {
 			return nil, fmt.Errorf(`store: unable to fetch feeds row: %w`, err)
+		}
+
+		if t, err := scanTime(checkedAtVal); err == nil {
+			feed.CheckedAt = t
+		} else if checkedAtVal != nil {
+			slog.Warn("unable to parse feed checked_at datetime",
+				slog.Int64("feed_id", feed.ID),
+				slog.String("value", fmt.Sprintf("%v", checkedAtVal)),
+				slog.Any("error", err),
+			)
+		}
+		if t, err := scanTime(nextCheckAtVal); err == nil {
+			feed.NextCheckAt = t
+		} else if nextCheckAtVal != nil {
+			slog.Warn("unable to parse feed next_check_at datetime",
+				slog.Int64("feed_id", feed.ID),
+				slog.String("value", fmt.Sprintf("%v", nextCheckAtVal)),
+				slog.Any("error", err),
+			)
 		}
 
 		if iconID.Valid && externalIconID.Valid {

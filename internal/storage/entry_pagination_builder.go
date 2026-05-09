@@ -11,12 +11,14 @@ import (
 	"strings"
 
 	"github.com/lib/pq"
+	"miniflux.app/v2/internal/database/dialect"
 	"miniflux.app/v2/internal/model"
 )
 
 // entryPaginationBuilder is a builder for entry prev/next queries.
 type entryPaginationBuilder struct {
 	db         *sql.DB
+	dialect    dialect.Dialect
 	conditions []string
 	args       []any
 	entryID    int64
@@ -27,7 +29,7 @@ type entryPaginationBuilder struct {
 // WithSearchQuery adds full-text search query to the condition.
 func (e *entryPaginationBuilder) WithSearchQuery(query string) *entryPaginationBuilder {
 	if query != "" {
-		e.conditions = append(e.conditions, fmt.Sprintf("e.document_vectors @@ websearch_to_tsquery($%d)", len(e.args)+1))
+		e.conditions = append(e.conditions, e.dialect.FtsCondition(len(e.args)+1))
 		e.args = append(e.args, query)
 	}
 
@@ -92,8 +94,15 @@ func (e *entryPaginationBuilder) WithStatusOrEntryID(status string, entryID int6
 
 func (e *entryPaginationBuilder) WithTags(tags []string) *entryPaginationBuilder {
 	if len(tags) > 0 {
-		e.conditions = append(e.conditions, fmt.Sprintf("LOWER(e.tags::text)::text[] @> LOWER($%d::text)::text[]", len(e.args)+1))
-		e.args = append(e.args, pq.Array(tags))
+		for _, tag := range tags {
+			argPos := len(e.args) + 1
+			if e.dialect.DatabaseType() == dialect.SQLite {
+				e.conditions = append(e.conditions, fmt.Sprintf("EXISTS (SELECT 1 FROM json_each(e.tags) WHERE LOWER(value) = LOWER($%d))", argPos))
+			} else {
+				e.conditions = append(e.conditions, fmt.Sprintf("LOWER($%d) = ANY(LOWER(e.tags::text)::text[])", argPos))
+			}
+			e.args = append(e.args, tag)
+		}
 	}
 
 	return e
@@ -204,6 +213,7 @@ func (e *entryPaginationBuilder) getEntry(tx *sql.Tx, entryID int64) (*model.Ent
 func (s *Storage) NewEntryPaginationBuilder(userID, entryID int64, order, direction string) *entryPaginationBuilder {
 	return &entryPaginationBuilder{
 		db:         s.db,
+		dialect:    s.dialect,
 		args:       []any{userID},
 		conditions: []string{"e.user_id = $1"},
 		entryID:    entryID,
