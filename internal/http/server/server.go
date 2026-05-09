@@ -160,6 +160,7 @@ func newHTTPServer(address string, handler http.Handler) *http.Server {
 		WriteTimeout:      timeout,
 		IdleTimeout:       timeout,
 		ReadHeaderTimeout: timeout,
+		MaxHeaderBytes:    1 << 20, // 1 MiB
 		Handler:           handler,
 	}
 }
