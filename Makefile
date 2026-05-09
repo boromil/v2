@@ -4,6 +4,7 @@ VERSION         := $(shell git describe --tags --exact-match 2>/dev/null)
 LD_FLAGS        := "-s -w -X 'miniflux.app/v2/internal/version.Version=$(VERSION)'"
 PKG_LIST        := $(shell go list ./... | grep -v /vendor/)
 DB_URL          := postgres://postgres:postgres@localhost/miniflux_test?sslmode=disable
+SQLITE_URL      := /tmp/miniflux_test.db
 DOCKER_PLATFORM := amd64
 
 export PGPASSWORD := postgres
@@ -23,12 +24,17 @@ export PGPASSWORD := postgres
 	openbsd-amd64 \
 	build \
 	run \
+	run-sqlite \
+	run-sqlite-persist \
 	clean \
 	add-string \
 	test \
+	test-storage \
 	lint \
 	integration-test \
+	integration-test-sqlite \
 	clean-integration-test \
+	clean-integration-test-sqlite \
 	docker-image \
 	docker-image-distroless \
 	docker-images \
@@ -87,8 +93,14 @@ build: linux-amd64 linux-arm64 linux-armv7 linux-armv6 linux-armv5 linux-riscv64
 run:
 	@ LOG_DATE_TIME=1 LOG_LEVEL=debug RUN_MIGRATIONS=1 CREATE_ADMIN=1 ADMIN_USERNAME=admin ADMIN_PASSWORD=test123 go run main.go
 
+run-sqlite:
+	@ LOG_DATE_TIME=1 LOG_LEVEL=debug CREATE_ADMIN=1 ADMIN_USERNAME=admin ADMIN_PASSWORD=test123 go run main.go --database-type sqlite
+
+run-sqlite-persist:
+	@ LOG_DATE_TIME=1 LOG_LEVEL=debug CREATE_ADMIN=1 ADMIN_USERNAME=admin ADMIN_PASSWORD=test123 DATABASE_TYPE=sqlite DATABASE_URL=$(SQLITE_URL) go run main.go
+
 clean:
-	@ rm -f $(APP)-* $(APP) $(APP)*.rpm $(APP)*.deb $(APP)*.exe $(APP)*.sha256
+	@ rm -f $(APP)-* $(APP) $(APP)*.rpm $(APP)*.deb $(APP)*.exe $(APP)*.sha256 $(SQLITE_URL)
 
 add-string:
 	cd internal/locale/translations && \
@@ -100,6 +112,9 @@ add-string:
 
 test:
 	go test -cover -race -count=1 ./...
+
+test-storage:
+	go test -v -count=1 ./internal/storage/testing/
 
 lint:
 	go vet ./...
@@ -127,10 +142,33 @@ integration-test:
 	TEST_MINIFLUX_ADMIN_PASSWORD=test123 \
 	go test -v -count=1 ./internal/api
 
+integration-test-sqlite:
+	DATABASE_TYPE=sqlite \
+	DATABASE_URL=$(SQLITE_URL) \
+	ADMIN_USERNAME=admin \
+	ADMIN_PASSWORD=test123 \
+	CREATE_ADMIN=1 \
+	RUN_MIGRATIONS=1 \
+	LOG_LEVEL=debug \
+	FETCHER_ALLOW_PRIVATE_NETWORKS=1 \
+	INTEGRATION_ALLOW_PRIVATE_NETWORKS=1 \
+	go run main.go >/tmp/miniflux-sqlite.log 2>&1 & echo "$$!" > "/tmp/miniflux-sqlite.pid"
+
+	while ! nc -z localhost 8080; do sleep 1; done
+
+	TEST_MINIFLUX_BASE_URL=http://127.0.0.1:8080 \
+	TEST_MINIFLUX_ADMIN_USERNAME=admin \
+	TEST_MINIFLUX_ADMIN_PASSWORD=test123 \
+	go test -v -count=1 ./internal/api
+
 clean-integration-test:
-	@ kill -9 `cat /tmp/miniflux.pid`
+	@ kill -9 `cat /tmp/miniflux.pid` 2>/dev/null || true
 	@ rm -f /tmp/miniflux.pid /tmp/miniflux.log
 	@ psql -U postgres -c 'drop database if exists miniflux_test;'
+
+clean-integration-test-sqlite:
+	@ kill -9 `cat /tmp/miniflux-sqlite.pid` 2>/dev/null || true
+	@ rm -f /tmp/miniflux-sqlite.pid /tmp/miniflux-sqlite.log $(SQLITE_URL)
 
 docker-image:
 	docker build --pull -t $(DOCKER_IMAGE):$(VERSION) -f packaging/docker/alpine/Dockerfile .

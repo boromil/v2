@@ -38,6 +38,19 @@ Load configuration file\&.
 Create an admin user from an interactive terminal\&.
 .RE
 .PP
+.B \-database-type <type>
+.RS 4
+Database type\&.
+.br
+Accepted values are "postgres" or "sqlite"\&.
+.br
+Default is "postgres"\&.
+.br
+When set to "sqlite" and no
+\fBDATABASE_URL\fR
+is configured, an in-memory database is used automatically\&.
+.RE
+.PP
 .B \-debug
 .RS 4
 Set log level to debug\&.
@@ -242,6 +255,15 @@ Set the maximum amount of time a connection may be reused\&.
 .br
 Default is 5 minutes\&.
 .TP
+.B DATABASE_TYPE
+Database type\&.
+.br
+Accepted values are "postgres" or "sqlite"\&.
+.br
+Default is "postgres"\&.
+.br
+When set to "sqlite", SQL migrations run automatically on startup\&.
+.TP
 .B DATABASE_MAX_CONNS
 Maximum number of database connections\&.
 .br
@@ -253,7 +275,11 @@ Minimum number of database connections\&.
 Default is 1\&.
 .TP
 .B DATABASE_URL
-PostgreSQL connection parameters\&.
+Database connection string\&.
+.br
+PostgreSQL: Connection parameters (e.g., "user=postgres password=postgres dbname=miniflux2 sslmode=disable")\&.
+.br
+SQLite: File path to the database (e.g., "/data/miniflux.db")\&.
 .br
 Default is "user=postgres password=postgres dbname=miniflux2 sslmode=disable"\&.
 .TP

@@ -36,7 +36,7 @@ When reporting bugs:
 
 - **Git**
 - **Go >= 1.26**
-- **PostgreSQL**
+- **PostgreSQL** or **SQLite** (both production-ready)
 
 ### Getting Started
 
@@ -59,7 +59,24 @@ When reporting bugs:
 
 ### Database Setup
 
-For development and testing, you can run a local PostgreSQL database with Docker:
+Miniflux supports both PostgreSQL (recommended for multi-user deployments) and SQLite (both production-ready).
+
+**Option 1: SQLite (quickest setup — no external database required)**
+
+```bash
+# In-memory (development, data lost on restart)
+CREATE_ADMIN=true ADMIN_USERNAME=admin ADMIN_PASSWORD=test123 \
+  go run main.go --database-type sqlite
+
+# Persistent file (production, data survives restarts)
+CREATE_ADMIN=true ADMIN_USERNAME=admin ADMIN_PASSWORD=test123 \
+  DATABASE_TYPE=sqlite DATABASE_URL=/data/miniflux.db \
+  go run main.go
+```
+
+**Option 2: PostgreSQL with Docker**
+
+For development and testing with a persistent database:
 
 ```bash
 # Start PostgreSQL container
@@ -71,6 +88,18 @@ docker run --rm --name miniflux2-db -p 5432:5432 \
 ```
 
 You can also use an existing PostgreSQL instance. Make sure to set the `DATABASE_URL` environment variable accordingly.
+
+The following SQLite settings are applied automatically on every connection:
+
+| Pragma | Value | Purpose |
+|--------|-------|---------|
+| `journal_mode` | WAL | Concurrent reads/writes |
+| `synchronous` | NORMAL | Durability/performance balance |
+| `foreign_keys` | ON | Referential integrity |
+| `busy_timeout` | 5000ms | Retry on lock contention |
+| `cache_size` | -64000 | 64MB page cache |
+| `mmap_size` | 268435456 | 256MB memory-mapped I/O |
+| `temp_store` | MEMORY | Temp tables in memory |
 
 ## Development Workflow
 
@@ -161,8 +190,8 @@ When creating a pull request, please include:
 
 ### Integration Tests
 - Add integration tests for new API endpoints
-- Tests run against a real PostgreSQL database
-- Ensure tests clean up after themselves
+- Storage layer tests run against both PostgreSQL and SQLite automatically
+- API integration tests require a running Miniflux instance
 
 ## Communication
 
