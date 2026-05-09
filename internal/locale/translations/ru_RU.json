@@ -36,6 +36,7 @@
     "confirm.loading": "В процессе…",
     "confirm.no": "нет",
     "confirm.question": "Вы уверены?",
+    "confirm.question.delete_category": "Это также удалит %d канал(ов) и все их записи. Вы уверены?",
     "confirm.question.refresh": "Вы хотите выполнить принудительное обновление?",
     "confirm.yes": "да",
     "enclosure_media_controls.seek": "Перемотка:",

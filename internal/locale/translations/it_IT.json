@@ -35,6 +35,7 @@
     "confirm.loading": "In corso...",
     "confirm.no": "no",
     "confirm.question": "Sei sicuro?",
+    "confirm.question.delete_category": "Questo eliminerà anche %d feed e tutte le loro voci. Sei sicuro?",
     "confirm.question.refresh": "Vuoi forzare l'aggiornamento?",
     "confirm.yes": "sì",
     "enclosure_media_controls.seek": "Sposta:",

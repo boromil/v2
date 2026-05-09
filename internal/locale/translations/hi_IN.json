@@ -35,6 +35,7 @@
     "confirm.loading": " प्रगति में है ...",
     "confirm.no": " नहीं",
     "confirm.question": "मंजूर है?",
+    "confirm.question.delete_category": "यह %d फ़ीड और उनकी सभी प्रविष्टियों को भी हटा देगा। मंजूर है?",
     "confirm.question.refresh": "क्या आप बल द्वारा ताज़ा करना चाहते हैं?",
     "confirm.yes": "हाँ",
     "enclosure_media_controls.seek": "खोजें:",

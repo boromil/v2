@@ -35,6 +35,7 @@
     "confirm.loading": "In Arbeit...",
     "confirm.no": "nein",
     "confirm.question": "Sind Sie sicher?",
+    "confirm.question.delete_category": "Dadurch werden auch %d Feed(s) und alle ihre Einträge gelöscht. Sind Sie sicher?",
     "confirm.question.refresh": "Möchten Sie eine erzwungene Aktualisierung durchführen?",
     "confirm.yes": "ja",
     "enclosure_media_controls.seek": "Vorspulen:",

@@ -35,6 +35,7 @@
     "confirm.loading": "En cours...",
     "confirm.no": "non",
     "confirm.question": "Êtes-vous sûr ?",
+    "confirm.question.delete_category": "Cela supprimera également %d flux et toutes leurs entrées. Êtes-vous sûr ?",
     "confirm.question.refresh": "Voulez-vous forcer le rafraîchissement ?",
     "confirm.yes": "oui",
     "enclosure_media_controls.seek": "Avancer/Reculer :",

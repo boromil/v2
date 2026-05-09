@@ -35,6 +35,7 @@
     "confirm.loading": "Käynnissä...",
     "confirm.no": "ei",
     "confirm.question": "Oletko varma?",
+    "confirm.question.delete_category": "Tämä poistaa myös %d syötettä ja kaikki niiden artikkelit. Oletko varma?",
     "confirm.question.refresh": "Haluatko pakottaa päivityksen?",
     "confirm.yes": "kyllä",
     "enclosure_media_controls.seek": "Siirry:",

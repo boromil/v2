@@ -36,6 +36,7 @@
     "confirm.loading": "В процесі...",
     "confirm.no": "ні",
     "confirm.question": "Ви впевнені?",
+    "confirm.question.delete_category": "Це також видалить %d канал(и) та всі їхні записи. Ви впевнені?",
     "confirm.question.refresh": "Ви хочете змусити оновити?",
     "confirm.yes": "так",
     "enclosure_media_controls.seek": "Пошук:",

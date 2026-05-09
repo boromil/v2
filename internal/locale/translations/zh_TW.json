@@ -34,6 +34,7 @@
     "confirm.loading": "執行中…",
     "confirm.no": "否",
     "confirm.question": "您確定嗎？",
+    "confirm.question.delete_category": "這將同時刪除 %d 個訂閱源及其所有條目。您確定嗎？",
     "confirm.question.refresh": "您想要強制重新整理嗎？",
     "confirm.yes": "是",
     "enclosure_media_controls.seek": "移動：",

@@ -34,6 +34,7 @@
     "confirm.loading": "进行中…",
     "confirm.no": "否",
     "confirm.question": "您确定吗？",
+    "confirm.question.delete_category": "这将同时删除 %d 个订阅源及其所有条目。您确定吗？",
     "confirm.question.refresh": "您确定要强制刷新吗？",
     "confirm.yes": "是",
     "enclosure_media_controls.seek": "查找：",

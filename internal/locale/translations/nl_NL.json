@@ -35,6 +35,7 @@
     "confirm.loading": "Bezig...",
     "confirm.no": "nee",
     "confirm.question": "Weet je het zeker?",
+    "confirm.question.delete_category": "Hiermee worden ook %d feed(s) en al hun berichten verwijderd. Weet je het zeker?",
     "confirm.question.refresh": "Wil je vernieuwen forceren?",
     "confirm.yes": "ja",
     "enclosure_media_controls.seek": "Vooruit/terug:",

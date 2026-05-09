@@ -35,6 +35,7 @@
     "confirm.loading": "Carregando...",
     "confirm.no": "Não",
     "confirm.question": "Tem certeza?",
+    "confirm.question.delete_category": "Isso também excluirá %d feed(s) e todas as suas entradas. Tem certeza?",
     "confirm.question.refresh": "Você deseja forçar a atualização?",
     "confirm.yes": "Sim",
     "enclosure_media_controls.seek": "Procurar:",

@@ -36,6 +36,7 @@
     "confirm.loading": "W toku…",
     "confirm.no": "nie",
     "confirm.question": "Czy na pewno?",
+    "confirm.question.delete_category": "To usunie także %d kanał(ów) i wszystkie ich wpisy. Czy na pewno?",
     "confirm.question.refresh": "Czy na pewno chcesz wymusić odświeżenie?",
     "confirm.yes": "tak",
     "enclosure_media_controls.seek": "Przewiń:",

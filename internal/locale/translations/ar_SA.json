@@ -39,6 +39,7 @@
     "confirm.loading": "جارٍ التحميل...",
     "confirm.no": "لا",
     "confirm.question": "هل أنت متأكد؟",
+    "confirm.question.delete_category": "سيؤدي هذا أيضًا إلى حذف %d مصدر(مصادر) وجميع إدخالاتها. هل أنت متأكد؟",
     "confirm.question.refresh": "هل أنت متأكد أنك تريد فرض التحديث؟",
     "confirm.yes": "نعم",
     "enclosure_media_controls.seek": "بحث:",

@@ -36,6 +36,7 @@
     "confirm.loading": "În progres…",
     "confirm.no": "nu",
     "confirm.question": "Suneți sigur?",
+    "confirm.question.delete_category": "Aceasta va șterge și %d feed-uri și toate intrările lor. Sunteți sigur?",
     "confirm.question.refresh": "Sunteți sigur că vreți să forțați reîmprospătarea?",
     "confirm.yes": "da",
     "enclosure_media_controls.seek": "Caută:",

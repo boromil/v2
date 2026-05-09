@@ -35,6 +35,7 @@
     "confirm.loading": "En progreso...",
     "confirm.no": "no",
     "confirm.question": "¿Estás seguro?",
+    "confirm.question.delete_category": "Esto también eliminará %d fuente(s) y todas sus entradas. ¿Estás seguro?",
     "confirm.question.refresh": "¿Quieres forzar la actualización?",
     "confirm.yes": "sí",
     "enclosure_media_controls.seek": "Buscar:",

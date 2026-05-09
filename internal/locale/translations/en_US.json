@@ -35,6 +35,7 @@
     "confirm.loading": "In progress…",
     "confirm.no": "no",
     "confirm.question": "Are you sure?",
+    "confirm.question.delete_category": "This will also delete %d feed(s) and all their entries. Are you sure?",
     "confirm.question.refresh": "Are you sure you want to force refresh?",
     "confirm.yes": "yes",
     "enclosure_media_controls.seek": "Seek:",

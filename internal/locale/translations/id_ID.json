@@ -34,6 +34,7 @@
     "confirm.loading": "Sedang progres...",
     "confirm.no": "tidak",
     "confirm.question": "Apakah Anda yakin?",
+    "confirm.question.delete_category": "Ini juga akan menghapus %d umpan dan semua entri mereka. Apakah Anda yakin?",
     "confirm.question.refresh": "Apakah Anda ingin memaksa penyegaran?",
     "confirm.yes": "ya",
     "enclosure_media_controls.seek": "Putar:",

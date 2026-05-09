@@ -35,6 +35,7 @@
     "confirm.loading": "Devam ediyor...",
     "confirm.no": "hayır",
     "confirm.question": "Emin misiniz?",
+    "confirm.question.delete_category": "Bu işlem ayrıca %d beslemeyi ve tüm girişlerini silecektir. Emin misiniz?",
     "confirm.question.refresh": "Zorla yenilemek istiyor musunuz?",
     "confirm.yes": "evet",
     "enclosure_media_controls.seek": "Sar:",

@@ -35,6 +35,7 @@
     "confirm.loading": "Σε εξέλιξη...",
     "confirm.no": "όχι",
     "confirm.question": "Είστε σίγουροι;",
+    "confirm.question.delete_category": "Αυτό θα διαγράψει επίσης %d ροή(ές) και όλες τις καταχωρήσεις τους. Είστε σίγουροι;",
     "confirm.question.refresh": "Θέλετε να επιτελέσετε μια υποχρεωτική ανανέωση;",
     "confirm.yes": "ναι",
     "enclosure_media_controls.seek": "Αναζήτηση:",
