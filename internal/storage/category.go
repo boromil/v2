@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/lib/pq"
 	"miniflux.app/v2/internal/model"
 )
 
@@ -173,17 +172,13 @@ func (s *Storage) CategoriesWithFeedCount(userID int64, sortOrder string) (model
 func (s *Storage) CreateCategory(userID int64, request *model.CategoryCreationRequest) (*model.Category, error) {
 	var category model.Category
 
-	query := `
+	query := fmt.Sprintf(`
 		INSERT INTO categories
 			(user_id, title, hide_globally)
 		VALUES
 			($1, $2, $3)
-		RETURNING
-			id,
-			user_id,
-			title,
-			hide_globally
-	`
+			%s
+	`, s.dialect.Returning("id", "user_id", "title", "hide_globally"))
 	err := s.db.QueryRow(
 		query,
 		userID,
@@ -250,10 +245,9 @@ func (s *Storage) RemoveAndReplaceCategoriesByName(userid int64, titles []string
 		return errors.New("store: unable to begin transaction")
 	}
 
-	titleParam := pq.Array(titles)
 	var count int
-	query := "SELECT count(*) FROM categories WHERE user_id = $1 AND title <> ALL($2)"
-	err = tx.QueryRow(query, userid, titleParam).Scan(&count)
+	query := fmt.Sprintf("SELECT count(*) FROM categories WHERE user_id = $1 AND %s", s.notInClause("title", 2))
+	err = tx.QueryRow(query, userid, s.encodeArray(titles)).Scan(&count)
 	if err != nil {
 		tx.Rollback()
 		return errors.New("store: unable to retrieve category count")
@@ -263,8 +257,8 @@ func (s *Storage) RemoveAndReplaceCategoriesByName(userid int64, titles []string
 		return errors.New("store: at least 1 category must remain after deletion")
 	}
 
-	query = `
-		WITH d_cats AS (SELECT id FROM categories WHERE user_id = $1 AND title = ANY($2))
+	query = fmt.Sprintf(`
+		WITH d_cats AS (SELECT id FROM categories WHERE user_id = $1 AND %s)
 		UPDATE feeds
 		 SET category_id =
 		  (SELECT id
@@ -273,15 +267,15 @@ func (s *Storage) RemoveAndReplaceCategoriesByName(userid int64, titles []string
 			ORDER BY title ASC
 			LIMIT 1)
 		WHERE user_id = $1 AND category_id IN (SELECT id FROM d_cats)
-	`
-	_, err = tx.Exec(query, userid, titleParam)
+	`, s.inClause("title", 2))
+	_, err = tx.Exec(query, userid, s.encodeArray(titles))
 	if err != nil {
 		tx.Rollback()
 		return fmt.Errorf("store: unable to replace categories: %v", err)
 	}
 
-	query = "DELETE FROM categories WHERE user_id = $1 AND title = ANY($2)"
-	_, err = tx.Exec(query, userid, titleParam)
+	query = fmt.Sprintf("DELETE FROM categories WHERE user_id = $1 AND %s", s.inClause("title", 2))
+	_, err = tx.Exec(query, userid, s.encodeArray(titles))
 	if err != nil {
 		tx.Rollback()
 		return fmt.Errorf("store: unable to delete categories: %v", err)

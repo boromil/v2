@@ -12,7 +12,6 @@ import (
 	"miniflux.app/v2/internal/crypto"
 	"miniflux.app/v2/internal/model"
 
-	"github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -31,7 +30,7 @@ func (s *Storage) CountUsers() (int, error) {
 
 // SetLastLogin sets the user's last login timestamp to the current time.
 func (s *Storage) SetLastLogin(userID int64) error {
-	query := `UPDATE users SET last_login_at=now() WHERE id=$1`
+	query := fmt.Sprintf(`UPDATE users SET last_login_at=%s WHERE id=$1`, s.dialect.Now())
 	_, err := s.db.Exec(query, userID)
 	if err != nil {
 		return fmt.Errorf(`store: unable to update last login date: %v`, err)
@@ -65,42 +64,45 @@ func (s *Storage) CreateUser(userCreationRequest *model.UserCreationRequest) (*m
 		}
 	}
 
-	query := `
+	query := fmt.Sprintf(`
 		INSERT INTO users
 			(username, password, is_admin, google_id, openid_connect_id)
 		VALUES
 			(LOWER($1), $2, $3, $4, $5)
-		RETURNING
-			id,
-			username,
-			is_admin,
-			language,
-			theme,
-			timezone,
-			entry_direction,
-			entries_per_page,
-			keyboard_shortcuts,
-			show_reading_time,
-			entry_swipe,
-			gesture_nav,
-			stylesheet,
-			custom_js,
-			external_font_hosts,
-			google_id,
-			openid_connect_id,
-			display_mode,
-			entry_order,
-			default_reading_speed,
-			cjk_reading_speed,
-			default_home_page,
-			categories_sorting_order,
-			mark_read_on_view,
-			media_playback_rate,
-			block_filter_entry_rules,
-			keep_filter_entry_rules,
-			always_open_external_links,
-			open_external_links_in_new_tab
-	`
+		%s
+	`,
+		s.dialect.Returning(
+			"id",
+			"username",
+			"is_admin",
+			"language",
+			"theme",
+			"timezone",
+			"entry_direction",
+			"entries_per_page",
+			"keyboard_shortcuts",
+			"show_reading_time",
+			"entry_swipe",
+			"gesture_nav",
+			"stylesheet",
+			"custom_js",
+			"external_font_hosts",
+			"google_id",
+			"openid_connect_id",
+			"display_mode",
+			"entry_order",
+			"default_reading_speed",
+			"cjk_reading_speed",
+			"default_home_page",
+			"categories_sorting_order",
+			"mark_read_on_view",
+			"media_playback_rate",
+			"block_filter_entry_rules",
+			"keep_filter_entry_rules",
+			"always_open_external_links",
+			"open_external_links_in_new_tab",
+		),
+	)
 
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -467,13 +469,13 @@ func (s *Storage) UserByField(field, value string) (*model.User, error) {
 		WHERE
 			%s=$1
 	`
-	return s.fetchUser(fmt.Sprintf(query, pq.QuoteIdentifier(field)), value)
+	return s.fetchUser(fmt.Sprintf(query, fmt.Sprintf("\"%s\"", field)), value)
 }
 
 // AnotherUserWithFieldExists returns true if a user other than userID has the given value in the given column.
 func (s *Storage) AnotherUserWithFieldExists(userID int64, field, value string) bool {
 	var result bool
-	query := `SELECT true FROM users WHERE id <> $1 AND ` + pq.QuoteIdentifier(field) + `=$2 LIMIT 1`
+	query := fmt.Sprintf(`SELECT true FROM users WHERE id <> $1 AND "%s"=$2 LIMIT 1`, field)
 	s.db.QueryRow(query, userID, value).Scan(&result)
 	return result
 }

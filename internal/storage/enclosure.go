@@ -10,8 +10,6 @@ import (
 	"strings"
 
 	"miniflux.app/v2/internal/model"
-
-	"github.com/lib/pq"
 )
 
 // EnclosuresByEntryID returns all enclosures for the given entry.
@@ -63,7 +61,7 @@ func (s *Storage) EnclosuresByEntryID(entryID int64) (model.EnclosureList, error
 
 // EnclosuresByEntryIDs returns enclosures for the given entries, grouped by entry ID.
 func (s *Storage) EnclosuresByEntryIDs(entryIDs []int64) (map[int64]model.EnclosureList, error) {
-	query := `
+	query := fmt.Sprintf(`
 		SELECT
 			id,
 			user_id,
@@ -75,11 +73,11 @@ func (s *Storage) EnclosuresByEntryIDs(entryIDs []int64) (map[int64]model.Enclos
 		FROM
 			enclosures
 		WHERE
-			entry_id = ANY($1)
+			%s
 		ORDER BY id ASC
-	`
+	`, s.inClause("entry_id", 1))
 
-	rows, err := s.db.Query(query, pq.Array(entryIDs))
+	rows, err := s.db.Query(query, s.encodeArray(entryIDs))
 	if err != nil {
 		return nil, fmt.Errorf("store: unable to fetch enclosures: %w", err)
 	}
@@ -152,15 +150,14 @@ func (s *Storage) createEnclosure(tx *sql.Tx, enclosure *model.Enclosure) error 
 		return nil
 	}
 
-	query := `
+	query := fmt.Sprintf(`
 		INSERT INTO enclosures
 			(url, size, mime_type, entry_id, user_id, media_progression)
 		VALUES
 			($1, $2, $3, $4, $5, $6)
-		ON CONFLICT (user_id, entry_id, encode(sha256(url::bytea), 'hex')) DO NOTHING
-		RETURNING
-			id
-	`
+		ON CONFLICT (user_id, entry_id, md5(url)) DO NOTHING
+		%s
+	`, s.dialect.Returning("id"))
 	if err := tx.QueryRow(
 		query,
 		enclosureURL,
@@ -202,14 +199,14 @@ func (s *Storage) updateEnclosures(tx *sql.Tx, entry *model.Entry) error {
 		}
 	}
 
-	query := `
+	query := fmt.Sprintf(`
 		DELETE FROM
 			enclosures
 		WHERE
-			user_id=$1 AND entry_id=$2 AND url <> ALL($3)
-	`
+			user_id=$1 AND entry_id=$2 AND %s
+	`, s.notInClause("url", 3))
 
-	_, err := tx.Exec(query, entry.UserID, entry.ID, pq.Array(sqlValues))
+	_, err := tx.Exec(query, entry.UserID, entry.ID, s.encodeArray(sqlValues))
 	if err != nil {
 		return fmt.Errorf(`store: unable to delete old enclosures: %v`, err)
 	}
