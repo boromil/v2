@@ -66,6 +66,7 @@ func StartWebServer(store *storage.Storage, pool *worker.Pool) ([]*http.Server, 
 			WriteTimeout:      config.Opts.HTTPServerTimeout(),
 			IdleTimeout:       config.Opts.HTTPServerTimeout(),
 			ReadHeaderTimeout: config.Opts.HTTPServerTimeout(),
+			MaxHeaderBytes:    1 << 20, // 1 MiB
 			Handler:           newRouter(store, pool),
 		}
 
@@ -177,8 +178,11 @@ func setupAutocert(store *storage.Storage) (*tls.Config, *http.Server) {
 	tlsConfig.GetCertificate = certManager.GetCertificate
 
 	challengeServer := &http.Server{
-		Handler: certManager.HTTPHandler(nil),
-		Addr:    ":http",
+		Handler:           certManager.HTTPHandler(nil),
+		Addr:              ":http",
+		ReadTimeout:       config.Opts.HTTPServerTimeout(),
+		WriteTimeout:      config.Opts.HTTPServerTimeout(),
+		ReadHeaderTimeout: config.Opts.HTTPServerTimeout(),
 	}
 
 	slog.Info("Starting ACME HTTP challenge server", slog.String("address", challengeServer.Addr))

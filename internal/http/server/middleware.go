@@ -38,7 +38,8 @@ func middleware(next http.Handler) http.Handler {
 			)
 		}()
 
-		if config.Opts.HTTPS() && config.Opts.HasHSTS() {
+		isRequestHTTPS := r.TLS != nil || (isTrustedProxyClientIP && r.Header.Get("X-Forwarded-Proto") == "https")
+		if isRequestHTTPS && config.Opts.HasHSTS() {
 			w.Header().Set("Strict-Transport-Security", "max-age=31536000")
 		}
 
