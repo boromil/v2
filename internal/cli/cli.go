@@ -12,6 +12,7 @@ import (
 
 	"miniflux.app/v2/internal/config"
 	"miniflux.app/v2/internal/database"
+	"miniflux.app/v2/internal/database/dialect"
 	"miniflux.app/v2/internal/proxyrotator"
 	"miniflux.app/v2/internal/storage"
 	"miniflux.app/v2/internal/ui/static"
@@ -34,6 +35,7 @@ const (
 	flagRunCleanupTasksHelp  = "Run cleanup tasks (delete old sessions and archive old entries)"
 	flagExportUserFeedsHelp  = "Export user feeds (provide the username as argument)"
 	flagResetNextCheckAtHelp = "Reset the next check time for all feeds"
+	flagDatabaseTypeHelp     = "Database type (postgres or sqlite)"
 )
 
 // Parse parses command line arguments.
@@ -55,6 +57,7 @@ func Parse() {
 		flagRefreshFeeds         bool
 		flagRunCleanupTasks      bool
 		flagExportUserFeeds      string
+		flagDatabaseType         string
 	)
 
 	flag.BoolVar(&flagInfo, "info", false, flagInfoHelp)
@@ -75,6 +78,7 @@ func Parse() {
 	flag.BoolVar(&flagRefreshFeeds, "refresh-feeds", false, flagRefreshFeedsHelp)
 	flag.BoolVar(&flagRunCleanupTasks, "run-cleanup-tasks", false, flagRunCleanupTasksHelp)
 	flag.StringVar(&flagExportUserFeeds, "export-user-feeds", "", flagExportUserFeedsHelp)
+	flag.StringVar(&flagDatabaseType, "database-type", "", flagDatabaseTypeHelp)
 	flag.Parse()
 
 	cfg := config.NewConfigParser()
@@ -154,7 +158,24 @@ func Parse() {
 		printfAndExit("unable to generate javascript bundle: %v", err)
 	}
 
+	if flagDatabaseType != "" {
+		config.Opts.SetDatabaseType(flagDatabaseType)
+	}
+
+	if config.Opts.DatabaseType() == "sqlite" && config.Opts.IsDefaultDatabaseURL() {
+		config.Opts.SetDatabaseURL("file::memory:?cache=shared")
+	}
+
+	var dbDialect dialect.Dialect
+	switch config.Opts.DatabaseType() {
+	case "sqlite":
+		dbDialect = &dialect.SQLiteDialect{}
+	default:
+		dbDialect = &dialect.PostgreSQLDialect{}
+	}
+
 	db, err := database.NewConnectionPool(
+		dbDialect,
 		config.Opts.DatabaseURL(),
 		config.Opts.DatabaseMinConns(),
 		config.Opts.DatabaseMaxConns(),
@@ -165,17 +186,23 @@ func Parse() {
 	}
 	defer db.Close()
 
-	store := storage.NewStorage(db)
+	store := storage.NewStorage(db, dbDialect)
 
 	if err := store.Ping(); err != nil {
 		printErrorAndExit(err)
 	}
 
 	if flagMigrate {
-		if err := database.Migrate(db); err != nil {
+		if err := database.Migrate(db, migrationProvider(dbDialect)); err != nil {
 			printErrorAndExit(err)
 		}
 		return
+	}
+
+	if config.Opts.RunMigrations() || isSQLite(dbDialect) {
+		if err := database.Migrate(db, migrationProvider(dbDialect)); err != nil {
+			printErrorAndExit(err)
+		}
 	}
 
 	if flagResetFeedErrors {
@@ -212,14 +239,8 @@ func Parse() {
 		return
 	}
 
-	// Run migrations and start the daemon.
-	if config.Opts.RunMigrations() {
-		if err := database.Migrate(db); err != nil {
-			printErrorAndExit(err)
-		}
-	}
-
-	if err := database.IsSchemaUpToDate(db); err != nil {
+	// Verify schema is up to date before starting the daemon.
+	if err := database.IsSchemaUpToDate(db, migrationProvider(dbDialect)); err != nil {
 		printErrorAndExit(err)
 	}
 
@@ -256,4 +277,17 @@ func printErrorAndExit(err error) {
 func printfAndExit(format string, args ...any) {
 	err := fmt.Errorf(format, args...)
 	printErrorAndExit(err)
+}
+
+func migrationProvider(d dialect.Dialect) database.MigrationProvider {
+	switch d.DatabaseType() {
+	case dialect.SQLite:
+		return database.NewSQLiteMigrationProvider()
+	default:
+		return database.NewPostgreSQLMigrationProvider()
+	}
+}
+
+func isSQLite(d dialect.Dialect) bool {
+	return d.DatabaseType() == dialect.SQLite
 }
