@@ -23,7 +23,7 @@ func (s *Storage) CreateWebSession(session *model.WebSession) error {
 		return fmt.Errorf(`store: unable to serialize web session state: %v`, err)
 	}
 
-	query := `
+	query := fmt.Sprintf(`
 		INSERT INTO web_sessions (
 			id,
 			secret_hash,
@@ -32,8 +32,8 @@ func (s *Storage) CreateWebSession(session *model.WebSession) error {
 			state
 		)
 		VALUES ($1, $2, $3, $4, $5)
-		RETURNING created_at
-	`
+		%s
+	`, s.dialect.Returning("created_at"))
 
 	err = s.db.QueryRow(
 		query,
@@ -141,7 +141,7 @@ func (s *Storage) RotateWebSession(oldID string, session *model.WebSession) erro
 		return fmt.Errorf(`store: unable to serialize web session state: %v`, err)
 	}
 
-	err = s.db.QueryRow(`
+	err = s.db.QueryRow(fmt.Sprintf(`
 		UPDATE
 			web_sessions
 		SET
@@ -149,11 +149,11 @@ func (s *Storage) RotateWebSession(oldID string, session *model.WebSession) erro
 			secret_hash=$3,
 			user_id=$4,
 			state=$5,
-			created_at=now()
+			created_at=%s
 		WHERE
 			id=$1
-		RETURNING created_at
-	`,
+		%s
+	`, s.dialect.Now(), s.dialect.Returning("created_at")),
 		oldID,
 		session.ID,
 		session.SecretHash,
@@ -244,13 +244,13 @@ const anonymousWebSessionLifetime = 24 * time.Hour
 // CleanOldWebSessions removes web sessions older than the specified interval (24h minimum),
 // and anonymous web sessions older than anonymousWebSessionLifetime.
 func (s *Storage) CleanOldWebSessions(interval time.Duration) (int64, error) {
-	query := `
+	query := fmt.Sprintf(`
 		DELETE FROM
 			web_sessions
 		WHERE
-			created_at < now() - $1::interval OR
-			(user_id IS NULL AND created_at < now() - $2::interval)
-	`
+			created_at < %s OR
+			(user_id IS NULL AND created_at < %s)
+	`, s.dialect.NowSubtractInterval("$1"), s.dialect.NowSubtractInterval("$2"))
 
 	days := max(int(interval/(24*time.Hour)), 1)
 	anonymousHours := int(anonymousWebSessionLifetime / time.Hour)

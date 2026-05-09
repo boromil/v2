@@ -148,15 +148,15 @@ func (s *Storage) WebAuthnCredentialsByUserID(userID int64) ([]model.WebAuthnCre
 
 // WebAuthnSaveLogin writes back the per-assertion fields (sign count, clone warning, backup state, BE) the WebAuthn spec requires after every successful login.
 func (s *Storage) WebAuthnSaveLogin(handle []byte, credential *webauthn.Credential) error {
-	query := `
+	query := fmt.Sprintf(`
 		UPDATE webauthn_credentials
-		SET last_seen_on = NOW(),
+		SET last_seen_on = %s,
 			sign_count = $1,
 			clone_warning = $2,
 			backup_eligible = $3,
 			backup_state = $4
 		WHERE handle = $5
-	`
+	`, s.dialect.Now())
 	_, err := s.db.Exec(
 		query,
 		credential.Authenticator.SignCount,

@@ -114,14 +114,11 @@ func (s *Storage) StoreFeedIcon(feedID int64, icon *model.Icon) error {
 
 	err = tx.QueryRow(`SELECT id FROM icons WHERE hash=$1`, icon.Hash).Scan(&icon.ID)
 	if errors.Is(err, sql.ErrNoRows) {
-		query := `
-			INSERT INTO icons
+		query := fmt.Sprintf(`INSERT INTO icons
 				(hash, mime_type, content, external_id)
 			VALUES
 				($1, $2, $3, $4)
-			RETURNING
-				id
-		`
+			%s`, s.dialect.Returning("id"))
 		err := tx.QueryRow(
 			query,
 			icon.Hash,

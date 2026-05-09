@@ -10,12 +10,14 @@ import (
 	"strconv"
 	"strings"
 
+	"miniflux.app/v2/internal/database/dialect"
 	"miniflux.app/v2/internal/model"
 	"miniflux.app/v2/internal/urllib"
 )
 
 type batchBuilder struct {
 	db           *sql.DB
+	dialect      dialect.Dialect
 	args         []any
 	conditions   []string
 	batchSize    int
@@ -24,7 +26,8 @@ type batchBuilder struct {
 
 func (s *Storage) NewBatchBuilder() *batchBuilder {
 	return &batchBuilder{
-		db: s.db,
+		db:      s.db,
+		dialect: s.dialect,
 	}
 }
 
@@ -54,7 +57,7 @@ func (b *batchBuilder) WithErrorLimit(limit int) *batchBuilder {
 }
 
 func (b *batchBuilder) WithNextCheckExpired() *batchBuilder {
-	b.conditions = append(b.conditions, "next_check_at < now()")
+	b.conditions = append(b.conditions, fmt.Sprintf("next_check_at < %s", b.dialect.Now()))
 	return b
 }
 
