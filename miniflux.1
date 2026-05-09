@@ -19,7 +19,7 @@ When started without any command option, \fBminiflux\fR runs as a daemon:
 it starts the HTTP server, the background scheduler that refreshes feeds,
 and the cleanup jobs.
 .PP
-Miniflux requires a PostgreSQL database.
+Miniflux requires a PostgreSQL or SQLite database.
 The database schema must be up to date before the daemon starts:
 use \fB\-migrate\fR or set \fBRUN_MIGRATIONS\fR.
 .PP
@@ -38,6 +38,13 @@ The output includes sensitive information like passwords.
 .B \-create\-admin
 Create an admin user from an interactive terminal and exit.
 The username and password are prompted for.
+.TP
+\fB\-database\-type\fR \fItype\fR
+Database type: "postgres" or "sqlite".
+.IP
+Default is "postgres".
+When set to "sqlite" and no \fBDATABASE_URL\fR is configured,
+an in-memory database is used automatically.
 .TP
 .B \-debug
 Set log level to debug.
@@ -229,6 +236,12 @@ Maximum amount of time in minutes a connection may be reused.
 .IP
 Default is 5 minutes.
 .TP
+.B DATABASE_TYPE
+Database type: "postgres" or "sqlite".
+.IP
+Default is "postgres".
+When set to "sqlite", SQL migrations run automatically on startup.
+.TP
 .B DATABASE_MAX_CONNS
 Maximum number of database connections.
 .IP
@@ -241,7 +254,13 @@ Must be less than or equal to \fBDATABASE_MAX_CONNS\fR.
 Default is 1.
 .TP
 .B DATABASE_URL
-PostgreSQL connection parameters.
+Database connection string.
+.IP
+PostgreSQL: connection parameters,
+for example "user=postgres password=postgres dbname=miniflux2 sslmode=disable".
+.br
+SQLite: path to the database file,
+for example "/var/lib/miniflux/miniflux.db".
 .IP
 Default is "user=postgres password=postgres dbname=miniflux2 sslmode=disable".
 .TP
