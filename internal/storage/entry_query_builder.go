@@ -5,16 +5,84 @@ package storage // import "miniflux.app/v2/internal/storage"
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/lib/pq"
-
+	"miniflux.app/v2/internal/database/dialect"
 	"miniflux.app/v2/internal/model"
 	"miniflux.app/v2/internal/timezone"
 )
+
+// timeParseFormats are tried in order when scanning a timestamp value.
+//
+// Background: modernc.org/sqlite v1.50.0's built-in parseTime() function
+// (conn.go:87) tries a fixed set of time formats against TEXT columns declared
+// as DATE/DATETIME/TIMESTAMP. If none match, it returns the raw string instead
+// of time.Time. This manifests as a Scan error when database/sql tries to scan
+// the string into *time.Time.
+//
+// The bug surfaces in 6-table LEFT JOIN queries (entries + feeds + categories
+// + feed_icons + icons + users). Simpler queries work correctly. It affects
+// entries imported from OPML files where timestamps may be stored in formats
+// the driver doesn't recognize, including Go's time.Time.String() format
+// ("2026-02-22 08:00:00 +0000 UTC") and corrupted double-timezone values
+// ("2026-05-08 17:22:08 +1000 +1000") from legacy imports.
+//
+// The workaround: scan datetime columns into interface{}, then parse with
+// scanTime() which tries a broader set of formats and can strip trailing
+// timezone tokens.
+var timeParseFormats = []string{
+	time.RFC3339Nano,
+	time.RFC3339,
+	"2006-01-02 15:04:05.999999999 -0700 MST",
+	"2006-01-02 15:04:05 -0700",
+	"2006-01-02T15:04:05.999999999Z07:00",
+	"2006-01-02 15:04:05.999999999Z07:00",
+	"2006-01-02T15:04:05Z07:00",
+	"2006-01-02 15:04:05Z07:00",
+	time.DateTime,
+	time.DateOnly,
+}
+
+func scanTime(v any) (time.Time, error) {
+	switch v := v.(type) {
+	case time.Time:
+		return v, nil
+	case string:
+		for _, f := range timeParseFormats {
+			if t, err := time.Parse(f, v); err == nil {
+				return t, nil
+			}
+		}
+		// Try stripping a trailing timezone token (some imported entries
+		// have doubled timezone info like "+1000 +1000").
+		if t, err := stripAndParse(v); err == nil {
+			return t, nil
+		}
+		return time.Time{}, fmt.Errorf("unable to parse time: %q", v)
+	default:
+		return time.Time{}, fmt.Errorf("unexpected type for time: %T", v)
+	}
+}
+
+func stripAndParse(s string) (time.Time, error) {
+	lastSpace := strings.LastIndexByte(s, ' ')
+	if lastSpace < 0 {
+		return time.Time{}, fmt.Errorf("no space in timestamp")
+	}
+	stripped := s[:lastSpace]
+	for _, f := range timeParseFormats {
+		if t, err := time.Parse(f, stripped); err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("unable to parse stripped time: %q", stripped)
+}
 
 // EntryQueryBuilder builds a SQL query to fetch entries.
 type EntryQueryBuilder struct {
@@ -45,17 +113,50 @@ func (e *EntryQueryBuilder) WithoutContent() *EntryQueryBuilder {
 // WithSearchQuery adds full-text search query to the condition.
 func (e *EntryQueryBuilder) WithSearchQuery(query string) *EntryQueryBuilder {
 	if query != "" {
+		if e.store.dialect.DatabaseType() == dialect.SQLite {
+			query = escapeFTS5Query(query)
+		}
+
 		nArgs := len(e.args) + 1
-		e.conditions = append(e.conditions, fmt.Sprintf("e.document_vectors @@ websearch_to_tsquery($%d)", nArgs))
+		e.conditions = append(e.conditions, e.store.dialect.FtsCondition(nArgs))
 		e.args = append(e.args, query)
 
 		// 0.0000001 = 0.1 / (seconds_in_a_day)
-
-		e.sortExpressions = append(e.sortExpressions,
-			fmt.Sprintf("ts_rank(document_vectors, websearch_to_tsquery($%d)) - extract (epoch from now() - published_at)::float * 0.0000001 DESC", nArgs),
+		e.WithSorting(
+			fmt.Sprintf("%s - %s * 0.0000001",
+				e.store.dialect.FtsRank(nArgs),
+				fmt.Sprintf("(%s - %s)", e.store.dialect.ExtractEpoch(e.store.dialect.Now()), e.store.dialect.ExtractEpoch("published_at"))),
+			"DESC",
 		)
 	}
 	return e
+}
+
+// escapeFTS5Query quotes numeric-looking tokens containing dots to prevent
+// FTS5 from parsing them as float literals (e.g. "2.0.8" causes "fts5: syntax
+// error near '.'"). The problematic token is wrapped in double quotes so FTS5
+// treats it as a literal phrase. Other tokens are left unchanged.
+func escapeFTS5Query(q string) string {
+	tokens := strings.Fields(q)
+	for i, t := range tokens {
+		if containsNumericDot(t) {
+			tokens[i] = `"` + t + `"`
+		}
+	}
+	return strings.Join(tokens, " ")
+}
+
+func containsNumericDot(s string) bool {
+	hasDigit := false
+	for _, c := range s {
+		if c >= '0' && c <= '9' {
+			hasDigit = true
+		}
+		if c == '.' && hasDigit {
+			return true
+		}
+	}
+	return false
 }
 
 // WithStarred adds starred filter.
@@ -120,8 +221,8 @@ func (e *EntryQueryBuilder) WithEntryIDs(entryIDs ...int64) *EntryQueryBuilder {
 		e.conditions = append(e.conditions, fmt.Sprintf("e.id = $%d", len(e.args)+1))
 		e.args = append(e.args, entryIDs[0])
 	} else if len(entryIDs) > 1 {
-		e.conditions = append(e.conditions, fmt.Sprintf("e.id = ANY($%d)", len(e.args)+1))
-		e.args = append(e.args, pq.Int64Array(entryIDs))
+		e.conditions = append(e.conditions, e.store.inClause("e.id", len(e.args)+1))
+		e.args = append(e.args, e.store.encodeArray(entryIDs))
 	}
 	return e
 }
@@ -150,8 +251,8 @@ func (e *EntryQueryBuilder) WithStatuses(statuses ...string) *EntryQueryBuilder 
 		e.conditions = append(e.conditions, fmt.Sprintf("e.status = $%d", len(e.args)+1))
 		e.args = append(e.args, statuses[0])
 	} else if len(statuses) > 1 {
-		e.conditions = append(e.conditions, fmt.Sprintf("e.status = ANY($%d)", len(e.args)+1))
-		e.args = append(e.args, pq.StringArray(statuses))
+		e.conditions = append(e.conditions, e.store.inClause("e.status", len(e.args)+1))
+		e.args = append(e.args, e.store.encodeArray(statuses))
 	}
 	return e
 }
@@ -159,8 +260,14 @@ func (e *EntryQueryBuilder) WithStatuses(statuses ...string) *EntryQueryBuilder 
 // WithTags filter by a list of entry tags.
 func (e *EntryQueryBuilder) WithTags(tags ...string) *EntryQueryBuilder {
 	if len(tags) > 0 {
-		e.conditions = append(e.conditions, fmt.Sprintf("LOWER(e.tags::text)::text[] @> LOWER($%d::text)::text[]", len(e.args)+1))
-		e.args = append(e.args, pq.Array(tags))
+		for _, cat := range tags {
+			if e.store.dialect.DatabaseType() == dialect.SQLite {
+				e.conditions = append(e.conditions, fmt.Sprintf("LOWER($%d) IN (SELECT LOWER(value) FROM json_each(e.tags))", len(e.args)+1))
+			} else {
+				e.conditions = append(e.conditions, fmt.Sprintf("LOWER($%d) = ANY(LOWER(e.tags::text)::text[])", len(e.args)+1))
+			}
+			e.args = append(e.args, cat)
+		}
 	}
 	return e
 }
@@ -297,23 +404,26 @@ func (e *EntryQueryBuilder) GetEntriesWithCount() (model.Entries, int, error) {
 func (e *EntryQueryBuilder) fetchEntries(withCount bool) (model.Entries, int, error) {
 	countColumn := ""
 	if withCount {
-		countColumn = "count(*) OVER(),"
+		countColumn = e.store.dialect.WindowCountOver() + ","
 	}
 
-	query := `
+	timezoneExpr := e.store.dialect.TimezoneConvert("e.published_at", "u.timezone")
+	contentCol := e.contentColumn()
+
+	query := fmt.Sprintf(`
 		SELECT
-			` + countColumn + `
+			%s
 			e.id,
 			e.user_id,
 			e.feed_id,
 			e.hash,
-			e.published_at at time zone u.timezone,
+			%s,
 			e.title,
 			e.url,
 			e.comments_url,
 			e.author,
 			e.share_code,
-			` + e.contentColumn() + `,
+			%s,
 			e.status,
 			e.starred,
 			e.reading_time,
@@ -353,7 +463,7 @@ func (e *EntryQueryBuilder) fetchEntries(withCount bool) (model.Entries, int, er
 			icons i ON i.id=fi.icon_id
 		INNER JOIN
 			users u ON u.id=e.user_id
-		WHERE ` + e.buildCondition() + " " + e.buildSorting()
+		WHERE `, countColumn, timezoneExpr, contentCol) + e.buildCondition() + " " + e.buildSorting()
 
 	rows, err := e.store.db.Query(query, e.args...)
 	if err != nil {
@@ -371,8 +481,17 @@ func (e *EntryQueryBuilder) fetchEntries(withCount bool) (model.Entries, int, er
 		var iconID sql.NullInt64
 		var externalIconID sql.NullString
 		var tz string
+		var tagsStr string
 
 		entry := model.NewEntry()
+
+		// For SQLite, scan datetime columns into interface{} instead of
+		// *time.Time.  The modernc.org/sqlite v1.50.0 driver's built-in
+		// parseTime() returns the raw string when it can't parse a timestamp
+		// value, causing Scan("string" → *time.Time) to fail.
+		// See the timeParseFormats doc above for full background.
+		// Values are parsed with scanTime() after rows.Scan() succeeds.
+		var dateVal, createdVal, changedVal, checkedVal any
 
 		dest := []any{
 			&entry.ID,
@@ -391,7 +510,7 @@ func (e *EntryQueryBuilder) fetchEntries(withCount bool) (model.Entries, int, er
 			&entry.ReadingTime,
 			&entry.CreatedAt,
 			&entry.ChangedAt,
-			pq.Array(&entry.Tags),
+			&tagsStr,
 			&entry.Language,
 			&entry.Feed.Title,
 			&entry.Feed.FeedURL,
@@ -419,9 +538,65 @@ func (e *EntryQueryBuilder) fetchEntries(withCount bool) (model.Entries, int, er
 			dest = append([]any{&totalCount}, dest...)
 		}
 
+		if e.store.dialect.DatabaseType() == dialect.SQLite {
+			idx := 0
+			if withCount {
+				idx = 1
+			}
+			dest[4+idx] = &dateVal
+			dest[14+idx] = &createdVal
+			dest[15+idx] = &changedVal
+			dest[21+idx] = &checkedVal
+		}
+
 		err := rows.Scan(dest...)
 		if err != nil {
 			return nil, 0, fmt.Errorf("store: unable to fetch entry row: %v", err)
+		}
+
+		if e.store.dialect.DatabaseType() == dialect.SQLite {
+			if t, err := scanTime(dateVal); err == nil {
+				entry.Date = t
+			} else if dateVal != nil {
+				slog.Warn("unable to parse published_at datetime",
+					slog.Int64("entry_id", entry.ID),
+					slog.String("value", fmt.Sprintf("%v", dateVal)),
+					slog.Any("error", err),
+				)
+			}
+			if t, err := scanTime(createdVal); err == nil {
+				entry.CreatedAt = t
+			} else if createdVal != nil {
+				slog.Warn("unable to parse created_at datetime",
+					slog.Int64("entry_id", entry.ID),
+					slog.String("value", fmt.Sprintf("%v", createdVal)),
+					slog.Any("error", err),
+				)
+			}
+			if t, err := scanTime(changedVal); err == nil {
+				entry.ChangedAt = t
+			} else if changedVal != nil {
+				slog.Warn("unable to parse changed_at datetime",
+					slog.Int64("entry_id", entry.ID),
+					slog.String("value", fmt.Sprintf("%v", changedVal)),
+					slog.Any("error", err),
+				)
+			}
+			if t, err := scanTime(checkedVal); err == nil {
+				entry.Feed.CheckedAt = t
+			} else if checkedVal != nil {
+				slog.Warn("unable to parse feed checked_at datetime",
+					slog.Int64("entry_id", entry.ID),
+					slog.String("value", fmt.Sprintf("%v", checkedVal)),
+					slog.Any("error", err),
+				)
+			}
+		}
+
+		if e.store.dialect.DatabaseType() == dialect.SQLite {
+			json.Unmarshal([]byte(tagsStr), &entry.Tags)
+		} else {
+			entry.Tags = parsePostgresArray(tagsStr)
 		}
 
 		if iconID.Valid && externalIconID.Valid && externalIconID.String != "" {
@@ -527,6 +702,11 @@ func (e *EntryQueryBuilder) buildSorting() string {
 	var parts string
 
 	if len(e.sortExpressions) > 0 {
+		for i, expr := range e.sortExpressions {
+			if !strings.ContainsAny(expr, ".(") {
+				e.sortExpressions[i] = "e." + expr
+			}
+		}
 		parts += " ORDER BY " + strings.Join(e.sortExpressions, ", ")
 	}
 
@@ -539,6 +719,28 @@ func (e *EntryQueryBuilder) buildSorting() string {
 	}
 
 	return parts
+}
+
+func parsePostgresArray(s string) []string {
+	s = strings.TrimSpace(s)
+	if s == "{}" {
+		return nil
+	}
+	s = strings.TrimPrefix(s, "{")
+	s = strings.TrimSuffix(s, "}")
+	if s == "" {
+		return nil
+	}
+	parts := strings.Split(s, ",")
+	result := make([]string, len(parts))
+	for i, p := range parts {
+		p = strings.TrimSpace(p)
+		if len(p) >= 2 && p[0] == '"' && p[len(p)-1] == '"' {
+			p = p[1 : len(p)-1]
+		}
+		result[i] = p
+	}
+	return result
 }
 
 // NewEntryQueryBuilder returns a new EntryQueryBuilder.

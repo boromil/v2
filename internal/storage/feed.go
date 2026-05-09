@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"miniflux.app/v2/internal/config"
+	"miniflux.app/v2/internal/database/dialect"
 	"miniflux.app/v2/internal/model"
 )
 
@@ -166,22 +167,45 @@ func (s *Storage) FeedsByCategoryWithCounters(userID, categoryID int64) (model.F
 
 // WeeklyFeedEntryCount returns the weekly entry count for a feed.
 func (s *Storage) WeeklyFeedEntryCount(userID, feedID int64) (int, error) {
-	// Calculate a virtual weekly count based on the average updating frequency.
-	// This helps after just adding a high volume feed.
-	// Return 0 when the 'count(*)' is zero(0) or one(1).
-	query := `
+	if s.dialect.DatabaseType() == dialect.SQLite {
+		query := fmt.Sprintf(`
+			SELECT
+				COALESCE(CAST(CEIL(
+					604800.0 /
+					NULLIF((julianday(max(published_at)) - julianday(min(published_at))) * 86400.0 / NULLIF(count(*) - 1, 0), 0)
+				) AS INTEGER), 0)
+			FROM entries
+			WHERE user_id=$1 AND feed_id=$2 AND published_at >= %s
+		`, s.dialect.NowSubtractInterval("'7 days'"))
+
+		var weeklyCount int
+		err := s.db.QueryRow(query, userID, feedID).Scan(&weeklyCount)
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return 0, nil
+		case err != nil:
+			return 0, fmt.Errorf(`store: unable to fetch weekly count for feed #%d: %v`, feedID, err)
+		}
+		return weeklyCount, nil
+	}
+
+	query := fmt.Sprintf(`
 		SELECT
 			COALESCE(CAST(CEIL(
-				(EXTRACT(epoch from interval '1 week'))	/
-				NULLIF((EXTRACT(epoch from (max(published_at)-min(published_at))/NULLIF((count(*)-1), 0) )), 0)
+				(%s) /
+				NULLIF((%s), 0)
 			) AS BIGINT), 0)
 		FROM
 			entries
 		WHERE
 			entries.user_id=$1 AND
 			entries.feed_id=$2 AND
-			entries.published_at >= now() - interval '1 week';
-	`
+			entries.published_at >= %s;
+	`,
+		s.dialect.ExtractEpoch(s.dialect.CastToInterval("1 week")),
+		s.dialect.ExtractEpoch("(max(published_at)-min(published_at))/NULLIF((count(*)-1), 0)"),
+		s.dialect.NowSubtractInterval("'1 week'"),
+	)
 
 	var weeklyCount int
 	err := s.db.QueryRow(query, userID, feedID).Scan(&weeklyCount)
@@ -471,6 +495,6 @@ func (s *Storage) ResetFeedErrors() error {
 
 // ResetNextCheckAt schedules all feeds to be checked immediately.
 func (s *Storage) ResetNextCheckAt() error {
-	_, err := s.db.Exec(`UPDATE feeds SET next_check_at=now()`)
+	_, err := s.db.Exec(fmt.Sprintf(`UPDATE feeds SET next_check_at=%s`, s.dialect.Now()))
 	return err
 }
