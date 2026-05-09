@@ -195,6 +195,14 @@ func NewConfigOptions() *configOptions {
 				valueType:         secretFileType,
 				targetKey:         "DATABASE_URL",
 			},
+			"DATABASE_TYPE": {
+				parsedStringValue: "postgres",
+				rawValue:          "postgres",
+				valueType:         stringType,
+				validator: func(rawValue string) error {
+					return validateChoices(rawValue, []string{"postgres", "sqlite"})
+				},
+			},
 			"DISABLE_API": {
 				parsedBoolValue: false,
 				rawValue:        "0",
@@ -700,6 +708,10 @@ func (c *configOptions) DatabaseURL() string {
 	return c.options["DATABASE_URL"].parsedStringValue
 }
 
+func (c *configOptions) DatabaseType() string {
+	return c.options["DATABASE_TYPE"].parsedStringValue
+}
+
 func (c *configOptions) DisableHSTS() bool {
 	return c.options["DISABLE_HSTS"].parsedBoolValue
 }
@@ -966,6 +978,16 @@ func (c *configOptions) SetHTTPSValue(value bool) {
 	} else {
 		c.options["HTTPS"].rawValue = "0"
 	}
+}
+
+func (c *configOptions) SetDatabaseType(value string) {
+	c.options["DATABASE_TYPE"].parsedStringValue = value
+	c.options["DATABASE_TYPE"].rawValue = value
+}
+
+func (c *configOptions) SetDatabaseURL(value string) {
+	c.options["DATABASE_URL"].parsedStringValue = value
+	c.options["DATABASE_URL"].rawValue = value
 }
 
 func (c *configOptions) SchedulerEntryFrequencyFactor() int {
