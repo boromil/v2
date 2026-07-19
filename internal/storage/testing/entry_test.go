@@ -138,7 +138,7 @@ func TestUpdateEntryTitleAndContent(t *testing.T) {
 
 			// Verify via query builder
 			builder := s.NewEntryQueryBuilder(user.ID)
-			builder.WithEntryID(entry.ID)
+			builder.WithEntryIDs(entry.ID)
 			fetched, err := builder.GetEntry()
 			if err != nil {
 				t.Fatalf("GetEntry failed: %v", err)
@@ -171,7 +171,7 @@ func TestSetEntriesStatus(t *testing.T) {
 			}
 
 			builder := s.NewEntryQueryBuilder(user.ID)
-			builder.WithStatus(model.EntryStatusRead)
+			builder.WithStatuses(model.EntryStatusRead)
 			count, err := builder.CountEntries()
 			if err != nil {
 				t.Fatalf("CountEntries failed: %v", err)
@@ -291,7 +291,7 @@ func TestMarkAllAsRead(t *testing.T) {
 			}
 
 			builder := s.NewEntryQueryBuilder(user.ID)
-			builder.WithStatus(model.EntryStatusUnread)
+			builder.WithStatuses(model.EntryStatusUnread)
 			count, _ := builder.CountEntries()
 			if count != 0 {
 				t.Errorf("expected 0 unread, got %d", count)
@@ -315,7 +315,7 @@ func TestMarkFeedAsRead(t *testing.T) {
 
 			builder := s.NewEntryQueryBuilder(user.ID)
 			builder.WithFeedID(feed.ID)
-			builder.WithStatus(model.EntryStatusUnread)
+			builder.WithStatuses(model.EntryStatusUnread)
 			count, _ := builder.CountEntries()
 			if count != 0 {
 				t.Errorf("expected 0 unread for feed, got %d", count)
@@ -339,7 +339,7 @@ func TestMarkCategoryAsRead(t *testing.T) {
 
 			builder := s.NewEntryQueryBuilder(user.ID)
 			builder.WithCategoryID(category.ID)
-			builder.WithStatus(model.EntryStatusUnread)
+			builder.WithStatuses(model.EntryStatusUnread)
 			count, _ := builder.CountEntries()
 			if count != 0 {
 				t.Errorf("expected 0 unread for category, got %d", count)
@@ -425,7 +425,7 @@ func TestFlushHistory(t *testing.T) {
 			}
 
 			builder := s.NewEntryQueryBuilder(user.ID)
-			builder.WithStatus(model.EntryStatusRead)
+			builder.WithStatuses(model.EntryStatusRead)
 			count, _ := builder.CountEntries()
 			if count != 0 {
 				t.Errorf("expected 0 read entries after flush, got %d", count)
@@ -467,7 +467,7 @@ func TestEntryQueryBuilderBasicFilters(t *testing.T) {
 
 			// Filter by multiple entry IDs
 			builder = s.NewEntryQueryBuilder(user.ID)
-			builder.WithEntryIDs([]int64{entries[0].ID, entries[2].ID, entries[5].ID})
+			builder.WithEntryIDs(entries[0].ID, entries[2].ID, entries[5].ID)
 			multiEntries, err := builder.GetEntries()
 			if err != nil {
 				t.Fatalf("GetEntries by IDs failed: %v", err)
@@ -506,7 +506,7 @@ func TestEntryQueryBuilderStatusesFilter(t *testing.T) {
 
 			// Query with multiple statuses
 			builder := s.NewEntryQueryBuilder(user.ID)
-			builder.WithStatuses([]string{model.EntryStatusUnread, model.EntryStatusRead})
+			builder.WithStatuses(model.EntryStatusUnread, model.EntryStatusRead)
 			allEntries, err := builder.GetEntries()
 			if err != nil {
 				t.Fatalf("GetEntries with statuses failed: %v", err)
@@ -564,7 +564,7 @@ func TestMarkAllAsReadBeforeDate(t *testing.T) {
 			}
 
 			builder := s.NewEntryQueryBuilder(user.ID)
-			builder.WithStatus(model.EntryStatusUnread)
+			builder.WithStatuses(model.EntryStatusUnread)
 			count, _ := builder.CountEntries()
 			if count != 0 {
 				t.Errorf("expected 0 unread entries, got %d", count)
@@ -603,7 +603,7 @@ func TestMarkGloballyVisibleFeedsAsRead(t *testing.T) {
 			}
 
 			builder := s.NewEntryQueryBuilder(user.ID)
-			builder.WithStatus(model.EntryStatusUnread)
+			builder.WithStatuses(model.EntryStatusUnread)
 			count, _ := builder.CountEntries()
 			if count != 2 {
 				t.Errorf("expected 2 unread entries (from hidden feed), got %d", count)

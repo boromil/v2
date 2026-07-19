@@ -36,7 +36,7 @@ When reporting bugs:
 
 - **Git**
 - **Go >= 1.26**
-- **PostgreSQL** or **SQLite** (both production-ready)
+- **PostgreSQL** or **SQLite**
 
 ### Getting Started
 
@@ -59,7 +59,7 @@ When reporting bugs:
 
 ### Database Setup
 
-Miniflux supports both PostgreSQL (recommended for multi-user deployments) and SQLite (both production-ready).
+Miniflux supports both PostgreSQL (recommended for multi-user deployments) and SQLite.
 
 **Option 1: SQLite (quickest setup — no external database required)**
 

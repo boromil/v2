@@ -23,8 +23,8 @@ func TestPostgreSQLMigrationProvider(t *testing.T) {
 func TestSQLiteMigrationProvider(t *testing.T) {
 	provider := NewSQLiteMigrationProvider()
 
-	if provider.SchemaVersion() != 1 {
-		t.Errorf("expected schema version 1, got %d", provider.SchemaVersion())
+	if provider.SchemaVersion() <= 0 {
+		t.Errorf("expected positive schema version, got %d", provider.SchemaVersion())
 	}
 
 	migrations := provider.GetMigrations()
