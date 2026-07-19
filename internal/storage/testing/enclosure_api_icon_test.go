@@ -38,9 +38,9 @@ func TestEnclosureCreation(t *testing.T) {
 				t.Fatalf("InsertEntryForFeed failed: %v", err)
 			}
 
-			enclosures, err := s.GetEnclosures(entry.ID)
+			enclosures, err := s.EnclosuresByEntryID(entry.ID)
 			if err != nil {
-				t.Fatalf("GetEnclosures failed: %v", err)
+				t.Fatalf("EnclosuresByEntryID failed: %v", err)
 			}
 			if len(enclosures) < 1 {
 				t.Error("expected at least 1 enclosure")
@@ -76,9 +76,9 @@ func TestGetEnclosuresForEntries(t *testing.T) {
 			s.InsertEntryForFeed(user.ID, feed.ID, e1)
 			s.InsertEntryForFeed(user.ID, feed.ID, e2)
 
-			result, err := s.GetEnclosuresForEntries([]int64{e1.ID, e2.ID})
+			result, err := s.EnclosuresByEntryIDs([]int64{e1.ID, e2.ID})
 			if err != nil {
-				t.Fatalf("GetEnclosuresForEntries failed: %v", err)
+				t.Fatalf("EnclosuresByEntryIDs failed: %v", err)
 			}
 			if len(result) != 2 {
 				t.Errorf("expected 2 entry groups, got %d", len(result))
@@ -108,14 +108,14 @@ func TestGetEnclosure(t *testing.T) {
 				t.Fatalf("InsertEntryForFeed failed: %v", err)
 			}
 
-			enclosures, _ := s.GetEnclosures(entry.ID)
+			enclosures, _ := s.EnclosuresByEntryID(entry.ID)
 			if len(enclosures) == 0 {
 				t.Fatal("expected enclosures to be created")
 			}
 
-			fetched, err := s.GetEnclosure(enclosures[0].ID)
+			fetched, err := s.EnclosureByID(user.ID, enclosures[0].ID)
 			if err != nil {
-				t.Fatalf("GetEnclosure failed: %v", err)
+				t.Fatalf("EnclosureByID failed: %v", err)
 			}
 			if fetched == nil {
 				t.Fatal("expected non-nil enclosure")

@@ -34,6 +34,7 @@
     "confirm.loading": "실행 중…",
     "confirm.no": "아니요",
     "confirm.question": "진행하시겠습니까?",
+    "confirm.question.delete_category": "이 작업은 피드 %d개와 해당 항목도 모두 삭제합니다. 진행하시겠습니까?",
     "confirm.question.refresh": "강제로 새로 고치시겠습니까?",
     "confirm.yes": "예",
     "enclosure_media_controls.seek": "탐색:",

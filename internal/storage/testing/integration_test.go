@@ -108,7 +108,7 @@ func TestEntryPublishedAtScan(t *testing.T) {
 
 			// Fetch entry back — exercises published_at scan via fetchEntries
 			builder := s.NewEntryQueryBuilder(user.ID)
-			builder.WithEntryID(entry.ID)
+			builder.WithEntryIDs(entry.ID)
 			fetched, err := builder.GetEntry()
 			if err != nil {
 				t.Fatalf("GetEntry failed: %v", err)
@@ -123,7 +123,7 @@ func TestEntryPublishedAtScan(t *testing.T) {
 
 			// Test with count (GetEntriesWithCount) — exercises withCount=true scan path
 			builder2 := s.NewEntryQueryBuilder(user.ID)
-			builder2.WithEntryID(entry.ID)
+			builder2.WithEntryIDs(entry.ID)
 			entries, count, err := builder2.GetEntriesWithCount()
 			if err != nil {
 				t.Fatalf("GetEntriesWithCount failed: %v", err)

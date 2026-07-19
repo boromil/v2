@@ -31,7 +31,7 @@ func TestEntryPaginationBuilderWithSearchQuery(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Storage{dialect: tt.dialect}
-			b := NewEntryPaginationBuilder(s, 1, 100, "published_at", "desc")
+			b := s.NewEntryPaginationBuilder(1, 100, "published_at", "desc")
 			b.WithSearchQuery("test query")
 
 			if len(b.conditions) != 2 {
@@ -55,7 +55,7 @@ func TestEntryPaginationBuilderWithSearchQuery(t *testing.T) {
 
 func TestEntryPaginationBuilderWithSearchQueryEmpty(t *testing.T) {
 	s := &Storage{dialect: &dialect.SQLiteDialect{}}
-	b := NewEntryPaginationBuilder(s, 1, 100, "published_at", "desc")
+	b := s.NewEntryPaginationBuilder(1, 100, "published_at", "desc")
 	b.WithSearchQuery("")
 
 	if len(b.conditions) != 1 {
@@ -87,7 +87,7 @@ func TestEntryPaginationBuilderWithTags(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Storage{dialect: tt.dialect}
-			b := NewEntryPaginationBuilder(s, 1, 100, "published_at", "desc")
+			b := s.NewEntryPaginationBuilder(1, 100, "published_at", "desc")
 			b.WithTags([]string{"golang", "testing"})
 
 			if len(b.conditions) != 3 {
@@ -110,7 +110,7 @@ func TestEntryPaginationBuilderWithTags(t *testing.T) {
 
 func TestEntryPaginationBuilderWithTagsEmpty(t *testing.T) {
 	s := &Storage{dialect: &dialect.SQLiteDialect{}}
-	b := NewEntryPaginationBuilder(s, 1, 100, "published_at", "desc")
+	b := s.NewEntryPaginationBuilder(1, 100, "published_at", "desc")
 	b.WithTags(nil)
 
 	if len(b.conditions) != 1 {
@@ -121,7 +121,7 @@ func TestEntryPaginationBuilderWithTagsEmpty(t *testing.T) {
 func TestEntryPaginationBuilderPlaceholderSpacing(t *testing.T) {
 	// Verify placeholder indices are sequential and correctly spaced
 	s := &Storage{dialect: &dialect.PostgreSQLDialect{}}
-	b := NewEntryPaginationBuilder(s, 1, 100, "published_at", "desc")
+	b := s.NewEntryPaginationBuilder(1, 100, "published_at", "desc")
 	b.WithStatus("unread")  // adds $2
 	b.WithSearchQuery("go") // adds $3
 

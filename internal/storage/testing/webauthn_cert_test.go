@@ -123,7 +123,10 @@ func TestWebAuthnSaveLogin(t *testing.T) {
 				Authenticator:   webauthn.Authenticator{AAGUID: []byte{3}, SignCount: 0},
 			})
 
-			if err := s.WebAuthnSaveLogin(handle); err != nil {
+			cred := &webauthn.Credential{
+				Authenticator: webauthn.Authenticator{SignCount: 1},
+			}
+			if err := s.WebAuthnSaveLogin(handle, cred); err != nil {
 				t.Fatalf("WebAuthnSaveLogin failed: %v", err)
 			}
 
@@ -149,7 +152,7 @@ func TestWebAuthnUpdateName(t *testing.T) {
 				Authenticator:   webauthn.Authenticator{AAGUID: []byte{3}, SignCount: 0},
 			})
 
-			if err := s.WebAuthnUpdateName(handle, "My Security Key"); err != nil {
+			if _, err := s.WebAuthnUpdateName(user.ID, handle, "My Security Key"); err != nil {
 				t.Fatalf("WebAuthnUpdateName failed: %v", err)
 			}
 

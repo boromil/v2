@@ -351,7 +351,7 @@ CREATE TABLE webauthn_credentials (
     aaguid BLOB,
     sign_count bigint,
     clone_warning int,
-    name text,
+    name text not null default '',
     added_on DATETIME default (datetime('now')),
     last_seen_on DATETIME default (datetime('now'))
 );
