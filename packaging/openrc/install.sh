@@ -218,18 +218,18 @@ if [ "$ENABLE_SERVICE" -eq 1 ]; then
     if [ -n "$ADMIN_USERNAME" ] && [ -n "$ADMIN_PASSWORD" ]; then
       echo "[*] Creating admin user: $ADMIN_USERNAME (non-interactive)..."
 
-      # Write the password to a temp file (0600, root-only) and point miniflux
-      # at it via ADMIN_PASSWORD_FILE. This avoids leaking the password into
-      # the process table (su -c '... PASSWORD=...' would show in `ps`).
-      _pw_file="$(mktemp)"
-      chmod 0600 "$_pw_file"
-      printf '%s' "$ADMIN_PASSWORD" > "$_pw_file"
-
-      # Run as the miniflux user so SQLite files keep correct ownership.
-      # timeout caps runtime: miniflux would otherwise fall through to startDaemon.
-      # env -i prevents inheriting install.sh's env (which holds ADMIN_PASSWORD).
+      # Pass credentials as env-var prefixes to the miniflux command. This is
+      # POSIX sh: `VAR=val cmd` sets the var in cmd's environment only, without
+      # putting it in argv (so it doesn't show in `ps`). The password lives in
+      # install.sh's shell variable and miniflux's process env briefly; it is
+      # never written to disk.
+      #
+      # su's default is a cleaned env (doesn't preserve parent's env unless -p),
+      # so the inline VAR=val prefix is the only path credentials take into
+      # miniflux. timeout caps runtime: miniflux would otherwise fall through
+      # to startDaemon.
       su -s /bin/sh miniflux -c \
-        "env -i CREATE_ADMIN=1 ADMIN_USERNAME='$ADMIN_USERNAME' ADMIN_PASSWORD_FILE='$_pw_file' \
+        "CREATE_ADMIN=1 ADMIN_USERNAME='$ADMIN_USERNAME' ADMIN_PASSWORD='$ADMIN_PASSWORD' \
          timeout 15 /usr/bin/miniflux --config-file /etc/miniflux.conf" \
         >/var/log/miniflux-admin.log 2>&1 &
       _admin_pid=$!
@@ -250,18 +250,27 @@ if [ "$ENABLE_SERVICE" -eq 1 ]; then
       done
       kill "$_admin_pid" 2>/dev/null || true
       wait "$_admin_pid" 2>/dev/null || true
-      rm -f "$_pw_file"
 
       if [ "$_admin_ok" -ne 1 ]; then
-        echo "Warning: admin creation may have failed. See /var/log/miniflux-admin.log"
+        echo "Error: admin creation failed. Last 20 lines of miniflux output:"
+        echo "---"
+        tail -n 20 /var/log/miniflux-admin.log 2>/dev/null || echo "(no log file)"
+        echo "---"
+        echo "Full log: /var/log/miniflux-admin.log"
       fi
     else
       echo "[*] Creating admin user (interactive)..."
       # Run as the miniflux user so SQLite files keep correct ownership.
       # su inherits the parent's TTY by default (does not break term.IsTerminal);
       # the no-TTY case is already handled by the [ -t 0 ] guard above.
-      su -s /bin/sh miniflux -c \
-        "/usr/bin/miniflux --config-file /etc/miniflux.conf --create-admin"
+      # The if/else consumes the exit code, so set -e won't abort the install.
+      if su -s /bin/sh miniflux -c \
+        "/usr/bin/miniflux --config-file /etc/miniflux.conf --create-admin"; then
+        _admin_ok=1
+      else
+        _admin_ok=0
+        echo "Error: interactive admin creation failed."
+      fi
     fi
 
     echo "[*] Restarting miniflux service..."
@@ -274,8 +283,11 @@ echo "=== Installation complete ==="
 echo ""
 if [ "$ENABLE_SERVICE" -eq 1 ]; then
   echo "Next steps:"
-  if [ "$CREATE_ADMIN" -eq 1 ] && [ -n "$ADMIN_USERNAME" ]; then
+  if [ "$CREATE_ADMIN" -eq 1 ] && [ -n "$ADMIN_USERNAME" ] && [ "${_admin_ok:-0}" -eq 1 ]; then
     echo "  1. Admin user created: $ADMIN_USERNAME"
+  elif [ "$CREATE_ADMIN" -eq 1 ]; then
+    echo "  1. Admin user creation FAILED. See /var/log/miniflux-admin.log"
+    echo "     To retry: su -s /bin/sh miniflux -c '/usr/bin/miniflux --config-file /etc/miniflux.conf --create-admin'"
   else
     echo "  1. No admin user was created. Create one interactively with:"
     echo "       su -s /bin/sh miniflux -c '/usr/bin/miniflux --config-file /etc/miniflux.conf --create-admin'"
