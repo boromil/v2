@@ -77,6 +77,7 @@ Features
 - Webhooks for real-time notifications or custom integrations.
 - Compatibility with existing mobile applications using the Fever or Google Reader API.
 - REST API with client libraries available in [Go](https://github.com/miniflux/v2/tree/main/client) and [Python](https://github.com/miniflux/python-client).
+- [Model Context Protocol (MCP)](#model-context-protocol-mcp) for AI agent integration.
 
 ### Authentication
 
@@ -124,6 +125,7 @@ The Miniflux documentation is available here: <https://miniflux.app/docs/> ([Man
 - [User Interface Usage](https://miniflux.app/docs/ui.html)
 - [Keyboard Shortcuts](https://miniflux.app/docs/keyboard_shortcuts.html)
 - [Integration with External Services](https://miniflux.app/docs/#integrations)
+- [Model Context Protocol (MCP)](#model-context-protocol-mcp)
 - [Rewrite and Scraper Rules](https://miniflux.app/docs/rules.html)
 - [API Reference](https://miniflux.app/docs/api.html)
 - [Development](https://miniflux.app/docs/development.html)
@@ -140,6 +142,149 @@ Default theme:
 Dark theme when using keyboard navigation:
 
 ![Dark theme](https://miniflux.app/images/item-selection-black-theme.png)
+
+Model Context Protocol (MCP)
+----------------------------
+
+Miniflux exposes an MCP endpoint at `/v1/mcp` so AI agents can query feeds and entries without knowing RSS internals.
+
+**Endpoint:** `POST /v1/mcp` (JSON-RPC 2.0 over HTTP) or `GET /v1/mcp` (SSE streaming)
+
+The server supports both transports from MCP spec 2024-11-05:
+- **POST** — plain request/response. Simplest for scripting and curl.
+- **GET** — opens a persistent Server-Sent Events stream; the server emits an `endpoint` event with a session-scoped POST URL, then streams JSON-RPC responses back. Required by clients like OpenCode that use the SSE transport.
+
+**Authentication:** Same as the REST API — API key (header `X-Auth-Token`) or basic auth (`-u user:pass`).
+
+### Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `list_feeds` | List RSS feeds with filtering by category and pagination |
+| `get_entries` | Query entries by feed, category, status, starred, full-text search; sort + paginate |
+| `mark_entries` | Set status (read / unread) on one or more entries |
+| `toggle_bookmark` | Toggle the starred flag on a single entry |
+| `list_categories` | List all feed categories |
+| `mark_feed_as_read` | Mark all unread entries in a feed as read |
+| `mark_category_as_read` | Mark all unread entries in a category as read |
+| `refresh_feed` | Refresh a single feed now (fetch new entries from source) |
+
+### Configuration Examples
+
+**OpenCode** (`.opencode.json`):
+```json
+{
+  "mcpServers": {
+    "miniflux": {
+      "url": "http://localhost:8080/v1/mcp"
+    }
+  }
+}
+```
+
+Or with credentials:
+```json
+{
+  "mcpServers": {
+    "miniflux": {
+      "url": "http://localhost:8080/v1/mcp",
+      "auth": {
+        "username": "admin",
+        "password": "your-password"
+      }
+    }
+  }
+}
+```
+
+**Claude Desktop** (`claude_desktop_config.json`):
+```json
+{
+  "mcpServers": {
+    "miniflux": {
+      "command": "curl",
+      "args": [
+        "-s",
+        "-u",
+        "admin:your-password",
+        "http://localhost:8080/v1/mcp"
+      ]
+    }
+  }
+}
+```
+
+**Cursor / Windsurf** (`.cursor/mcp.json` or `.windsurf/mcp.json`):
+```json
+{
+  "mcpServers": {
+    "miniflux": {
+      "url": "http://localhost:8080/v1/mcp",
+      "headers": {
+        "Authorization": "Basic YWRtaW46eW91ci1wYXNzd29yZA=="
+      }
+    }
+  }
+}
+```
+
+### Testing
+
+```bash
+# Query available tools
+curl -s http://localhost:8080/v1/mcp \
+  --user admin:your-password \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'
+
+# List feeds (paginated)
+curl -s http://localhost:8080/v1/mcp \
+  --user admin:your-password \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"tools/call","id":2,"params":{"name":"list_feeds","arguments":{"limit":10}}}'
+
+# List 10 most recent unread entries
+curl -s http://localhost:8080/v1/mcp \
+  --user admin:your-password \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"tools/call","id":3,"params":{"name":"get_entries","arguments":{"status":"unread","limit":10,"direction":"desc"}}}'
+
+# Mark entries 1, 2, 3 as read
+curl -s http://localhost:8080/v1/mcp \
+  --user admin:your-password \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"tools/call","id":4,"params":{"name":"mark_entries","arguments":{"entry_ids":[1,2,3],"status":"read"}}}'
+
+# Toggle bookmark on entry 42
+curl -s http://localhost:8080/v1/mcp \
+  --user admin:your-password \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"tools/call","id":5,"params":{"name":"toggle_bookmark","arguments":{"entry_id":42}}}'
+
+# List categories
+curl -s http://localhost:8080/v1/mcp \
+  --user admin:your-password \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"tools/call","id":6,"params":{"name":"list_categories","arguments":{}}}'
+
+# Mark all entries in feed 7 as read
+curl -s http://localhost:8080/v1/mcp \
+  --user admin:your-password \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"tools/call","id":7,"params":{"name":"mark_feed_as_read","arguments":{"feed_id":7}}}'
+
+# Mark all entries in category 2 as read
+curl -s http://localhost:8080/v1/mcp \
+  --user admin:your-password \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"tools/call","id":8,"params":{"name":"mark_category_as_read","arguments":{"category_id":2}}}'
+
+# Refresh feed 7
+curl -s http://localhost:8080/v1/mcp \
+  --user admin:your-password \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"tools/call","id":9,"params":{"name":"refresh_feed","arguments":{"feed_id":7}}}'
+```
 
 Credits
 -------
