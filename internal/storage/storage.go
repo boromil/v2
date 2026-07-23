@@ -63,6 +63,17 @@ func (s *Storage) DatabaseVersion() string {
 	return dbVersion
 }
 
+// DatabaseTypeName returns the human-readable name of the database backend
+// ("PostgreSQL" or "SQLite"), used for display in the about page.
+func (s *Storage) DatabaseTypeName() string {
+	switch s.dialect.DatabaseType() {
+	case dialect.SQLite:
+		return "SQLite"
+	default:
+		return "PostgreSQL"
+	}
+}
+
 // Ping checks if the database connection works.
 func (s *Storage) Ping() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
