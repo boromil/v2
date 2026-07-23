@@ -1,0 +1,8 @@
+/var/log/miniflux.log {
+	daily
+	missingok
+	notifempty
+	rotate 15
+	compress
+	copytruncate
+}
