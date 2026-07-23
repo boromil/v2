@@ -1,0 +1,15 @@
+#!/bin/sh
+
+# Create miniflux group if missing. Tolerate "already exists"; fail on real errors.
+# (busybox has no getent; grep /etc/group is portable.)
+if ! grep -q '^miniflux:' /etc/group 2>/dev/null; then
+  addgroup -S miniflux || { echo "Error: failed to create group miniflux" >&2; exit 1; }
+fi
+
+# Create miniflux system user if missing. (id is present on busybox.)
+if ! id miniflux >/dev/null 2>&1; then
+  adduser -S -D -H -h /var/empty -s /sbin/nologin -G miniflux -g miniflux miniflux \
+    || { echo "Error: failed to create user miniflux" >&2; exit 1; }
+fi
+
+exit 0

@@ -1,0 +1,73 @@
+OpenRC Scripts for Miniflux on Alpine Linux
+============================================
+
+Files:
+  miniflux                  OpenRC init script
+  miniflux.conf             OpenRC conf.d (supervisor settings)
+  miniflux.conf.application Miniflux application config (SQLite defaults)
+  miniflux.pre-install      User/group creation script
+  logrotate-miniflux        Logrotate configuration
+  install.sh                Convenience install script (run as root, builds from source, creates admin)
+
+Quick install (as root):
+  sh packaging/openrc/install.sh
+
+This will:
+  - Build the miniflux binary from source (SQLite support included)
+  - Create the miniflux system user/group
+  - Prompt for admin username and password (or skip to create no admin)
+  - Create /var/lib/miniflux/ for the SQLite database
+  - Install the init script, OpenRC config, and application config
+  - Install logrotate configuration
+  - Initialize the database file
+  - Start the service and create the admin user via the miniflux CLI
+
+The config file (/etc/miniflux.conf) is installed clean (mode 0644) — no admin
+credentials are ever written to it.  Admin creation is done via the miniflux
+CLI after the service starts:
+
+  - Interactive mode (default):  miniflux --config-file /etc/miniflux.conf --create-admin
+                                  (requires a TTY)
+  - Non-interactive mode:        --admin-user/--admin-pass flags to install.sh.
+                                  Password is passed via ADMIN_PASSWORD_FILE (a
+                                  0600 root-only temp file), never in argv.
+
+Security notes:
+  - /etc/miniflux.conf holds no secrets (0644 is safe).
+  - In non-interactive mode, the password lives briefly in a 0600 root-owned
+    temp file, deleted after admin creation. It is NOT passed on the miniflux
+    command line (would be visible in `ps`).
+  - --admin-pass on the install.sh command line is visible in shell history.
+    Prefer interactive mode on shared hosts.
+  - logrotate uses copytruncate (no service restart, no downtime).
+  - The miniflux daemon runs as the unprivileged `miniflux` user.
+
+Install from pre-built binary (e.g., from apk):
+  sh packaging/openrc/install.sh --no-build
+
+Custom options:
+  sh packaging/openrc/install.sh --sqlite-dir /path/to/db
+  sh packaging/openrc/install.sh --no-enable    # don't enable/start at boot
+  sh packaging/openrc/install.sh --no-backup    # don't backup existing config
+  sh packaging/openrc/install.sh --no-build     # skip building from source
+  sh packaging/openrc/install.sh --no-admin     # skip admin creation entirely
+  sh packaging/openrc/install.sh --admin-user myuser --admin-pass mypass  # non-interactive admin
+
+Manual install (without install.sh):
+  1. cp packaging/openrc/miniflux /etc/init.d/miniflux
+  2. cp packaging/openrc/miniflux.conf /etc/conf.d/miniflux
+  3. cp packaging/openrc/miniflux.conf.application /etc/miniflux.conf
+  4. cp packaging/openrc/logrotate-miniflux /etc/logrotate.d/miniflux
+  5. rc-update add miniflux default
+  6. service miniflux start
+
+  To create an admin user interactively:
+  7. service miniflux start
+  8. miniflux --config-file /etc/miniflux.conf --create-admin
+
+Configuration:
+  Edit /etc/miniflux.conf to customize settings. Key defaults:
+    - DATABASE_TYPE=sqlite
+    - DATABASE_URL=/var/lib/miniflux/miniflux.db
+    - LISTEN_ADDR=127.0.0.1:8080
+    - RUN_MIGRATIONS=1

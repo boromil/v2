@@ -1,0 +1,22 @@
+# Application configuration for Miniflux on Alpine Linux (SQLite3)
+
+# Run database migrations automatically on startup
+RUN_MIGRATIONS=1
+
+# Listen on localhost by default (change to 0.0.0.0 for external access)
+LISTEN_ADDR=127.0.0.1:8080
+
+# Use SQLite3 database (default for Alpine deployment)
+DATABASE_TYPE=sqlite
+DATABASE_URL=/var/lib/miniflux/miniflux.db
+
+# Admin user is NOT created via config. Use the CLI instead:
+#   miniflux --config-file /etc/miniflux.conf --create-admin
+# (or let install.sh handle it: --admin-user/--admin-pass)
+# CREATE_ADMIN=1
+# ADMIN_USERNAME=admin
+# ADMIN_PASSWORD=changeme
+
+# Logging
+LOG_DATE_TIME=yes
+LOG_LEVEL=info
