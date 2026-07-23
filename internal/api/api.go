@@ -6,6 +6,7 @@ package api // import "miniflux.app/v2/internal/api"
 import (
 	"net/http"
 
+	"miniflux.app/v2/internal/mcp"
 	"miniflux.app/v2/internal/storage"
 	"miniflux.app/v2/internal/worker"
 )
@@ -73,6 +74,11 @@ func NewHandler(store *storage.Storage, pool *worker.Pool) http.Handler {
 	mux.HandleFunc("POST /v1/api-keys", handler.createAPIKeyHandler)
 	mux.HandleFunc("GET /v1/api-keys", handler.getAPIKeysHandler)
 	mux.HandleFunc("DELETE /v1/api-keys/{apiKeyID}", handler.deleteAPIKeyHandler)
+
+	// MCP endpoint: SSE (GET) + JSON-RPC 2.0 (POST) on /v1/mcp.
+	mcpHandler := mcp.NewMCPHandler(store)
+	mux.Handle("GET /v1/mcp", mcpHandler)
+	mux.Handle("POST /v1/mcp", mcpHandler)
 
 	return middleware.withCORSHeaders(middleware.validateAPIKeyAuth(middleware.validateBasicAuth(mux)))
 }
