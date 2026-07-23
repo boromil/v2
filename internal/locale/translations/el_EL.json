@@ -439,6 +439,7 @@
     "page.about.go_version": "Έκδοση Go:",
     "page.about.license": "Άδεια:",
     "page.about.postgres_version": "Έκδοση Postgres:",
+    "page.about.sqlite_version": "Έκδοση SQLite:",
     "page.about.title": "Περί",
     "page.about.version": "Έκδοση:",
     "page.add_feed.choose_feed": "Επιλέξτε μια συνδρομή",

@@ -439,6 +439,7 @@
     "page.about.go_version": "Go-versio:",
     "page.about.license": "Lisenssi:",
     "page.about.postgres_version": "Postgres-versio:",
+    "page.about.sqlite_version": "SQLite-versio:",
     "page.about.title": "Tietoja",
     "page.about.version": "Versio:",
     "page.add_feed.choose_feed": "Valitse tilaus",

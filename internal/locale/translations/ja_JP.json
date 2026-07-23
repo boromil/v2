@@ -436,6 +436,7 @@
     "page.about.go_version": "Go バージョン:",
     "page.about.license": "ライセンス:",
     "page.about.postgres_version": "Postgres バージョン:",
+    "page.about.sqlite_version": "SQLite バージョン:",
     "page.about.title": "ソフトウェア情報",
     "page.about.version": "バージョン:",
     "page.add_feed.choose_feed": "フィードを選択",

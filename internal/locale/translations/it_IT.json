@@ -439,6 +439,7 @@
     "page.about.go_version": "Go versione:",
     "page.about.license": "Licenza:",
     "page.about.postgres_version": "Postgres versione:",
+    "page.about.sqlite_version": "SQLite versione:",
     "page.about.title": "Informazioni",
     "page.about.version": "Versione:",
     "page.add_feed.choose_feed": "Scegli un feed",

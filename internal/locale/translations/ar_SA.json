@@ -451,6 +451,7 @@
     "page.about.go_version": "إصدار Go:",
     "page.about.license": "الرخصة:",
     "page.about.postgres_version": "إصدار Postgres:",
+    "page.about.sqlite_version": "إصدار SQLite:",
     "page.about.title": "حول",
     "page.about.version": "الإصدار:",
     "page.add_feed.choose_feed": "اختر مصدراً",

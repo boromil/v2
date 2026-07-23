@@ -442,6 +442,7 @@
     "page.about.go_version": "Версія Go:",
     "page.about.license": "Ліцензія:",
     "page.about.postgres_version": "Версія Postgres:",
+    "page.about.sqlite_version": "Версія SQLite:",
     "page.about.title": "Про додадок",
     "page.about.version": "Версія:",
     "page.add_feed.choose_feed": "Обрати підписку",

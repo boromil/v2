@@ -436,6 +436,7 @@
     "page.about.go_version": "Go 版本：",
     "page.about.license": "授權：",
     "page.about.postgres_version": "Postgres 版本：",
+    "page.about.sqlite_version": "SQLite 版本：",
     "page.about.title": "關於",
     "page.about.version": "版本：",
     "page.add_feed.choose_feed": "選擇一個 Feed",
