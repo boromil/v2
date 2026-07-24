@@ -23,6 +23,30 @@ import (
 	"miniflux.app/v2/internal/storage"
 )
 
+// MinContentLengthToAutoFetch is the threshold (in characters of visible
+// text, after stripping HTML) below which an entry is considered a stub and
+// will be auto-fetched when the user has enabled the
+// "auto_fetch_short_entries" preference. Only the visible text is measured so
+// that HTML markup, attributes, and metadata do not inflate the length.
+const MinContentLengthToAutoFetch = 200
+
+// shouldCrawlEntry reports whether the original web page should be fetched for
+// an entry. This is the case when the per-feed crawler is enabled, or when the
+// user has opted into auto-fetching short entries (visible text shorter than
+// MinContentLengthToAutoFetch characters).
+func shouldCrawlEntry(feed *model.Feed, entry *model.Entry, user *model.User) bool {
+	return feed.Crawler ||
+		(user.AutoFetchShortEntries && EntryContentTextLength(entry.Content) < MinContentLengthToAutoFetch)
+}
+
+// EntryContentTextLength returns the length of the visible text in an entry's
+// HTML content, after stripping tags and whitespace. Exported so that other
+// packages (e.g. the UI on-demand fetch) can apply the same shortness check as
+// the feed processor.
+func EntryContentTextLength(content string) int {
+	return len(sanitizer.StripTags(content))
+}
+
 // ProcessFeedEntries downloads original web page for entries and apply filters.
 func ProcessFeedEntries(store *storage.Storage, feed *model.Feed, userID int64, forceRefresh bool) {
 	var filteredEntries model.Entries
@@ -94,7 +118,7 @@ func ProcessFeedEntries(store *storage.Storage, feed *model.Feed, userID int64, 
 		entry.URL = rewrite.RewriteEntryURL(feed, entry)
 		entryIsNew := store.IsNewEntry(feed.ID, entry.Hash)
 		contentExtractedSuccessfully := false
-		if feed.Crawler && (entryIsNew || forceRefresh) {
+		if shouldCrawlEntry(feed, entry, user) && (entryIsNew || forceRefresh) {
 			slog.Debug("Scraping entry",
 				slog.Int64("user_id", user.ID),
 				slog.String("entry_url", entry.URL),

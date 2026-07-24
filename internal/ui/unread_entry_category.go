@@ -87,6 +87,8 @@ func (h *handler) showUnreadCategoryEntryPage(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	h.autoFetchShortEntryContent(user, entry)
+
 	view := view.New(h.tpl, r)
 	view.Set("entry", entry)
 	view.Set("prevEntry", prevEntry)

@@ -5,6 +5,9 @@ package form // import "miniflux.app/v2/internal/ui/form"
 
 import (
 	"testing"
+
+	"miniflux.app/v2/internal/config"
+	"miniflux.app/v2/internal/model"
 )
 
 func TestValid(t *testing.T) {
@@ -83,5 +86,27 @@ func TestConfirmationIncorrect(t *testing.T) {
 	err := settings.Validate()
 	if err == nil {
 		t.Error("Validate should return an error")
+	}
+}
+
+func TestMergeAutoFetchShortEntries(t *testing.T) {
+	// Regression test: the auto_fetch_short_entries preference must propagate
+	// from the settings form into the user model on save, and from the user
+	// model back into the form on page load (see settings_show.go).
+	config.Opts = config.NewConfigOptions()
+	user := &model.User{}
+
+	// Disabled by default.
+	form := &SettingsForm{AutoFetchShortEntries: false}
+	form.Merge(user)
+	if user.AutoFetchShortEntries {
+		t.Error("expected AutoFetchShortEntries to be false after merge")
+	}
+
+	// Enabled via form.
+	form = &SettingsForm{AutoFetchShortEntries: true}
+	form.Merge(user)
+	if !user.AutoFetchShortEntries {
+		t.Error("expected AutoFetchShortEntries to be true after merge")
 	}
 }

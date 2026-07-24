@@ -51,6 +51,8 @@ func (h *handler) showFeedEntryPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.autoFetchShortEntryContent(user, entry)
+
 	prevEntry, nextEntry, err := h.store.NewEntryPaginationBuilder(user.ID, entry.ID, user.EntryOrder, user.EntryDirection).
 		WithFeedID(feedID).
 		Entries()

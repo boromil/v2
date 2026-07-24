@@ -52,6 +52,8 @@ func (h *handler) showSearchEntryPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.autoFetchShortEntryContent(user, entry)
+
 	entryPaginationBuilder := h.store.NewEntryPaginationBuilder(user.ID, entry.ID, user.EntryOrder, user.EntryDirection).
 		WithSearchQuery(searchQuery)
 	if unreadOnly {
