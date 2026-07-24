@@ -50,6 +50,7 @@ type SettingsForm struct {
 	EntrySwipe                bool
 	MarkReadOnView            bool
 	ShowReadingTime           bool
+	AutoFetchShortEntries     bool
 }
 
 // MarkAsReadBehavior returns the MarkReadBehavior from the given MarkReadOnView and MarkReadOnMediaPlayerCompletion values.
@@ -111,6 +112,7 @@ func (s *SettingsForm) Merge(user *model.User) *model.User {
 	user.KeepFilterEntryRules = s.KeepFilterEntryRules
 	user.AlwaysOpenExternalLinks = s.AlwaysOpenExternalLinks
 	user.OpenExternalLinksInNewTab = s.OpenExternalLinksInNewTab
+	user.AutoFetchShortEntries = s.AutoFetchShortEntries
 
 	MarkReadOnView, MarkReadOnMediaPlayerCompletion := extractMarkAsReadBehavior(s.MarkReadBehavior)
 	user.MarkReadOnView = MarkReadOnView
@@ -186,5 +188,6 @@ func NewSettingsForm(r *http.Request) *SettingsForm {
 		KeepFilterEntryRules:      r.FormValue("keep_filter_entry_rules"),
 		AlwaysOpenExternalLinks:   r.FormValue("always_open_external_links") == "1",
 		OpenExternalLinksInNewTab: r.FormValue("open_external_links_in_new_tab") == "1",
+		AutoFetchShortEntries:     r.FormValue("auto_fetch_short_entries") == "1",
 	}
 }

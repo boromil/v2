@@ -370,6 +370,7 @@
     "form.prefs.fieldset.reader_settings": "रीडर सेटिंग्स",
     "form.prefs.help.external_font_hosts": "अनुमति प्राप्त बाहरी फ़ॉन्ट होस्ट की सूची (स्पेस से पृथक). उदाहरण: \"fonts.gstatic.com fonts.googleapis.com\".",
     "form.prefs.label.always_open_external_links": "बाहरी लिंक खोलकर लेख पढ़ें",
+    "form.prefs.label.auto_fetch_short_entries": "Automatically fetch full content for short entries",
     "form.prefs.label.categories_sorting_order": "श्रेणियाँ छँटाई",
     "form.prefs.label.cjk_reading_speed": "चीनी, कोरियाई और जापानी के लिए पढ़ने की गति (प्रति मिनट वर्ण)",
     "form.prefs.label.custom_css": "कस्टम सीएसएस",

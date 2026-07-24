@@ -370,6 +370,7 @@
     "form.prefs.fieldset.reader_settings": "Lees Instellingen",
     "form.prefs.help.external_font_hosts": "Spatiegescheiden lijst van externe font-hosts die zijn toegestaan. Bijvoorbeeld: 'fonts.gstatic.com fonts.googleapis.com'.",
     "form.prefs.label.always_open_external_links": "Lees artikelen door externe links te openen",
+    "form.prefs.label.auto_fetch_short_entries": "Automatically fetch full content for short entries",
     "form.prefs.label.categories_sorting_order": "Volgorde categorieën",
     "form.prefs.label.cjk_reading_speed": "Leessnelheid voor Chinees, Koreaans en Japans (tekens per minuut)",
     "form.prefs.label.custom_css": "Aangepaste CSS",

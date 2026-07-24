@@ -168,6 +168,7 @@ func TestMe(t *testing.T) {
 		ExternalFontHosts:         "https://fonts.googleapis.com",
 		AlwaysOpenExternalLinks:   true,
 		OpenExternalLinksInNewTab: true,
+		AutoFetchShortEntries:     true,
 	}
 
 	client := NewClientWithOptions(

@@ -47,6 +47,7 @@ func (h *handler) showSettingsPage(w http.ResponseWriter, r *http.Request) {
 		KeepFilterEntryRules:      user.KeepFilterEntryRules,
 		AlwaysOpenExternalLinks:   user.AlwaysOpenExternalLinks,
 		OpenExternalLinksInNewTab: user.OpenExternalLinksInNewTab,
+		AutoFetchShortEntries:     user.AutoFetchShortEntries,
 	}
 
 	view := view.New(h.tpl, r)

@@ -69,6 +69,8 @@ func (h *handler) showTagEntryPage(w http.ResponseWriter, r *http.Request) {
 		prevEntryRoute = h.routePath("/tags/%s/entry/%d", url.PathEscape(tagName), prevEntry.ID)
 	}
 
+	h.autoFetchShortEntryContent(user, entry)
+
 	view := view.New(h.tpl, r)
 	view.Set("entry", entry)
 	view.Set("prevEntry", prevEntry)

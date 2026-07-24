@@ -382,6 +382,7 @@
     "form.prefs.fieldset.reader_settings": "إعدادات القارئ",
     "form.prefs.help.external_font_hosts": "قائمة مفصولة بمسافات لمضيفي الخطوط الخارجية للسماح بها. مثال: \"fonts.gstatic.com fonts.googleapis.com\".",
     "form.prefs.label.always_open_external_links": "قراءة المقالات عن طريق فتح الروابط الخارجية",
+    "form.prefs.label.auto_fetch_short_entries": "Automatically fetch full content for short entries",
     "form.prefs.label.categories_sorting_order": "فرز الفئات",
     "form.prefs.label.cjk_reading_speed": "سرعة القراءة للغات الصينية والكورية واليابانية (حرف في الدقيقة)",
     "form.prefs.label.custom_css": "CSS مخصص",

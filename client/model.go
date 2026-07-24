@@ -47,6 +47,7 @@ type User struct {
 	ExternalFontHosts         string     `json:"external_font_hosts"`
 	AlwaysOpenExternalLinks   bool       `json:"always_open_external_links"`
 	OpenExternalLinksInNewTab bool       `json:"open_external_links_in_new_tab"`
+	AutoFetchShortEntries     bool       `json:"auto_fetch_short_entries"`
 }
 
 func (u User) String() string {
@@ -91,6 +92,7 @@ type UserModificationRequest struct {
 	ExternalFontHosts         *string  `json:"external_font_hosts"`
 	AlwaysOpenExternalLinks   *bool    `json:"always_open_external_links"`
 	OpenExternalLinksInNewTab *bool    `json:"open_external_links_in_new_tab"`
+	AutoFetchShortEntries     *bool    `json:"auto_fetch_short_entries"`
 }
 
 // Users represents a list of users.

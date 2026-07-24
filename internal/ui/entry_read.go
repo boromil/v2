@@ -39,6 +39,8 @@ func (h *handler) showReadEntryPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.autoFetchShortEntryContent(user, entry)
+
 	prevEntry, nextEntry, err := h.store.NewEntryPaginationBuilder(user.ID, entry.ID, "changed_at", "desc").
 		WithStatus(model.EntryStatusRead).
 		Entries()

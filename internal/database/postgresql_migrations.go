@@ -1590,4 +1590,10 @@ var migrations = [...]func(tx *sql.Tx) error{
 		_, err = tx.Exec(sql)
 		return err
 	},
+	func(tx *sql.Tx) (err error) {
+		_, err = tx.Exec(`
+			ALTER TABLE users ADD COLUMN auto_fetch_short_entries boolean default 'f';
+		`)
+		return err
+	},
 }
