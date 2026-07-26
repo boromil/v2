@@ -19,6 +19,8 @@ import (
 
 func (h *handler) checkLogin(w http.ResponseWriter, r *http.Request) {
 	clientIP := request.ClientIP(r)
+	session := request.WebSession(r)
+	language := session.Language()
 	view := view.New(h.tpl, r)
 	redirectURL := r.FormValue("redirect_url")
 	view.Set("redirectURL", redirectURL)
@@ -33,11 +35,17 @@ func (h *handler) checkLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	authForm := form.NewAuthForm(r)
-	view.Set("errorMessage", locale.NewLocalizedError("error.bad_credentials").Translate(request.WebSession(r).Language()))
-	view.Set("form", authForm)
 
 	if validationErr := authForm.Validate(); validationErr != nil {
 		translatedErrorMessage := validationErr.Translate(request.WebSession(r).Language())
+		if rateLimited, retryAfter := h.loginLimiter.recordFailedAttempt(clientIP); rateLimited {
+			slog.Warn("Login rate limit exceeded during validation",
+				slog.String("client_ip", clientIP),
+				slog.String("user_agent", r.UserAgent()),
+			)
+			h.renderRateLimitResponse(w, r, language, retryAfter)
+			return
+		}
 		slog.Warn("Validation error during login check",
 			slog.Bool("authentication_failed", true),
 			slog.String("client_ip", clientIP),
@@ -45,11 +53,21 @@ func (h *handler) checkLogin(w http.ResponseWriter, r *http.Request) {
 			slog.String("username", authForm.Username),
 			slog.Any("error", translatedErrorMessage),
 		)
+		view.Set("errorMessage", translatedErrorMessage)
+		view.Set("form", authForm)
 		response.HTML(w, r, view.Render("login"))
 		return
 	}
 
 	if err := h.store.CheckPassword(authForm.Username, authForm.Password); err != nil {
+		if rateLimited, retryAfter := h.loginLimiter.recordFailedAttempt(clientIP); rateLimited {
+			slog.Warn("Login rate limit exceeded during password check",
+				slog.String("client_ip", clientIP),
+				slog.String("user_agent", r.UserAgent()),
+			)
+			h.renderRateLimitResponse(w, r, language, retryAfter)
+			return
+		}
 		slog.Warn("Incorrect username or password",
 			slog.Bool("authentication_failed", true),
 			slog.String("client_ip", clientIP),
@@ -57,6 +75,8 @@ func (h *handler) checkLogin(w http.ResponseWriter, r *http.Request) {
 			slog.String("username", authForm.Username),
 			slog.Any("error", err),
 		)
+		view.Set("errorMessage", locale.NewLocalizedError("error.bad_credentials").Translate(language))
+		view.Set("form", authForm)
 		response.HTML(w, r, view.Render("login"))
 		return
 	}
@@ -79,6 +99,7 @@ func (h *handler) checkLogin(w http.ResponseWriter, r *http.Request) {
 		slog.String("username", authForm.Username),
 	)
 
+	h.loginLimiter.reset(clientIP)
 	h.store.SetLastLogin(user.ID)
 	if err := authenticateWebSession(w, r, h.store, user); err != nil {
 		response.HTMLServerError(w, r, err)
