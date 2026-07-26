@@ -25,6 +25,12 @@ func (h *handler) uploadOPML(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Limit total form body size to prevent DoS via extremely large uploads.
+	// http.MaxBytesReader wraps r.Body so that when r.FormFile triggers
+	// ParseMultipartForm internally, the read is capped.
+	maxBodySize := config.Opts.HTTPClientMaxBodySize()
+	r.Body = http.MaxBytesReader(w, r.Body, maxBodySize)
+
 	file, fileHeader, err := r.FormFile("file")
 	if err != nil {
 		slog.Error("OPML file upload error",
