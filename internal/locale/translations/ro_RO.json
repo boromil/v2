@@ -155,6 +155,7 @@
     "error.subscription_not_found": "Nu se poate găsi nici un flux.",
     "error.title_required": "Titlul este obligatoriu.",
     "error.tls_error": "Eroare TLS: %q. Puteți dezactiva verificarea TLS în setările fluxurilor dacă doriți.",
+    "error.too_many_login_attempts": "Prea multe încercări de autentificare. Încercați din nou mai târziu.",
     "error.unable_to_create_api_key": "Nu pot crea această cheie API.",
     "error.unable_to_create_category": "Nu se poate crea această categorie.",
     "error.unable_to_create_user": "Nu se poate crea utilizatorul.",

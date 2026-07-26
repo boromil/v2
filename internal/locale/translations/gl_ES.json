@@ -152,6 +152,7 @@
     "error.subscription_not_found": "Non se atopou ningunha canle.",
     "error.title_required": "O título é obrigatorio.",
     "error.tls_error": "Erro TLS: %q. Podes desactivar a verificación TLS nos axustes da canle se queres.",
+    "error.too_many_login_attempts": "Demasiados intentos de inicio de sesión. Ténteo de novo máis tarde.",
     "error.unable_to_create_api_key": "Non se puido crear a clave da API.",
     "error.unable_to_create_category": "Non se puido crear a categoría.",
     "error.unable_to_create_user": "Non se puido crear a conta.",

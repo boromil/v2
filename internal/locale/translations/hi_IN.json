@@ -152,6 +152,7 @@
     "error.subscription_not_found": "कोई सदस्यता ढूँढने में असमर्थ.",
     "error.title_required": "शीर्षक अनिवार्य है।",
     "error.tls_error": "TLS त्रुटि: %q. यदि आप चाहें तो फ़ीड सेटिंग्स में TLS सत्यापन अक्षम कर सकते हैं।",
+    "error.too_many_login_attempts": "बहुत अधिक लॉगिन प्रयास। कृपया बाद में पुनः प्रयास करें।",
     "error.unable_to_create_api_key": "यह एपीआई कुंजी बनाने में असमर्थ।",
     "error.unable_to_create_category": "यह श्रेणी बनाने में असमर्थ.",
     "error.unable_to_create_user": "इस उपयोगकर्ता को बनाने में असमर्थ।",

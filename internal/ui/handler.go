@@ -13,10 +13,11 @@ import (
 )
 
 type handler struct {
-	basePath string
-	store    *storage.Storage
-	tpl      *template.Engine
-	pool     *worker.Pool
+	basePath     string
+	store        *storage.Storage
+	tpl          *template.Engine
+	pool         *worker.Pool
+	loginLimiter *loginRateLimiter
 }
 
 func (h *handler) routePath(format string, args ...any) string {

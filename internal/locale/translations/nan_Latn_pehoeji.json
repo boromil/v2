@@ -149,6 +149,7 @@
     "error.subscription_not_found": "Chhē bōe tio̍h līm-hô tēng ê siau-sit lâi-goân",
     "error.title_required": "Tio̍h-ài su-li̍p piau-tôe.",
     "error.tls_error": "TLS m̄-tio̍h: %q。Nā-sī beh pàng-ba̍k TSL chèng-bêng, ē-sái tī siau-sit lâi-goân siat-tēng lāi thêng-tiong.",
+    "error.too_many_login_attempts": "Teng-lo̍k ê chhì-giām siuⁿ chē. Chhiáⁿ té-á-ē koh chhì khoàⁿ-māi.",
     "error.unable_to_create_api_key": "Bô-hoat-tō͘ sin cheng-ka chit ê  API só-sî.",
     "error.unable_to_create_category": "Bô-hoat-tō͘ sin cheng-ka chit ê lūi-pia̍t",
     "error.unable_to_create_user": "Bô-hoat-tō͘ sin cheng-ka chit ê sú-iōng-lâng",

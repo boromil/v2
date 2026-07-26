@@ -155,6 +155,7 @@
     "error.subscription_not_found": "Nie znaleziono żadnych kanałów.",
     "error.title_required": "Tytuł jest obowiązkowy.",
     "error.tls_error": "Błąd TLS: %q. Jeśli chcesz, możesz wyłączyć weryfikację TLS w ustawieniach kanału.",
+    "error.too_many_login_attempts": "Zbyt wiele prób logowania. Spróbuj ponownie później.",
     "error.unable_to_create_api_key": "Nie można utworzyć tego klucza API.",
     "error.unable_to_create_category": "Ta kategoria nie mogła zostać utworzona.",
     "error.unable_to_create_user": "Nie można utworzyć tego użytkownika.",

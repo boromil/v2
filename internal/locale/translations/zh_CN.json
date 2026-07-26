@@ -149,6 +149,7 @@
     "error.subscription_not_found": "无法找到任何订阅源。",
     "error.title_required": "必须填写标题。",
     "error.tls_error": "TLS 错误: %q。如果您愿意的话可以在订阅源设置里关闭 TLS 验证。",
+    "error.too_many_login_attempts": "登录尝试次数过多。请稍后再试。",
     "error.unable_to_create_api_key": "无法创建此 API 密钥。",
     "error.unable_to_create_category": "无法创建此分类。",
     "error.unable_to_create_user": "无法创建此用户。",

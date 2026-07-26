@@ -152,6 +152,7 @@
     "error.subscription_not_found": "Não foi possível encontrar uma inscrição.",
     "error.title_required": "O título é obrigatório.",
     "error.tls_error": "Erro TLS: %q. Você pode desabilitar a verificação TLS nas configurações do feed se desejar.",
+    "error.too_many_login_attempts": "Muitas tentativas de login. Tente novamente mais tarde.",
     "error.unable_to_create_api_key": "Não foi possível criar uma chave de API.",
     "error.unable_to_create_category": "Não foi possível criar essa categoria.",
     "error.unable_to_create_user": "Não foi possível criar esse usuário.",

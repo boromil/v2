@@ -152,6 +152,7 @@
     "error.subscription_not_found": "Kan geen feeds vinden.",
     "error.title_required": "De titel is verplicht.",
     "error.tls_error": "TLS fout: %q. Als je wilt, kun je TLS-verificatie uitschakelen in de feed-instellingen.",
+    "error.too_many_login_attempts": "Te veel inlogpogingen. Probeer het later opnieuw.",
     "error.unable_to_create_api_key": "Kan deze API-sleutel niet aanmaken.",
     "error.unable_to_create_category": "Kan deze categorie niet aanmaken.",
     "error.unable_to_create_user": "Kan deze gebruiker niet aanmaken.",

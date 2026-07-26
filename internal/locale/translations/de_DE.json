@@ -152,6 +152,7 @@
     "error.subscription_not_found": "Es wurden keine Abonnements gefunden.",
     "error.title_required": "Der Titel ist obligatorisch.",
     "error.tls_error": "TLS-Fehler: %q. Wenn Sie mögen, können Sie versuchen die TLS-Verifizierung in den Einstellungen des Abonnements zu deaktivieren.",
+    "error.too_many_login_attempts": "Zu viele Anmeldeversuche. Bitte später erneut versuchen.",
     "error.unable_to_create_api_key": "Dieser API-Schlüssel kann nicht erstellt werden.",
     "error.unable_to_create_category": "Diese Kategorie konnte nicht angelegt werden.",
     "error.unable_to_create_user": "Dieser Benutzer kann nicht erstellt werden.",

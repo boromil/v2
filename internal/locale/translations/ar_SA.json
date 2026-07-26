@@ -164,6 +164,7 @@
     "error.subscription_not_found": "تعذر العثور على أي مصدر.",
     "error.title_required": "العنوان إلزامي.",
     "error.tls_error": "خطأ TLS: %q. يمكنك تعطيل التحقق من TLS في إعدادات المصدر إذا كنت ترغب في ذلك.",
+    "error.too_many_login_attempts": "محاولات تسجيل دخول كثيرة جداً. يرجى المحاولة مرة أخرى لاحقاً.",
     "error.unable_to_create_api_key": "تعذر إنشاء مفتاح API هذا.",
     "error.unable_to_create_category": "تعذر إنشاء هذه الفئة.",
     "error.unable_to_create_user": "تعذر إنشاء هذا المستخدم.",

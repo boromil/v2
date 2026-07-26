@@ -152,6 +152,7 @@
     "error.subscription_not_found": "Incapaz de encontrar alguna fuente.",
     "error.title_required": "El título es obligatorio.",
     "error.tls_error": "Error de TLS: %q. Puede desactivar la verificación TLS en la configuración del feed si lo desea.",
+    "error.too_many_login_attempts": "Demasiados intentos de inicio de sesión. Inténtelo de nuevo más tarde.",
     "error.unable_to_create_api_key": "No se puede crear esta clave API.",
     "error.unable_to_create_category": "Incapaz de crear esta categoría.",
     "error.unable_to_create_user": "Incapaz de crear este usuario.",

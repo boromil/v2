@@ -152,6 +152,7 @@
     "error.subscription_not_found": "Impossible de trouver un abonnement.",
     "error.title_required": "Le titre est obligatoire.",
     "error.tls_error": "Erreur TLS : %q. Vous pouvez désactiver la vérification TLS dans les paramètres de l'abonnement.",
+    "error.too_many_login_attempts": "Trop de tentatives de connexion. Veuillez réessayer plus tard.",
     "error.unable_to_create_api_key": "Impossible de créer cette clé d'API.",
     "error.unable_to_create_category": "Impossible de créer cette catégorie.",
     "error.unable_to_create_user": "Impossible de créer cet utilisateur.",

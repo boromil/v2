@@ -155,6 +155,7 @@
     "error.subscription_not_found": "Не удалось найти подписки.",
     "error.title_required": "Название обязательно.",
     "error.tls_error": "Ошибка TLS: %q. Вы можете отключить проверку TLS в настройках подписки.",
+    "error.too_many_login_attempts": "Слишком много попыток входа. Повторите попытку позже.",
     "error.unable_to_create_api_key": "Невозможно создать этот API-ключ.",
     "error.unable_to_create_category": "Не удалось создать эту категорию.",
     "error.unable_to_create_user": "Не удалось создать этого пользователя.",

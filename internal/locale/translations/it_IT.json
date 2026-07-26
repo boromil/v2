@@ -152,6 +152,7 @@
     "error.subscription_not_found": "Non ho trovato nessun feed.",
     "error.title_required": "Il titolo è obbligatorio.",
     "error.tls_error": "Errore TLS: %q. Puoi disabilitare la verifica TLS nelle impostazioni del feed se preferisci.",
+    "error.too_many_login_attempts": "Troppi tentativi di accesso. Riprova più tardi.",
     "error.unable_to_create_api_key": "Impossibile creare questa chiave API.",
     "error.unable_to_create_category": "Non sono riuscito ad aggiungere questa categoria.",
     "error.unable_to_create_user": "Non sono riuscito ad aggiungere questo user.",

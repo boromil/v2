@@ -152,6 +152,7 @@
     "error.subscription_not_found": "Tilausta ei löydy.",
     "error.title_required": "Otsikko on pakollinen.",
     "error.tls_error": "TLS-virhe: %q. Voit halutessasi poistaa TLS-tarkistuksen syöteasetuksista.",
+    "error.too_many_login_attempts": "Liian monta kirjautumisyritystä. Yritä myöhemmin uudelleen.",
     "error.unable_to_create_api_key": "API-avainta ei voi luoda.",
     "error.unable_to_create_category": "Kategoriaa ei voi luoda.",
     "error.unable_to_create_user": "Käyttäjää ei voi luoda.",

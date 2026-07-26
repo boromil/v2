@@ -149,6 +149,7 @@
     "error.subscription_not_found": "找不到任何訂閱",
     "error.title_required": "必須填寫標題",
     "error.tls_error": "TLS 錯誤：%q。若需忽略 TLS 驗證，可在 Feed 設定中停用。",
+    "error.too_many_login_attempts": "登入嘗試次數過多。請稍後再試。",
     "error.unable_to_create_api_key": "無法建立此 API 金鑰。",
     "error.unable_to_create_category": "無法建立這個分類",
     "error.unable_to_create_user": "無法建立此使用者",

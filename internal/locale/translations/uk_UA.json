@@ -155,6 +155,7 @@
     "error.subscription_not_found": "Не знайшлося жодної підписки.",
     "error.title_required": "Назва є обов’язковою.",
     "error.tls_error": "Помилка TLS: %q. Ви можете відключити перевірку TLS в налаштуваннях фіду, якщо хочете.",
+    "error.too_many_login_attempts": "Забагато спроб входу. Спробуйте пізніше.",
     "error.unable_to_create_api_key": "Не вдається створити такий ключ API",
     "error.unable_to_create_category": "Не вдається сворити категорію.",
     "error.unable_to_create_user": "Не вдається створити користувача.",

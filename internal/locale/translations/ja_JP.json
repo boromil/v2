@@ -149,6 +149,7 @@
     "error.subscription_not_found": "フィードが見つかりません。",
     "error.title_required": "タイトルが必要です。",
     "error.tls_error": "TLS エラー: %q。必要であればフィード設定で TLS 検証を無効にできます。",
+    "error.too_many_login_attempts": "ログイン試行が多すぎます。後でもう一度お試しください。",
     "error.unable_to_create_api_key": "この API キーを作成できません。",
     "error.unable_to_create_category": "このカテゴリは作成できません。",
     "error.unable_to_create_user": "このユーザーは作成できません。",

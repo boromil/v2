@@ -149,6 +149,7 @@
     "error.subscription_not_found": "Tidak bisa mencari langganan apa pun.",
     "error.title_required": "Judul harus ada.",
     "error.tls_error": "Galat TLS: %q. Anda bisa mematikan verifikasi TLS di pengaturan umpan jika Anda mau.",
+    "error.too_many_login_attempts": "Terlalu banyak upaya masuk. Silakan coba lagi nanti.",
     "error.unable_to_create_api_key": "Tidak bisa membuat kunci API ini.",
     "error.unable_to_create_category": "Tidak bisa membuat kategori ini.",
     "error.unable_to_create_user": "Tidak bisa membuat pengguna tersebut.",

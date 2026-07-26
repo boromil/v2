@@ -23,7 +23,13 @@ func Serve(store *storage.Storage, pool *worker.Pool) http.Handler {
 	templateEngine := template.NewEngine(basePath)
 	templateEngine.ParseTemplates()
 
-	handler := &handler{basePath, store, templateEngine, pool}
+	handler := &handler{
+		basePath:     basePath,
+		store:        store,
+		tpl:          templateEngine,
+		pool:         pool,
+		loginLimiter: newLoginRateLimiter(),
+	}
 
 	mux := http.NewServeMux()
 
@@ -158,7 +164,7 @@ func Serve(store *storage.Storage, pool *worker.Pool) http.Handler {
 	mux.HandleFunc("GET /offline", handler.showOfflinePage)
 
 	// Authentication pages.
-	mux.HandleFunc("POST /login", handler.checkLogin)
+	mux.HandleFunc("POST /login", handler.rateLimitedLogin(handler.checkLogin))
 	mux.HandleFunc("POST /logout", handler.logout)
 	mux.Handle("GET /{$}", authProxyMiddleware.handle(http.HandlerFunc(handler.showLoginPage)))
 
