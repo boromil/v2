@@ -327,6 +327,7 @@ func (d *SQLiteDialect) Open(dsn string) (*sql.DB, error) {
 	dsn = appendPragma(dsn, "cache_size", "-64000")
 	dsn = appendPragma(dsn, "temp_store", "memory")
 	dsn = appendPragma(dsn, "mmap_size", "268435456")
+	dsn = appendPragma(dsn, "journal_size_limit", "67108864")
 	dsn = appendPragma(dsn, "auto_vacuum", "INCREMENTAL")
 	return sql.Open("sqlite", dsn)
 }
