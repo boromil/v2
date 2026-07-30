@@ -651,6 +651,13 @@
   transition: background-color 100ms;
 }
 
+.feed-tree-item img {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+}
+
 .feed-tree-item:hover {
   background-color: var(--color-gray-200);
 }

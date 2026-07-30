@@ -194,12 +194,13 @@ type menuSection struct {
 }
 
 type menuItem struct {
-	Label       string
-	URL         string
-	SSEURL      string
-	UnreadCount string
-	Selected    bool
-	Children    []menuItem
+	Label          string
+	URL            string
+	SSEURL         string
+	UnreadCount    string
+	Selected       bool
+	ExternalIconID string
+	Children       []menuItem
 }
 
 // ─── Full page handler ───────────────────────────────────────────────────
@@ -685,11 +686,12 @@ func (h *handler) buildMenu(user *model.User, activeView string, activeFeedID, a
 					count = fmt.Sprintf("%d", f.UnreadCount)
 				}
 				children = append(children, menuItem{
-					Label:       f.Title,
-					URL:         fmt.Sprintf("/ds/feed/%d", f.ID),
-					SSEURL:      fmt.Sprintf("/ds/sse/entries?feedId=%d", f.ID),
-					UnreadCount: count,
-					Selected:    activeView == "feed" && activeFeedID == f.ID,
+					Label:          f.Title,
+					URL:            fmt.Sprintf("/ds/feed/%d", f.ID),
+					SSEURL:         fmt.Sprintf("/ds/sse/entries?feedId=%d", f.ID),
+					UnreadCount:    count,
+					Selected:       activeView == "feed" && activeFeedID == f.ID,
+					ExternalIconID: externalIconID(f),
 				})
 			}
 
@@ -712,6 +714,14 @@ func (h *handler) buildMenu(user *model.User, activeView string, activeFeedID, a
 	}
 
 	return sections
+}
+
+// externalIconID extracts the external icon ID from a feed for use in URLs.
+func externalIconID(f *model.Feed) string {
+	if f.Icon != nil && f.Icon.ExternalIconID != "" {
+		return f.Icon.ExternalIconID
+	}
+	return ""
 }
 
 // ─── Route parsing ───────────────────────────────────────────────────────
