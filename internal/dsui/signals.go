@@ -20,6 +20,7 @@ type EntryRequest struct {
 	View       string `json:"view"`
 	FeedID     int64  `json:"feedId"`
 	CategoryID int64  `json:"categoryId"`
+	SearchQuery string `json:"searchQuery"`
 	Offset     int    `json:"offset"`
 	EntryID    int64  `json:"entryId"`
 }
