@@ -1418,3 +1418,26 @@ input[type="file"]::file-selector-button {
     color: #c0c0d0;
   }
 }
+
+/* Settings page layout — matches app shell styling */
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--color-white);
+  color: var(--color-gray-800);
+}
+.settings-page-inner {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+@media (prefers-color-scheme: dark) {
+  .settings-page {
+    background-color: #1a1a2e;
+    color: #c0c0d0;
+  }
+}
