@@ -15,9 +15,12 @@ import (
 	"strings"
 	"time"
 
+	"miniflux.app/v2/internal/config"
 	"miniflux.app/v2/internal/http/request"
 	"miniflux.app/v2/internal/http/response"
 	"miniflux.app/v2/internal/model"
+	"miniflux.app/v2/internal/proxyrotator"
+	"miniflux.app/v2/internal/reader/fetcher"
 	"miniflux.app/v2/internal/reader/opml"
 	"miniflux.app/v2/internal/storage"
 	dsstatic "miniflux.app/v2/internal/dsui/static"
@@ -65,15 +68,17 @@ func Serve(store *storage.Storage, pool *worker.Pool) http.Handler {
 	mux.HandleFunc("GET /ds/starred", h.showApp)
 	mux.HandleFunc("GET /ds/history", h.showApp)
 	mux.HandleFunc("GET /ds/search", h.showApp)
-	// TODO: settings page
-	// mux.HandleFunc("GET /ds/settings", h.showSettings)
+	mux.HandleFunc("GET /ds/settings", h.showSettings)
 	mux.HandleFunc("GET /ds/feed/{feedID}", h.showApp)
 	mux.HandleFunc("GET /ds/category/{categoryID}", h.showApp)
+
+	// OPML import (regular form POST).
+	mux.HandleFunc("POST /ds/import-opml", h.importOPML)
+	mux.HandleFunc("POST /ds/fetch-opml", h.fetchOPML)
 
 	// SSE fragment endpoints.
 	mux.HandleFunc("GET /ds/sse/entries", h.sseEntries)
 	mux.HandleFunc("GET /ds/sse/subscriptions", h.sseSubscriptions)
-	mux.HandleFunc("POST /ds/import-opml", h.importOPML)
 	mux.HandleFunc("GET /ds/sse/entry/{entryID}", h.sseEntry)
 	mux.HandleFunc("POST /ds/sse/entry/star/{entryID}", h.sseToggleStar)
 	mux.HandleFunc("POST /ds/sse/entry/status", h.sseToggleEntryStatus)
@@ -100,6 +105,7 @@ func parseTemplates() *template.Template {
 	return template.Must(template.New("").Funcs(funcMap).ParseFS(templateFiles,
 		"templates/layout.html",
 		"templates/app.html",
+		"templates/settings.html",
 		"templates/components/subscription_list.html",
 		"templates/components/entry_list.html",
 		"templates/components/entry_row.html",
@@ -164,11 +170,7 @@ type appViewModel struct {
 	SelectedEntry      *entryDetailView
 	Pagination         *paginationView
 	MenuSections       []menuSection
-	// Settings page data (TODO)
-	// Form      *settingsFormData
-	// Themes    []selectOption
-	// Languages []selectOption
-	// Timezones []selectOption
+	IsSettings         bool
 }
 
 type entryView struct {
@@ -328,6 +330,72 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 	}
 	response.HTML(w, r, buf.Bytes())
 }
+
+func (h *handler) showSettings(w http.ResponseWriter, r *http.Request) {
+	user, err := h.store.UserByID(request.UserID(r))
+	if err != nil {
+		response.HTMLServerError(w, r, err)
+		return
+	}
+
+	vm := appViewModel{
+		Language:           user.Language,
+		Direction:          "ltr",
+		CSRFToken:          request.WebSession(r).CSRF(),
+		StyleChecksum:      dsstatic.StylesheetBundles["app"].Checksum,
+		JSChecksum:         dsstatic.JavascriptBundles["datastar"].Checksum,
+		KeyboardChecksum:   dsstatic.JavascriptBundles["keyboard"].Checksum,
+		ComponentsChecksum: dsstatic.JavascriptBundles["components"].Checksum,
+		Title:              "Settings — Miniflux",
+		IsSettings:         true,
+	}
+
+	var buf bytes.Buffer
+	if err := h.tpl.ExecuteTemplate(&buf, "layout", vm); err != nil {
+		response.HTMLServerError(w, r, fmt.Errorf("template render error: %w", err))
+		return
+	}
+	response.HTML(w, r, buf.Bytes())
+}
+
+func (h *handler) fetchOPML(w http.ResponseWriter, r *http.Request) {
+	user, err := h.store.UserByID(request.UserID(r))
+	if err != nil {
+		response.HTMLServerError(w, r, err)
+		return
+	}
+
+	opmlURL := strings.TrimSpace(r.FormValue("url"))
+	if opmlURL == "" {
+		response.HTMLRedirect(w, r, "/ds/settings")
+		return
+	}
+
+	slog.Info("dsui: fetching OPML from URL",
+		slog.Int64("user_id", user.ID),
+		slog.String("url", opmlURL),
+	)
+
+	requestBuilder := fetcher.NewRequestBuilder().
+		WithTimeout(config.Opts.HTTPClientTimeout()).
+		WithProxyRotator(proxyrotator.ProxyRotatorInstance)
+
+	responseHandler := fetcher.NewResponseHandler(requestBuilder.ExecuteRequest(opmlURL))
+	defer responseHandler.Close()
+
+	if localizedError := responseHandler.LocalizedError(); localizedError != nil {
+		slog.Warn("dsui: unable to fetch OPML", slog.String("url", opmlURL), slog.Any("error", localizedError.Error()))
+		response.HTMLRedirect(w, r, "/ds/settings")
+		return
+	}
+
+	if impErr := opml.NewHandler(h.store).Import(user.ID, responseHandler.Body(config.Opts.HTTPClientMaxBodySize())); impErr != nil {
+		slog.Error("dsui: OPML import failed", slog.Any("error", impErr))
+	}
+
+	response.HTMLRedirect(w, r, "/ds/unread")
+}
+
 // ─── SSE fragment handlers ───────────────────────────────────────────────
 
 func (h *handler) sseEntries(w http.ResponseWriter, r *http.Request) {
