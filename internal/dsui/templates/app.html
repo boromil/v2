@@ -16,7 +16,10 @@
         </nav>
         <div class="px-2 py-2 border-t border-gray-200 dark:border-[#2a2a4a]">
             <form id="import-opml-form"
-                data-on:submit__formData="@post('/ds/sse/import-opml')">
+                data-on:submit="@post('/ds/sse/import-opml')"
+                method="post"
+                enctype="multipart/form-data">
+                <input type="hidden" name="csrf" value="{{.CSRFToken}}">
                 <input type="file" name="file" accept=".opml,.xml"
                     class="text-xs w-full mb-1">
                 <button type="submit" class="toolbar-btn w-full text-center">
