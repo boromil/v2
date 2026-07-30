@@ -6,20 +6,14 @@
     <a class="feed-tree-item truncate{{if .Selected}} selected{{end}}"
         href="{{.URL}}"
         data-on:click="@get('{{.SSEURL}}')">
+        {{if .ExternalIconID}}<img src="/feed-icon/{{.ExternalIconID}}" class="mr-1" width="16" height="16" loading="lazy" alt="">{{end}}
         <span class="truncate">{{.Label}}</span>
         {{if .UnreadCount}}
         <span class="unread-count">{{.UnreadCount}}</span>
         {{end}}
     </a>
     {{range .Children}}
-    <a class="feed-tree-item truncate pl-2{{if .Selected}} selected{{end}}"
-        href="{{.URL}}"
-        data-on:click="@get('{{.SSEURL}}')">
-        <span class="truncate">{{.Label}}</span>
-        {{if .UnreadCount}}
-        <span class="unread-count">{{.UnreadCount}}</span>
-        {{end}}
-    </a>
+    {{template "feed_node" .}}
     {{end}}
     {{end}}
     {{end}}
