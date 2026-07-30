@@ -4,7 +4,10 @@
 package dsui // import "miniflux.app/v2/internal/dsui"
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 
@@ -48,6 +51,20 @@ func (m *csrfMiddleware) validate(w http.ResponseWriter, r *http.Request) bool {
 
 	if crypto.ConstantTimeCmp(csrfToken, formValue) || crypto.ConstantTimeCmp(csrfToken, headerValue) {
 		return true
+	}
+
+	// Check Datastar JSON body for csrfToken signal.
+	if r.Header.Get("Datastar-Request") != "" && r.Header.Get("Content-Type") == "application/json" {
+		body, err := io.ReadAll(r.Body)
+		if err == nil {
+			r.Body = io.NopCloser(bytes.NewReader(body)) // restore body
+			var signals struct {
+				CsrfToken string `json:"csrfToken"`
+			}
+			if json.Unmarshal(body, &signals) == nil && crypto.ConstantTimeCmp(csrfToken, signals.CsrfToken) {
+				return true
+			}
+		}
 	}
 
 	slog.Warn("dsui: invalid or missing CSRF token",
