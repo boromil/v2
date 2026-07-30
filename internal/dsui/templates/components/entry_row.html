@@ -1,10 +1,8 @@
 {{define "entry_row"}}
 <entry-row class="entry-row {{if eq .Status "unread"}}unread{{else}}read{{end}}"
     data-id="{{.ID}}"
-    data-title="{{.Title}}"
-    data-status="{{.Status}}"
-    data-starred="{{.Starred}}"
-    id="entry-row-{{.ID}}">
+    id="entry-row-{{.ID}}"
+    data-on:click="@get('/ds/sse/entry/{{.ID}}')">
     <div class="flex items-center gap-2">
         {{template "star_button" .}}
         <span class="entry-title flex-1">{{.Title}}</span>
@@ -20,7 +18,8 @@
 
 {{define "star_button"}}
 <button class="star-btn {{if .Starred}}starred{{end}} flex-shrink-0"
-    id="star-icon-{{.ID}}">
+    id="star-icon-{{.ID}}"
+    data-on:click="@post('/ds/sse/entry/star/{{.ID}}')">
     {{if .Starred}}★{{else}}☆{{end}}
 </button>
 {{end}}
