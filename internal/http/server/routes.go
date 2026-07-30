@@ -8,6 +8,7 @@ import (
 
 	"miniflux.app/v2/internal/api"
 	"miniflux.app/v2/internal/config"
+	"miniflux.app/v2/internal/dsui"
 	"miniflux.app/v2/internal/fever"
 	"miniflux.app/v2/internal/googlereader"
 	"miniflux.app/v2/internal/storage"
@@ -41,6 +42,9 @@ func newRouter(store *storage.Storage, pool *worker.Pool) http.Handler {
 	if config.Opts.HasMetricsCollector() {
 		appMux.Handle("GET /metrics", metricsHandler())
 	}
+
+	// Datastar UI routing.
+	appMux.Handle("/ds/", dsui.Serve(store, pool))
 
 	// UI routing (catch-all).
 	appMux.Handle("/", ui.Serve(store, pool))

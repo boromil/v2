@@ -1,0 +1,11 @@
+{{define "entry_list"}}
+{{if .Entries}}
+{{range .Entries}}
+{{template "entry_row" .}}
+{{end}}
+{{else}}
+<div class="empty-state">
+    <p>No entries to display.</p>
+</div>
+{{end}}
+{{end}}

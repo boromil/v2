@@ -1,0 +1,27 @@
+{{define "subscription_list"}}
+<div class="feed-tree">
+    {{range .MenuSections}}
+    <div class="feed-tree-section">{{.Label}}</div>
+    {{range .Items}}
+    <a class="feed-tree-item truncate{{if .Selected}} selected{{end}}"
+        href="{{.URL}}"
+        data-on:click="@get('{{.SSEURL}}')">
+        <span class="truncate">{{.Label}}</span>
+        {{if .UnreadCount}}
+        <span class="unread-count">{{.UnreadCount}}</span>
+        {{end}}
+    </a>
+    {{range .Children}}
+    <a class="feed-tree-item truncate pl-2{{if .Selected}} selected{{end}}"
+        href="{{.URL}}"
+        data-on:click="@get('{{.SSEURL}}')">
+        <span class="truncate">{{.Label}}</span>
+        {{if .UnreadCount}}
+        <span class="unread-count">{{.UnreadCount}}</span>
+        {{end}}
+    </a>
+    {{end}}
+    {{end}}
+    {{end}}
+</div>
+{{end}}

@@ -1,0 +1,13 @@
+{{define "feed_node"}}
+<a class="feed-tree-item truncate{{if .Selected}} selected{{end}}"
+    href="{{.URL}}"
+    data-on:click="@get('{{.SSEURL}}')">
+    {{if .IconURL}}
+    <img src="{{.IconURL}}" class="mr-1" width="16" height="16" alt="">
+    {{end}}
+    <span class="truncate">{{.Label}}</span>
+    {{if .UnreadCount}}
+    <span class="unread-count">{{.UnreadCount}}</span>
+    {{end}}
+</a>
+{{end}}

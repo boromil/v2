@@ -1,0 +1,11 @@
+{{define "pagination"}}
+<div class="pagination">
+    {{if .HasPrev}}
+    <a href="#" data-on:click="@get('/ds/sse/entries?offset={{.PrevOffset}}')">&laquo; Previous</a>
+    {{end}}
+    <span>Page {{.CurrentPage}} of {{.TotalPages}}</span>
+    {{if .HasNext}}
+    <a href="#" data-on:click="@get('/ds/sse/entries?offset={{.NextOffset}}')">Next &raquo;</a>
+    {{end}}
+</div>
+{{end}}
