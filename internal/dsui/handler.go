@@ -504,17 +504,18 @@ func (h *handler) sseToggleStar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return SSE to patch the star button.
+	var starBuf bytes.Buffer
+	starData := map[string]any{
+		"ID":      entry.ID,
+		"Starred": newStarred,
+	}
+	if err := h.tpl.ExecuteTemplate(&starBuf, "star_button", starData); err != nil {
+		response.HTMLServerError(w, r, fmt.Errorf("star_button template: %w", err))
+		return
+	}
+
 	sse := datastar.NewSSE(w, r)
-	starHTML := fmt.Sprintf(`<button class="star-btn %s flex-shrink-0"
-		data-on:click="@post('/ds/sse/entry/star/%d')"
-		data-starred="%v"
-		id="star-icon-%d">%s</button>`,
-		map[bool]string{true: "starred", false: ""}[newStarred],
-		entryID, newStarred, entryID,
-		map[bool]string{true: "★", false: "☆"}[newStarred],
-	)
-	sse.PatchElements(starHTML, datastar.WithSelector(fmt.Sprintf("#star-icon-%d", entryID)))
+	sse.PatchElements(starBuf.String(), datastar.WithSelector(fmt.Sprintf("#star-icon-%d", entry.ID)))
 }
 
 func (h *handler) sseToggleEntryStatus(w http.ResponseWriter, r *http.Request) {
