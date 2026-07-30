@@ -31,7 +31,10 @@
             </form>
             {{if .CanMarkAllRead}}
             <button class="mark-read-btn"
-                data-on:click="@post('/ds/sse/mark-all-read')">Mark all read</button>
+                data-on:click="@post('/ds/sse/mark-all-read')">
+                <span data-indicator>Marking...</span>
+                <span data-indicator="!exists">Mark all read</span>
+            </button>
             {{end}}
         </div>
         <div id="entry-list" class="flex-1 overflow-y-auto">
