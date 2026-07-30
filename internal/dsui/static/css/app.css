@@ -914,14 +914,90 @@
   background-color: var(--color-gray-100);
 }
 
-/* Responsive: stack panels on narrow screens */
+/* Mobile navigation bar — hidden on desktop, shown on narrow screens */
+.mobile-nav {
+  display: none;
+  flex-direction: row;
+  background-color: var(--color-gray-100);
+  border-bottom: 1px solid var(--color-gray-200);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.mobile-nav button {
+  flex: 1;
+  padding: 0.625rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-gray-600);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 100ms, border-color 100ms;
+}
+
+.mobile-nav button.active {
+  color: var(--color-blue-600);
+  border-bottom-color: var(--color-blue-600);
+}
+
+/* Responsive: single-panel layout on narrow screens */
 @media (max-width: 768px) {
+  .mobile-nav {
+    display: flex;
+  }
+
   .app-container {
     grid-template-columns: 1fr;
   }
+
   #subscription-panel,
+  #entry-list-panel,
   #entry-content-panel {
     display: none;
+  }
+
+  .app-container[data-active-panel="subscriptions"] #subscription-panel,
+  .app-container[data-active-panel="list"] #entry-list-panel,
+  .app-container[data-active-panel="content"] #entry-content-panel {
+    display: flex;
+  }
+
+  /* Larger touch targets on mobile */
+  .entry-row {
+    padding: 0.75rem 1rem;
+  }
+
+  .entry-title {
+    font-size: 0.9375rem;
+  }
+
+  .feed-tree-item {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9375rem;
+  }
+
+  .toolbar-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+}
+
+/* Dark mode mobile nav */
+@media (prefers-color-scheme: dark) {
+  .mobile-nav {
+    background-color: #16213e;
+    border-bottom-color: #2a2a4a;
+  }
+
+  .mobile-nav button {
+    color: #8888aa;
+  }
+
+  .mobile-nav button.active {
+    color: #6ab0ff;
+    border-bottom-color: #6ab0ff;
   }
 }
 
