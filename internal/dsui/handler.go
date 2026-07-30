@@ -15,7 +15,6 @@ import (
 	"strings"
 	"time"
 
-	"miniflux.app/v2/internal/config"
 	"miniflux.app/v2/internal/http/request"
 	"miniflux.app/v2/internal/http/response"
 	"miniflux.app/v2/internal/model"
@@ -718,10 +717,6 @@ func (h *handler) sseImportOPML(w http.ResponseWriter, r *http.Request) {
 		response.HTMLServerError(w, r, err)
 		return
 	}
-
-	// Limit body size to prevent DoS.
-	maxBodySize := config.Opts.HTTPClientMaxBodySize()
-	r.Body = http.MaxBytesReader(w, r.Body, maxBodySize)
 
 	file, fileHeader, err := r.FormFile("file")
 	if err != nil {
