@@ -1,0 +1,17 @@
+{{define "article_toolbar"}}
+<div id="article-toolbar" class="article-toolbar">
+    <button class="toolbar-btn"
+        data-on:click="@post('/ds/sse/entry/star/{{.ID}}')">
+        {{template "star_button" .}}
+        <span>{{if .Starred}}Starred{{else}}Star{{end}}</span>
+    </button>
+    <a href="{{.URL}}" target="_blank" rel="noopener" class="toolbar-btn no-underline">
+        Open original
+    </a>
+    <button class="toolbar-btn"
+        data-signals='{"entryIds":[{{.ID}}]}'
+        data-on:click="@post('/ds/sse/entry/status')">
+        {{if eq .Status "unread"}}Mark read{{else}}Mark unread{{end}}
+    </button>
+</div>
+{{end}}
