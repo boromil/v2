@@ -11,8 +11,9 @@
     <link rel="stylesheet" href="/ds/stylesheets/{{.StyleChecksum}}/app.css">
     <script type="module" src="/ds/js/{{.JSChecksum}}/datastar"></script>
     <script src="/ds/js/{{.KeyboardChecksum}}/keyboard" defer></script>
+    <script src="/ds/js/{{.ComponentsChecksum}}/components" defer></script>
 </head>
-<body class="m-0 p-0 overflow-hidden h-screen font-sans antialiased" style="background-color: #ffffff; color: #1a1a2e;" data-signals="{{.SignalsJSON}}">
+<body class="m-0 p-0 overflow-hidden h-screen font-sans antialiased" style="background-color: #ffffff; color: #1a1a2e;" data-signals="{{.SignalsJSON}}" data-csrf-token="{{.CSRFToken}}">
     {{template "app" .}}
 </body>
 </html>

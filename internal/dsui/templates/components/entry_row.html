@@ -1,13 +1,13 @@
 {{define "entry_row"}}
-<article class="entry-row {{if eq .Status "unread"}}unread{{else}}read{{end}}"
+<entry-row class="entry-row {{if eq .Status "unread"}}unread{{else}}read{{end}}"
     data-id="{{.ID}}"
-    data-on:click="@get('/ds/sse/entry/{{.ID}}')"
+    data-title="{{.Title}}"
+    data-status="{{.Status}}"
+    data-starred="{{.Starred}}"
     id="entry-row-{{.ID}}">
     <div class="flex items-center gap-2">
-        <button class="star-btn {{if .Starred}}starred{{end}} flex-shrink-0"
-            data-on:click="@post('/ds/sse/entry/star/{{.ID}}')"
-            data-starred="{{.Starred}}">
-            {{if .Starred}}&#9733;{{else}}&#9734;{{end}}
+        <button class="star-btn {{if .Starred}}starred{{end}} flex-shrink-0">
+            {{if .Starred}}★{{else}}☆{{end}}
         </button>
         <span class="entry-title flex-1">{{.Title}}</span>
     </div>
@@ -17,5 +17,5 @@
         {{end}}
         <span class="entry-date">{{elapsed .Date}}</span>
     </div>
-</article>
+</entry-row>
 {{end}}
