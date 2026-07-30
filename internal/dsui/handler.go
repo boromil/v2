@@ -89,9 +89,7 @@ func Serve(store *storage.Storage, pool *worker.Pool) http.Handler {
 	mux.HandleFunc("POST /ds/sse/mark-page-read", h.sseMarkPageRead)
 	mux.HandleFunc("POST /ds/sse/fetch-content/{entryID}", h.sseFetchContent)
 	mux.HandleFunc("POST /ds/sse/share/{entryID}", h.sseToggleShare)
-
-	// TODO: settings save endpoint
-	// mux.HandleFunc("POST /ds/sse/settings", h.sseSaveSettings)
+	mux.HandleFunc("POST /ds/sse/settings", h.sseSaveSettings)
 
 	// Apply middleware chain: secure headers -> session -> CSRF -> handlers.
 	return secureHeadersMiddleware(sessionMiddleware(store)(newCSRFMiddleware().handle(mux)))
@@ -178,6 +176,10 @@ type appViewModel struct {
 	Pagination         *paginationView
 	MenuSections       []menuSection
 	IsSettings         bool
+	Form               *settingsFormData
+	Themes             []selectOption
+	Languages          []selectOption
+	Timezones          []selectOption
 }
 
 type entryView struct {
@@ -342,6 +344,8 @@ func (h *handler) showSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	form := settingsFormFromUser(user)
+
 	vm := appViewModel{
 		Language:           user.Language,
 		Direction:          "ltr",
@@ -352,6 +356,10 @@ func (h *handler) showSettings(w http.ResponseWriter, r *http.Request) {
 		ComponentsChecksum: dsstatic.JavascriptBundles["components"].Checksum,
 		Title:              "Settings — Miniflux",
 		IsSettings:         true,
+		Form:               form,
+		Themes:             themeOptions(),
+		Languages:          languageOptions(),
+		Timezones:          timezoneOptions(),
 	}
 
 	var buf bytes.Buffer
@@ -360,6 +368,31 @@ func (h *handler) showSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.HTML(w, r, buf.Bytes())
+}
+
+func (h *handler) sseSaveSettings(w http.ResponseWriter, r *http.Request) {
+	user, err := h.store.UserByID(request.UserID(r))
+	if err != nil {
+		response.HTMLServerError(w, r, err)
+		return
+	}
+
+	form := parseSettingsForm(r)
+	if form.Password != "" && form.Password != form.Confirmation {
+		sse := datastar.NewSSE(w, r)
+		sse.MarshalAndPatchSignals(map[string]any{"settingsError": "Passwords do not match"})
+		return
+	}
+
+	form.applyToUser(user)
+	if err := h.store.UpdateUser(user); err != nil {
+		sse := datastar.NewSSE(w, r)
+		sse.MarshalAndPatchSignals(map[string]any{"settingsError": err.Error()})
+		return
+	}
+
+	sse := datastar.NewSSE(w, r)
+	sse.MarshalAndPatchSignals(map[string]any{"settingsSaved": true, "settingsError": ""})
 }
 
 func (h *handler) fetchOPML(w http.ResponseWriter, r *http.Request) {
