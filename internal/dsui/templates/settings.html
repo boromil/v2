@@ -12,6 +12,7 @@
             <a href="#feeds" class="settings-nav-item">Feeds</a>
             <a href="#import" class="settings-nav-item">Import &amp; Export</a>
             <a href="#account" class="settings-nav-item">Account</a>
+            <a href="#password" class="settings-nav-item">Password</a>
         </nav>
 
         <!-- Content area -->
@@ -178,27 +179,31 @@
                         <textarea name="stylesheet" class="settings-textarea" rows="3" data-bind-stylesheet>{{.Form.Stylesheet}}</textarea>
                     </label>
                 </div>
+            </section>
 
-                <div class="mt-3 pt-3" style="border-top:1px solid var(--color-gray-100);">
-                    <h4 class="text-sm font-semibold mb-2" style="color:var(--color-gray-700);">Change Password</h4>
-                    <form action="/ds/sse/settings" method="post"
-                        data-on:submit="@post('/ds/sse/settings')"
-                        onsubmit="return false">
-                        <div style="display:flex; gap:0.5rem; align-items:flex-end; flex-wrap:wrap;">
-                            <label class="settings-field" style="flex:1; min-width:140px;">
-                                <span class="settings-field-label">New password</span>
-                                <input type="password" name="password" class="settings-input" placeholder="Min 6 characters">
-                            </label>
-                            <label class="settings-field" style="flex:1; min-width:140px;">
-                                <span class="settings-field-label">Confirm</span>
-                                <input type="password" name="confirmation" class="settings-input" placeholder="Re-enter password">
-                            </label>
-                            <button type="submit" class="toolbar-btn">
-                                Change password
-                            </button>
-                        </div>
-                    </form>
-                </div>
+            <!-- Password -->
+            <section id="password" class="settings-section">
+                <h3 class="settings-heading">Password</h3>
+                <form action="/ds/sse/settings" method="post"
+                    enctype="multipart/form-data"
+                    data-on:submit="@post('/ds/sse/settings')"
+                    onsubmit="return false">
+                    <div class="settings-grid">
+                        <label class="settings-field">
+                            <span class="settings-field-label">New password</span>
+                            <input type="password" name="password" class="settings-input" placeholder="Minimum 6 characters">
+                        </label>
+                        <label class="settings-field">
+                            <span class="settings-field-label">Confirm new password</span>
+                            <input type="password" name="confirmation" class="settings-input" placeholder="Re-enter password">
+                        </label>
+                    </div>
+                    <div class="mt-2">
+                        <button type="submit" class="toolbar-btn">
+                            Update password
+                        </button>
+                    </div>
+                </form>
             </section>
 
             </form>

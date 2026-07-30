@@ -20,69 +20,70 @@ type selectOption struct {
 }
 
 // settingsFormData holds the form values for the settings page.
+// JSON tags match Datastar signal names (camelCase from data-bind).
 type settingsFormData struct {
-	Username                   string
-	Password                   string
-	Confirmation               string
-	Theme                      string
-	Language                   string
-	Timezone                   string
-	EntryDirection             string
-	EntryOrder                 string
-	EntriesPerPage             int
-	DefaultHomePage            string
-	CategoriesSortingOrder     string
-	DisplayMode                string
-	GestureNav                 string
-	DefaultReadingSpeed        int
-	CJKReadingSpeed            int
-	MediaPlaybackRate          float64
-	ShowReadingTime            bool
-	KeyboardShortcuts          bool
-	EntrySwipe                 bool
-	AlwaysOpenExternalLinks    bool
-	OpenExternalLinksInNewTab  bool
-	AutoFetchShortEntries      bool
-	BlockFilterEntryRules      string
-	KeepFilterEntryRules       string
-	Stylesheet                 string
-	CustomJS                   string
-	ExternalFontHosts          string
-	MarkReadBehavior           string
+	Username                  string  `json:"username"`
+	Password                  string  `json:"password"`
+	Confirmation              string  `json:"confirmation"`
+	Theme                     string  `json:"theme"`
+	Language                  string  `json:"language"`
+	Timezone                  string  `json:"timezone"`
+	EntryDirection            string  `json:"entryDirection"`
+	EntryOrder                string  `json:"entryOrder"`
+	EntriesPerPage            int     `json:"entriesPerPage"`
+	DefaultHomePage           string  `json:"defaultHomePage"`
+	CategoriesSortingOrder    string  `json:"categoriesSortingOrder"`
+	DisplayMode               string  `json:"displayMode"`
+	GestureNav                string  `json:"gestureNav"`
+	DefaultReadingSpeed       int     `json:"defaultReadingSpeed"`
+	CJKReadingSpeed           int     `json:"cjkReadingSpeed"`
+	MediaPlaybackRate         float64 `json:"mediaPlaybackRate"`
+	ShowReadingTime           bool    `json:"showReadingTime"`
+	KeyboardShortcuts         bool    `json:"keyboardShortcuts"`
+	EntrySwipe                bool    `json:"entrySwipe"`
+	AlwaysOpenExternalLinks   bool    `json:"alwaysOpenExternalLinks"`
+	OpenExternalLinksInNewTab bool    `json:"openExternalLinksInNewTab"`
+	AutoFetchShortEntries     bool    `json:"autoFetchShortEntries"`
+	BlockFilterEntryRules     string  `json:"blockFilterEntryRules"`
+	KeepFilterEntryRules      string  `json:"keepFilterEntryRules"`
+	Stylesheet                string  `json:"stylesheet"`
+	CustomJS                  string  `json:"customJs"`
+	ExternalFontHosts         string  `json:"externalFontHosts"`
+	MarkReadBehavior          string  `json:"markReadBehavior"`
 }
 
 func settingsFormFromUser(user *model.User) *settingsFormData {
 	return &settingsFormData{
-		Username:                   user.Username,
-		Theme:                      user.Theme,
-		Language:                   user.Language,
-		Timezone:                   user.Timezone,
-		EntryDirection:             user.EntryDirection,
-		EntryOrder:                 user.EntryOrder,
-		EntriesPerPage:             user.EntriesPerPage,
-		DefaultHomePage:            user.DefaultHomePage,
-		CategoriesSortingOrder:     user.CategoriesSortingOrder,
-		DisplayMode:                user.DisplayMode,
-		GestureNav:                 user.GestureNav,
-		DefaultReadingSpeed:        user.DefaultReadingSpeed,
-		CJKReadingSpeed:            user.CJKReadingSpeed,
-		MediaPlaybackRate:          user.MediaPlaybackRate,
-		ShowReadingTime:            user.ShowReadingTime,
-		KeyboardShortcuts:          user.KeyboardShortcuts,
-		EntrySwipe:                 user.EntrySwipe,
-		AlwaysOpenExternalLinks:    user.AlwaysOpenExternalLinks,
-		OpenExternalLinksInNewTab:  user.OpenExternalLinksInNewTab,
-		AutoFetchShortEntries:      user.AutoFetchShortEntries,
-		BlockFilterEntryRules:      user.BlockFilterEntryRules,
-		KeepFilterEntryRules:       user.KeepFilterEntryRules,
-		Stylesheet:                 user.Stylesheet,
-		CustomJS:                   user.CustomJS,
-		ExternalFontHosts:          user.ExternalFontHosts,
-		MarkReadBehavior:           markReadBehavior(user.MarkReadOnView, user.MarkReadOnMediaPlayerCompletion),
+		Username:                  user.Username,
+		Theme:                     user.Theme,
+		Language:                  user.Language,
+		Timezone:                  user.Timezone,
+		EntryDirection:            user.EntryDirection,
+		EntryOrder:                user.EntryOrder,
+		EntriesPerPage:            user.EntriesPerPage,
+		DefaultHomePage:           user.DefaultHomePage,
+		CategoriesSortingOrder:    user.CategoriesSortingOrder,
+		DisplayMode:               user.DisplayMode,
+		GestureNav:                user.GestureNav,
+		DefaultReadingSpeed:       user.DefaultReadingSpeed,
+		CJKReadingSpeed:           user.CJKReadingSpeed,
+		MediaPlaybackRate:         user.MediaPlaybackRate,
+		ShowReadingTime:           user.ShowReadingTime,
+		KeyboardShortcuts:         user.KeyboardShortcuts,
+		EntrySwipe:                user.EntrySwipe,
+		AlwaysOpenExternalLinks:   user.AlwaysOpenExternalLinks,
+		OpenExternalLinksInNewTab: user.OpenExternalLinksInNewTab,
+		AutoFetchShortEntries:     user.AutoFetchShortEntries,
+		BlockFilterEntryRules:     user.BlockFilterEntryRules,
+		KeepFilterEntryRules:      user.KeepFilterEntryRules,
+		Stylesheet:                user.Stylesheet,
+		CustomJS:                  user.CustomJS,
+		ExternalFontHosts:         user.ExternalFontHosts,
+		MarkReadBehavior:          markReadBehavior(user.MarkReadOnView, user.MarkReadOnMediaPlayerCompletion),
 	}
 }
 
-// parseSettingsForm reads settings from an HTTP request form.
+// parseSettingsForm reads settings from an HTTP request form (used for regular POST).
 func parseSettingsForm(r *http.Request) *settingsFormData {
 	f := &settingsFormData{}
 	f.Username = r.FormValue("username")
@@ -110,7 +111,7 @@ func parseSettingsForm(r *http.Request) *settingsFormData {
 	f.BlockFilterEntryRules = r.FormValue("block_filter_entry_rules")
 	f.KeepFilterEntryRules = r.FormValue("keep_filter_entry_rules")
 	f.Stylesheet = r.FormValue("stylesheet")
-	f.CustomJS = r.FormValue("custom_js")
+	f.CustomJS = r.FormValue("custom_js")    // Match HTML name attribute
 	f.ExternalFontHosts = r.FormValue("external_font_hosts")
 	f.MarkReadBehavior = r.FormValue("mark_read_behavior")
 	return f
@@ -156,7 +157,6 @@ func (f *settingsFormData) applyToUser(user *model.User) {
 	user.Stylesheet = f.Stylesheet
 	user.CustomJS = f.CustomJS
 	user.ExternalFontHosts = f.ExternalFontHosts
-	// Split mark read behavior back to two bools.
 	user.MarkReadOnView, user.MarkReadOnMediaPlayerCompletion = applyMarkReadBehavior(f.MarkReadBehavior)
 }
 

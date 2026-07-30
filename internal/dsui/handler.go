@@ -377,7 +377,19 @@ func (h *handler) sseSaveSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	form := parseSettingsForm(r)
+	// Read settings from Datastar signals (JSON body) or form values.
+	var form *settingsFormData
+	if r.Header.Get("Content-Type") == "application/json" || r.Header.Get("Datastar-Request") != "" {
+		form = &settingsFormData{}
+		if err := readSignals(r, form); err != nil {
+			sse := datastar.NewSSE(w, r)
+			sse.MarshalAndPatchSignals(map[string]any{"importError": "Invalid settings data"})
+			return
+		}
+	} else {
+		// Fallback: regular form POST (password change form)
+		form = parseSettingsForm(r)
+	}
 	if form.Password != "" && form.Password != form.Confirmation {
 		sse := datastar.NewSSE(w, r)
 		sse.MarshalAndPatchSignals(map[string]any{"importError": "Passwords do not match"})
