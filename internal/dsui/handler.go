@@ -146,6 +146,7 @@ type appViewModel struct {
 	FeedID             int64
 	CategoryID         int64
 	Offset             int
+	CountUnread        int
 	StyleChecksum      string
 	JSChecksum         string
 	KeyboardChecksum   string
@@ -242,6 +243,8 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 	// Build subscription menu.
 	vm.MenuSections = h.buildMenu(user, viewName, feedID, categoryID)
 	vm.ListTitle = listTitleForView(viewName, feedID, categoryID, h.store, user.ID)
+	nav, _ := h.store.GetNavMetadata(user.ID)
+	vm.CountUnread = nav.CountUnread
 
 	// Load entries.
 	entries, total, err := h.queryEntries(user.ID, viewName, feedID, categoryID, searchQuery, offset, user.EntriesPerPage)
