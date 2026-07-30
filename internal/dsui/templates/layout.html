@@ -23,6 +23,9 @@
     <div id="toast-success" class="toast toast-success" data-show="$importSuccess" style="display:none" data-on:click="$importSuccess = ''">
         <span data-text="$importSuccess"></span>
     </div>
+    <div id="toast-info" class="toast toast-info" data-show="$refreshMessage" style="display:none" data-on:click="$refreshMessage = ''">
+        <span data-text="$refreshMessage"></span>
+    </div>
     {{if .IsSettings}}
         {{template "settings" .}}
     {{else}}
