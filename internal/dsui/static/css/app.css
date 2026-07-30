@@ -1265,3 +1265,27 @@
     color: #8888aa;
   }
 }
+
+/* File input styling */
+input[type="file"] {
+  font-size: 0.75rem;
+}
+input[type="file"]::file-selector-button {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  border: 1px solid var(--color-gray-300);
+  background: var(--color-gray-100);
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  input[type="file"] {
+    color: #c0c0d0;
+  }
+  input[type="file"]::file-selector-button {
+    background-color: #2a2a4a;
+    color: #c0c0d0;
+    border-color: #3a3a5a;
+  }
+}
