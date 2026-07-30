@@ -1,0 +1,17 @@
+{{define "layout"}}
+<!DOCTYPE html>
+<html lang="{{.Language}}" dir="{{.Direction}}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#1a1a2e" media="(prefers-color-scheme: dark)">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/ds/stylesheets/{{.StyleChecksum}}/app.css">
+    <script type="module" src="/ds/js/{{.JSChecksum}}/datastar.js"></script>
+</head>
+<body class="m-0 p-0 overflow-hidden h-screen bg-white text-gray-900 font-sans antialiased" data-signals="{{.SignalsJSON}}">
+    {{template "app" .}}
+</body>
+</html>
+{{end}}

@@ -1,0 +1,23 @@
+{{define "entry_content"}}
+{{if .SelectedEntry}}
+<div class="article-header">
+    <h1 class="article-title">{{.SelectedEntry.Title}}</h1>
+    <div class="article-meta">
+        {{if .SelectedEntry.Feed}}
+        <span>{{.SelectedEntry.Feed.Title}}</span>
+        {{end}}
+        {{if .SelectedEntry.Author}}
+        <span class="author">{{.SelectedEntry.Author}}</span>
+        {{end}}
+        <span>{{.SelectedEntry.Date.Format "January 2, 2006 15:04"}}</span>
+    </div>
+</div>
+<div class="article-body">
+    {{.SelectedEntry.Content}}
+</div>
+{{else}}
+<div class="empty-state">
+    <p>Select an entry to read.</p>
+</div>
+{{end}}
+{{end}}
