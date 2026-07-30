@@ -6,9 +6,7 @@
     data-starred="{{.Starred}}"
     id="entry-row-{{.ID}}">
     <div class="flex items-center gap-2">
-        <button class="star-btn {{if .Starred}}starred{{end}} flex-shrink-0">
-            {{if .Starred}}★{{else}}☆{{end}}
-        </button>
+        {{template "star_button" .}}
         <span class="entry-title flex-1">{{.Title}}</span>
     </div>
     <div class="entry-meta">
@@ -18,4 +16,11 @@
         <span class="entry-date">{{elapsed .Date}}</span>
     </div>
 </entry-row>
+{{end}}
+
+{{define "star_button"}}
+<button class="star-btn {{if .Starred}}starred{{end}} flex-shrink-0"
+    id="star-icon-{{.ID}}">
+    {{if .Starred}}★{{else}}☆{{end}}
+</button>
 {{end}}
