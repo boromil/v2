@@ -924,3 +924,171 @@
     display: none;
   }
 }
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: #1a1a2e;
+    color: #e0e0e0;
+  }
+
+  #subscription-panel {
+    background-color: #16213e;
+    border-right-color: #2a2a4a;
+  }
+
+  #entry-list-panel {
+    background-color: #1a1a2e;
+    border-right-color: #2a2a4a;
+  }
+
+  #entry-content-panel {
+    background-color: #1a1a2e;
+  }
+
+  .top-nav {
+    background-color: #16213e;
+    border-bottom-color: #2a2a4a;
+  }
+
+  .top-nav .nav-title {
+    color: #e0e0e0;
+  }
+
+  .feed-tree-item {
+    color: #c0c0d0;
+  }
+
+  .feed-tree-item:hover {
+    background-color: #2a2a4a;
+  }
+
+  .feed-tree-item.selected {
+    background-color: #1a3a6a;
+    border-right-color: #4a9eff;
+  }
+
+  .feed-tree-item .unread-count {
+    color: #8888aa;
+  }
+
+  .feed-tree-item.selected .unread-count {
+    color: #4a9eff;
+  }
+
+  .feed-tree-section {
+    color: #666688;
+  }
+
+  .entry-row {
+    border-bottom-color: #2a2a4a;
+  }
+
+  .entry-row:hover {
+    background-color: #1e1e3a;
+  }
+
+  .entry-row.selected {
+    background-color: #1a2a4a;
+  }
+
+  .entry-row.read .entry-title {
+    color: #7777aa;
+  }
+
+  .entry-row.unread .entry-title {
+    color: #e0e0e0;
+  }
+
+  .entry-meta {
+    color: #666688;
+  }
+
+  .entry-meta .feed-name {
+    color: #4a9e6a;
+  }
+
+  .article-header {
+    border-bottom-color: #2a2a4a;
+  }
+
+  .article-title {
+    color: #e0e0e0;
+  }
+
+  .article-meta {
+    color: #8888aa;
+  }
+
+  .article-meta .author {
+    color: #c0c0d0;
+  }
+
+  .article-body {
+    color: #d0d0d0;
+  }
+
+  .article-body a {
+    color: #6ab0ff;
+  }
+
+  .article-body pre {
+    background-color: #16213e;
+  }
+
+  .article-toolbar {
+    background-color: #16213e;
+    border-bottom-color: #2a2a4a;
+  }
+
+  .toolbar-btn {
+    background-color: #1a1a2e;
+    border-color: #3a3a5a;
+    color: #c0c0d0;
+  }
+
+  .toolbar-btn:hover {
+    background-color: #2a2a4a;
+    border-color: #4a4a6a;
+  }
+
+  .mark-read-btn {
+    color: #6ab0ff;
+  }
+
+  .mark-read-btn:hover {
+    background-color: #1a2a4a;
+  }
+
+  .star-btn {
+    color: #5555aa;
+  }
+
+  .star-btn:hover {
+    color: #ffb300;
+  }
+
+  .star-btn.starred {
+    color: #ffb300;
+  }
+
+  .pagination {
+    color: #8888aa;
+  }
+
+  .pagination a:hover {
+    background-color: #2a2a4a;
+  }
+
+  .loading-indicator {
+    color: #8888aa;
+  }
+
+  .empty-state {
+    color: #8888aa;
+  }
+}
