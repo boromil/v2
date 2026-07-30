@@ -23,7 +23,11 @@
     <div id="toast-success" class="toast toast-success" data-show="$importSuccess" style="display:none" data-on:click="$importSuccess = ''">
         <span data-text="$importSuccess"></span>
     </div>
-    {{template "app" .}}
+    {{if .IsSettings}}
+        {{template "settings" .}}
+    {{else}}
+        {{template "app" .}}
+    {{end}}
 </body>
 </html>
 {{end}}

@@ -2,203 +2,76 @@
 <div id="settings-panel" class="flex flex-col h-full">
     <div class="top-nav">
         <a href="/ds/unread" class="nav-title no-underline">&larr; Back to feeds</a>
-        <span class="nav-title ml-2">Settings</span>
     </div>
     <div class="flex-1 overflow-y-auto px-4 py-3">
-        <form id="settings-form"
-            data-on:submit="@post('/ds/sse/settings')"
-            data-signals='{"settingsSaved": false, "settingsError": ""}'
-            method="post">
+        <h2 class="text-lg font-semibold mb-3" style="color: inherit;">Settings</h2>
 
-            <!-- Reading Preferences -->
-            <fieldset class="settings-group">
-                <legend class="settings-legend">Reading</legend>
+        <!-- OPML Import -->
+        <fieldset class="settings-group">
+            <legend class="settings-legend">Import Feeds (OPML)</legend>
 
-                <label class="settings-label">Default Home Page</label>
-                <select name="default_home_page" class="settings-select" data-bind-defaultHomePage>
-                    <option value="unread" {{if eq .Form.DefaultHomePage "unread"}}selected{{end}}>Unread</option>
-                    <option value="starred" {{if eq .Form.DefaultHomePage "starred"}}selected{{end}}>Starred</option>
-                    <option value="history" {{if eq .Form.DefaultHomePage "history"}}selected{{end}}>History</option>
-                    <option value="feeds" {{if eq .Form.DefaultHomePage "feeds"}}selected{{end}}>Feeds</option>
-                    <option value="categories" {{if eq .Form.DefaultHomePage "categories"}}selected{{end}}>Categories</option>
-                </select>
-
-                <label class="settings-label">Entry Order</label>
-                <select name="entry_order" class="settings-select" data-bind-entryOrder>
-                    <option value="published_at" {{if eq .Form.EntryOrder "published_at"}}selected{{end}}>Published Date</option>
-                    <option value="created_at" {{if eq .Form.EntryOrder "created_at"}}selected{{end}}>Created Date</option>
-                </select>
-
-                <label class="settings-label">Entry Direction</label>
-                <select name="entry_direction" class="settings-select" data-bind-entryDirection>
-                    <option value="desc" {{if eq .Form.EntryDirection "desc"}}selected{{end}}>Newest First</option>
-                    <option value="asc" {{if eq .Form.EntryDirection "asc"}}selected{{end}}>Oldest First</option>
-                </select>
-
-                <label class="settings-label">Entries Per Page (1–1000)</label>
-                <input type="number" name="entries_per_page" class="settings-input"
-                    min="1" max="1000" value="{{.Form.EntriesPerPage}}" data-bind-entriesPerPage>
-
-                <label class="settings-label">Mark Read Behavior</label>
-                <select name="mark_read_behavior" class="settings-select" data-bind-markReadBehavior>
-                    <option value="no-auto" {{if eq .Form.MarkReadBehavior "no-auto"}}selected{{end}}>Manual Only</option>
-                    <option value="on-view" {{if eq .Form.MarkReadBehavior "on-view"}}selected{{end}}>On View</option>
-                    <option value="on-view-but-wait-for-player-completion" {{if eq .Form.MarkReadBehavior "on-view-but-wait-for-player-completion"}}selected{{end}}>On View (Wait for Media)</option>
-                    <option value="on-player-completion" {{if eq .Form.MarkReadBehavior "on-player-completion"}}selected{{end}}>Only on Media Completion</option>
-                </select>
-
-                <label class="settings-label">Reading Speed (words/min)</label>
-                <input type="number" name="default_reading_speed" class="settings-input"
-                    min="1" value="{{.Form.DefaultReadingSpeed}}" data-bind-defaultReadingSpeed>
-
-                <label class="settings-label">CJK Reading Speed (chars/min)</label>
-                <input type="number" name="cjk_reading_speed" class="settings-input"
-                    min="1" value="{{.Form.CJKReadingSpeed}}" data-bind-cjkReadingSpeed>
-
-                <label class="settings-label">Media Playback Rate (0.25–4.0)</label>
-                <input type="number" name="media_playback_rate" class="settings-input"
-                    min="0.25" max="4.0" step="0.25" value="{{.Form.MediaPlaybackRate}}" data-bind-mediaPlaybackRate>
-
-                <label class="settings-label">
-                    <input type="checkbox" name="show_reading_time" value="1" {{if .Form.ShowReadingTime}}checked{{end}}>
-                    Show Reading Time
-                </label>
-            </fieldset>
-
-            <!-- Appearance -->
-            <fieldset class="settings-group">
-                <legend class="settings-legend">Appearance</legend>
-
-                <label class="settings-label">Theme</label>
-                <select name="theme" class="settings-select" data-bind-theme>
-                    {{range .Themes}}
-                    <option value="{{.Value}}" {{if eq $.Form.Theme .Value}}selected{{end}}>{{.Label}}</option>
-                    {{end}}
-                </select>
-
-                <label class="settings-label">Language</label>
-                <select name="language" class="settings-select" data-bind-language>
-                    {{range .Languages}}
-                    <option value="{{.Value}}" {{if eq $.Form.Language .Value}}selected{{end}}>{{.Label}}</option>
-                    {{end}}
-                </select>
-
-                <label class="settings-label">Timezone</label>
-                <select name="timezone" class="settings-select" data-bind-timezone>
-                    {{range .Timezones}}
-                    <option value="{{.Value}}" {{if eq $.Form.Timezone .Value}}selected{{end}}>{{.Label}}</option>
-                    {{end}}
-                </select>
-
-                <label class="settings-label">Display Mode</label>
-                <select name="display_mode" class="settings-select" data-bind-displayMode>
-                    <option value="fullscreen" {{if eq .Form.DisplayMode "fullscreen"}}selected{{end}}>Fullscreen</option>
-                    <option value="standalone" {{if eq .Form.DisplayMode "standalone"}}selected{{end}}>Standalone</option>
-                    <option value="minimal-ui" {{if eq .Form.DisplayMode "minimal-ui"}}selected{{end}}>Minimal UI</option>
-                    <option value="browser" {{if eq .Form.DisplayMode "browser"}}selected{{end}}>Browser</option>
-                </select>
-            </fieldset>
-
-            <!-- Interaction -->
-            <fieldset class="settings-group">
-                <legend class="settings-legend">Interaction</legend>
-
-                <label class="settings-label">
-                    <input type="checkbox" name="keyboard_shortcuts" value="1" {{if .Form.KeyboardShortcuts}}checked{{end}}>
-                    Enable Keyboard Shortcuts
-                </label>
-
-                <label class="settings-label">
-                    <input type="checkbox" name="entry_swipe" value="1" {{if .Form.EntrySwipe}}checked{{end}}>
-                    Enable Entry Swipe
-                </label>
-
-                <label class="settings-label">
-                    <input type="checkbox" name="always_open_external_links" value="1" {{if .Form.AlwaysOpenExternalLinks}}checked{{end}}>
-                    Always Open External Links
-                </label>
-
-                <label class="settings-label">
-                    <input type="checkbox" name="open_external_links_in_new_tab" value="1" {{if .Form.OpenExternalLinksInNewTab}}checked{{end}}>
-                    Open External Links in New Tab
-                </label>
-
-                <label class="settings-label">
-                    <input type="checkbox" name="auto_fetch_short_entries" value="1" {{if .Form.AutoFetchShortEntries}}checked{{end}}>
-                    Auto-Fetch Short Entries
-                </label>
-            </fieldset>
-
-            <!-- Feed Defaults -->
-            <fieldset class="settings-group">
-                <legend class="settings-legend">Feed Defaults</legend>
-
-                <label class="settings-label">Categories Sorting</label>
-                <select name="categories_sorting_order" class="settings-select" data-bind-categoriesSortingOrder>
-                    <option value="unread_count" {{if eq .Form.CategoriesSortingOrder "unread_count"}}selected{{end}}>By Unread Count</option>
-                    <option value="alphabetical" {{if eq .Form.CategoriesSortingOrder "alphabetical"}}selected{{end}}>Alphabetically</option>
-                </select>
-
-                <label class="settings-label">Gesture Navigation</label>
-                <select name="gesture_nav" class="settings-select" data-bind-gestureNav>
-                    <option value="none" {{if eq .Form.GestureNav "none"}}selected{{end}}>None</option>
-                    <option value="tap" {{if eq .Form.GestureNav "tap"}}selected{{end}}>Tap</option>
-                    <option value="swipe" {{if eq .Form.GestureNav "swipe"}}selected{{end}}>Swipe</option>
-                </select>
-
-                <label class="settings-label">Block Filter Rules</label>
-                <textarea name="block_filter_entry_rules" class="settings-textarea" rows="2"
-                    data-bind-blockFilterEntryRules>{{.Form.BlockFilterEntryRules}}</textarea>
-
-                <label class="settings-label">Keep Filter Rules</label>
-                <textarea name="keep_filter_entry_rules" class="settings-textarea" rows="2"
-                    data-bind-keepFilterEntryRules>{{.Form.KeepFilterEntryRules}}</textarea>
-            </fieldset>
-
-            <!-- Customization -->
-            <fieldset class="settings-group">
-                <legend class="settings-legend">Customization</legend>
-
-                <label class="settings-label">Custom CSS</label>
-                <textarea name="stylesheet" class="settings-textarea" rows="3"
-                    data-bind-stylesheet>{{.Form.Stylesheet}}</textarea>
-
-                <label class="settings-label">External Font Hosts</label>
-                <input type="text" name="external_font_hosts" class="settings-input"
-                    value="{{.Form.ExternalFontHosts}}" data-bind-externalFontHosts
-                    placeholder="fonts.example.com, fonts.googleapis.com">
-
-                <label class="settings-label">Custom JavaScript</label>
-                <textarea name="custom_js" class="settings-textarea" rows="3"
-                    data-bind-customJs>{{.Form.CustomJS}}</textarea>
-            </fieldset>
-
-            <!-- Account -->
-            <fieldset class="settings-group">
-                <legend class="settings-legend">Account</legend>
-
-                <label class="settings-label">Username</label>
-                <input type="text" name="username" class="settings-input"
-                    value="{{.Form.Username}}" data-bind-username required>
-
-                <label class="settings-label">New Password</label>
-                <input type="password" name="password" class="settings-input"
-                    data-bind-password placeholder="Leave blank to keep current">
-
-                <label class="settings-label">Confirm Password</label>
-                <input type="password" name="confirmation" class="settings-input"
-                    data-bind-confirmation placeholder="Leave blank to keep current">
-            </fieldset>
-
-            <div class="py-3">
-                <button type="submit" class="toolbar-btn px-4 py-2" style="background-color: var(--color-blue-600, #2563eb); color: #fff; border: none;">
-                    <span data-indicator>Saving...</span>
-                    <span data-indicator="!exists">Save Settings</span>
+            <form action="/ds/import-opml" method="post" enctype="multipart/form-data" class="mb-3">
+                <input type="hidden" name="csrf" value="{{.CSRFToken}}">
+                <p class="text-sm mb-2" style="color: var(--color-gray-600);">Upload an OPML file exported from another feed reader.</p>
+                <input type="file" name="file" accept=".opml,.xml" required
+                    style="display:block; width:100%; font-size:0.8125rem; margin-bottom:0.5rem; color:inherit;">
+                <button type="submit" class="toolbar-btn">
+                    Import from File
                 </button>
-                <span class="ml-2 text-sm" data-show="$settingsSaved" style="color: var(--color-green-600, #16a34a)">✓ Settings saved</span>
-                <span class="ml-2 text-sm" data-show="$settingsError" data-text="$settingsError" style="color: var(--color-red-600, #dc2626)"></span>
-            </div>
-        </form>
+            </form>
+
+            <form action="/ds/fetch-opml" method="post" enctype="multipart/form-data">
+                <input type="hidden" name="csrf" value="{{.CSRFToken}}">
+                <p class="text-sm mb-2" style="color: var(--color-gray-600);">Or fetch an OPML file from a URL.</p>
+                <input type="url" name="url" placeholder="https://example.com/feeds.opml" required
+                    style="display:block; width:100%; font-size:0.8125rem; padding:0.375rem 0.5rem; margin-bottom:0.5rem; border:1px solid var(--color-gray-300); border-radius:0.25rem; color:inherit; background:var(--color-white);">
+                <button type="submit" class="toolbar-btn">
+                    Fetch from URL
+                </button>
+            </form>
+        </fieldset>
+
+        <!-- Reading Preferences (TODO: full settings form) -->
+        <fieldset class="settings-group">
+            <legend class="settings-legend">Export Feeds</legend>
+            <p class="text-sm mb-2" style="color: var(--color-gray-600);">Download your subscriptions as an OPML file.</p>
+            <a href="/export" class="toolbar-btn no-underline" target="_blank">Download OPML</a>
+        </fieldset>
     </div>
 </div>
+
+<style>
+.settings-group {
+    border: 1px solid var(--color-gray-200);
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+.settings-legend {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-gray-700);
+    padding: 0 0.25rem;
+}
+@media (prefers-color-scheme: dark) {
+    .settings-group {
+        border-color: #2a2a4a;
+    }
+    .settings-legend {
+        color: #c0c0d0;
+    }
+    input[type="url"] {
+        background: #1a1a2e !important;
+        border-color: #3a3a5a !important;
+    }
+    input[type="file"] {
+        color: #c0c0d0;
+    }
+    input[type="file"]::file-selector-button {
+        background-color: #2a2a4a;
+        color: #c0c0d0;
+        border-color: #3a3a5a;
+    }
+}
+</style>
 {{end}}

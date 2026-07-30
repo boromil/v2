@@ -10,23 +10,11 @@
     <aside id="subscription-panel" class="flex flex-col h-full">
         <div class="top-nav">
             <span class="nav-title">Subscriptions</span>
+            <a href="/ds/settings" class="ml-auto no-underline" title="Settings" style="font-size:1rem; color:var(--color-gray-500);">&#9881;</a>
         </div>
         <nav class="flex-1 overflow-y-auto">
             {{template "subscription_list" .}}
         </nav>
-        <div class="px-2 py-2 border-t border-gray-200" style="border-top-color: #e5e7eb;">
-            <form id="import-opml-form"
-                action="/ds/import-opml"
-                method="post"
-                enctype="multipart/form-data">
-                <input type="hidden" name="csrf" value="{{.CSRFToken}}">
-                <input type="file" name="file" accept=".opml,.xml" required
-                    style="display:block; width:100%; font-size:0.75rem; margin-bottom:0.25rem; color:inherit;">
-                <button type="submit" class="toolbar-btn w-full text-center">
-                    Import OPML
-                </button>
-            </form>
-        </div>
     </aside>
 
     <!-- MIDDLE PANEL: Entry List -->
