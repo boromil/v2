@@ -42,13 +42,15 @@ func setSessionOnRequest(req *http.Request, session *model.WebSession) *http.Req
 
 // authenticateTestSession creates and persists an authenticated session
 // in the database, then attaches the cookie + context to the request.
+// Returns the CSRF token needed for POST requests.
 func authenticateTestSession(t *testing.T, store interface {
 	CreateWebSession(*model.WebSession) error
 	RotateWebSession(string, *model.WebSession) error
-}, req *http.Request, user *model.User) *http.Request {
+}, req *http.Request, user *model.User) (*http.Request, string) {
 	t.Helper()
 
 	session, _ := model.NewWebSession("test-agent", "127.0.0.1")
+	csrfToken := session.CSRF()
 	if err := store.CreateWebSession(session); err != nil {
 		t.Fatalf("failed to create web session: %v", err)
 	}
@@ -64,7 +66,7 @@ func authenticateTestSession(t *testing.T, store interface {
 		Value: session.ID + "." + newSecret,
 	})
 
-	return setSessionOnRequest(req, session)
+	return setSessionOnRequest(req, session), csrfToken
 }
 
 func TestShowAppUnread(t *testing.T) {
@@ -78,7 +80,7 @@ func TestShowAppUnread(t *testing.T) {
 	handler := Serve(store, pool)
 
 	req := httptest.NewRequest(http.MethodGet, "/ds/unread", nil)
-	req = authenticateTestSession(t, store, req, user)
+	req, _ = authenticateTestSession(t, store, req, user)
 
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -113,7 +115,7 @@ func TestShowAppStarred(t *testing.T) {
 	handler := Serve(store, pool)
 
 	req := httptest.NewRequest(http.MethodGet, "/ds/starred", nil)
-	req = authenticateTestSession(t, store, req, user)
+	req, _ = authenticateTestSession(t, store, req, user)
 
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -137,7 +139,7 @@ func TestShowAppFeedView(t *testing.T) {
 	handler := Serve(store, pool)
 
 	req := httptest.NewRequest(http.MethodGet, "/ds/feed/"+itoa(feed.ID), nil)
-	req = authenticateTestSession(t, store, req, user)
+	req, _ = authenticateTestSession(t, store, req, user)
 
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -161,7 +163,7 @@ func TestSSEEntriesReturnsFragment(t *testing.T) {
 	handler := Serve(store, pool)
 
 	req := httptest.NewRequest(http.MethodGet, "/ds/sse/entries?view=unread", nil)
-	req = authenticateTestSession(t, store, req, user)
+	req, _ = authenticateTestSession(t, store, req, user)
 
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -189,7 +191,7 @@ func TestSSEEntryReturnsContent(t *testing.T) {
 	handler := Serve(store, pool)
 
 	req := httptest.NewRequest(http.MethodGet, "/ds/sse/entry/"+itoa(entry.ID), nil)
-	req = authenticateTestSession(t, store, req, user)
+	req, _ = authenticateTestSession(t, store, req, user)
 
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -213,7 +215,8 @@ func TestSSEToggleStar(t *testing.T) {
 	handler := Serve(store, pool)
 
 	req := httptest.NewRequest(http.MethodPost, "/ds/sse/entry/star/"+itoa(entry.ID), nil)
-	req = authenticateTestSession(t, store, req, user)
+	req, csrf := authenticateTestSession(t, store, req, user)
+	req.Header.Set("X-Csrf-Token", csrf)
 
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -249,7 +252,8 @@ func TestSSEMarkAllRead(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Datastar-Request", "true")
 
-	req = authenticateTestSession(t, store, req, user)
+	req, csrf := authenticateTestSession(t, store, req, user)
+	req.Header.Set("X-Csrf-Token", csrf)
 
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -332,7 +336,7 @@ func TestCategoryView(t *testing.T) {
 	handler := Serve(store, pool)
 
 	req := httptest.NewRequest(http.MethodGet, "/ds/category/"+itoa(cat.ID), nil)
-	req = authenticateTestSession(t, store, req, user)
+	req, _ = authenticateTestSession(t, store, req, user)
 
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
