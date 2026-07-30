@@ -520,6 +520,21 @@ func (h *handler) sseToggleEntryStatus(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	// Also update the toolbar if the entry is currently displayed.
+	if len(req.EntryIDs) > 0 {
+		firstID := req.EntryIDs[0]
+		entry, err := h.store.NewEntryQueryBuilder(user.ID).
+			WithEntryIDs(firstID).
+			GetEntry()
+		if err == nil && entry != nil {
+			toolbarHTML := buildArticleToolbar(entry)
+			fragments = append(fragments, SSEFragment{
+				HTML:     toolbarHTML,
+				Selector: "#article-toolbar",
+			})
+		}
+	}
+
 	if len(fragments) > 0 {
 		renderSSEMulti(w, r, fragments)
 	} else {
@@ -892,4 +907,36 @@ func elapsedTime(t time.Time) string {
 		}
 		return fmt.Sprintf("%dy", y)
 	}
+}
+
+// buildArticleToolbar renders an HTML toolbar for the article content panel.
+func buildArticleToolbar(entry *model.Entry) string {
+	toggleLabel := "Mark read"
+	if entry.Status == model.EntryStatusRead {
+		toggleLabel = "Mark unread"
+	}
+	starIcon := "☆"
+	starLabel := "Star"
+	starClass := ""
+	if entry.Starred {
+		starIcon = "★"
+		starLabel = "Starred"
+		starClass = "starred"
+	}
+	return fmt.Sprintf(`<div id="article-toolbar" class="article-toolbar">
+    <button class="toolbar-btn"
+        data-on:click="@post('/ds/sse/entry/star/%d')">
+        <span id="star-icon-%d" class="%s">%s</span>
+        <span>%s</span>
+    </button>
+    <a href="%s" target="_blank" rel="noopener" class="toolbar-btn no-underline">
+        Open original
+    </a>
+    <button class="toolbar-btn"
+        data-signals-entryIds="[%d]"
+        data-on:click="@post('/ds/sse/entry/status')">
+        %s
+    </button>
+</div>`, entry.ID, entry.ID, starClass, starIcon, starLabel,
+		entry.URL, entry.ID, toggleLabel)
 }
