@@ -192,8 +192,9 @@ type paginationView struct {
 }
 
 type menuSection struct {
-	Label string
-	Items []menuItem
+	Label       string
+	HasChildren bool
+	Items       []menuItem
 }
 
 type menuItem struct {
@@ -767,9 +768,10 @@ func (h *handler) buildMenu(user *model.User, activeView string, activeFeedID, a
 			if cat.TotalUnread != nil && *cat.TotalUnread > 0 {
 				catCount = fmt.Sprintf("%d", *cat.TotalUnread)
 			}
-			sections = append(sections, menuSection{
-				Label: cat.Title,
-				Items: []menuItem{{
+		sections = append(sections, menuSection{
+			Label:       cat.Title,
+			HasChildren: true,
+			Items: []menuItem{{
 					Label:       cat.Title,
 					URL:         fmt.Sprintf("/ds/category/%d", cat.ID),
 					SSEURL:      fmt.Sprintf("/ds/sse/entries?categoryId=%d", cat.ID),

@@ -685,6 +685,37 @@
   text-transform: uppercase;
   color: var(--color-gray-500);
   letter-spacing: 0.05em;
+  cursor: default;
+}
+
+/* Category expand/collapse via <details> */
+.feed-tree-category {
+  margin: 0;
+}
+
+.feed-tree-category > summary {
+  padding: 0.25rem 0.5rem 0.25rem 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--color-gray-500);
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.feed-tree-category > summary::-webkit-details-marker {
+  display: none;
+}
+
+.feed-tree-category > summary::before {
+  content: '▸ ';
+  font-size: 0.5625rem;
+}
+
+.feed-tree-category[open] > summary::before {
+  content: '▾ ';
 }
 
 /* Entry rows */
