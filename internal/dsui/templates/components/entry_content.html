@@ -10,7 +10,7 @@
         Open original
     </a>
     <button class="toolbar-btn"
-        data-signals-entryIds="[{{.SelectedEntry.ID}}]"
+        data-signals='{"entryIds":[{{.SelectedEntry.ID}}]}'
         data-on:click="@post('/ds/sse/entry/status')">
         {{if eq .SelectedEntry.Status "unread"}}Mark read{{else}}Mark unread{{end}}
     </button>

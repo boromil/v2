@@ -1049,8 +1049,8 @@ func buildArticleToolbar(entry *model.Entry) string {
         Open original
     </a>
     <button class="toolbar-btn"
-        data-signals-entryIds="[%d]"
-        data-on:click="@post('/ds/sse/entry/status')">
+        data-signals='{\"entryIds\":[%d]}'
+        data-on:click=\"@post('/ds/sse/entry/status')\">
         %s
     </button>
 </div>`, entry.ID, entry.ID, starClass, starIcon, starLabel,
