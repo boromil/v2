@@ -430,3 +430,128 @@ func TestSSEResponseHasNoHtmlWrapper(t *testing.T) {
 		t.Error("expected at least 2 patch events (entry-content + entry-row)")
 	}
 }
+
+func TestShowAppEmptyEntries(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	_ = mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	// No entries created.
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	req := httptest.NewRequest(http.MethodGet, "/ds/unread", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "No entries to display") {
+		t.Error("expected empty state message when no entries exist")
+	}
+	if strings.Contains(body, "entry-row") {
+		t.Error("should not have entry rows when no entries exist")
+	}
+}
+
+func TestShowAppNoFeeds(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	// No categories or feeds created.
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	req := httptest.NewRequest(http.MethodGet, "/ds/unread", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "All") {
+		t.Error("expected standard views (All/Starred/History) in sidebar")
+	}
+	if !strings.Contains(body, "app-container") {
+		t.Error("expected three-panel layout even with no feeds")
+	}
+}
+
+func TestPaginationBoundary(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	_ = mtest.CreateTestEntries(t, store, user.ID, feed.ID, 2)
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	req := httptest.NewRequest(http.MethodGet, "/ds/unread", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "entry-row") {
+		t.Error("expected entry rows in response")
+	}
+}
+
+func TestSearchNoResults(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	_ = mtest.CreateTestEntries(t, store, user.ID, feed.ID, 3)
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	req := httptest.NewRequest(http.MethodGet, "/ds/search?q=nonexistentxyz123", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "Search") {
+		t.Error("expected 'Search' title in response")
+	}
+}
+
+func TestCSSStyleContainsDarkMode(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	checksum := "00000000"
+	req := httptest.NewRequest(http.MethodGet, "/ds/stylesheets/"+checksum+"/app", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code == http.StatusOK {
+		body := w.Body.String()
+		if !strings.Contains(body, "prefers-color-scheme: dark") {
+			t.Error("CSS should contain dark mode media query")
+		}
+		if !strings.Contains(body, "color-scheme: dark") {
+			t.Error("CSS should set dark color-scheme")
+		}
+	}
+}
