@@ -77,8 +77,8 @@ func Serve(store *storage.Storage, pool *worker.Pool) http.Handler {
 	mux.HandleFunc("POST /ds/sse/entry/status", h.sseToggleEntryStatus)
 	mux.HandleFunc("POST /ds/sse/mark-all-read", h.sseMarkAllRead)
 
-	// Apply session middleware.
-	return sessionMiddleware(store)(mux)
+	// Apply middleware chain: secure headers -> session -> CSRF -> handlers.
+	return secureHeadersMiddleware(sessionMiddleware(store)(newCSRFMiddleware().handle(mux)))
 }
 
 // parseTemplates loads and compiles all HTML templates.

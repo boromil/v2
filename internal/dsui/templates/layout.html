@@ -7,6 +7,7 @@
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#1a1a2e" media="(prefers-color-scheme: dark)">
     <title>{{.Title}}</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; frame-src https:; connect-src 'self';">
     <link rel="stylesheet" href="/ds/stylesheets/{{.StyleChecksum}}/app.css">
     <script type="module" src="/ds/js/{{.JSChecksum}}/datastar"></script>
     <script src="/ds/js/{{.KeyboardChecksum}}/keyboard" defer></script>
