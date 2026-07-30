@@ -888,6 +888,49 @@
   font-size: 0.75rem;
 }
 
+/* Spinner animation */
+@keyframes dsui-spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-gray-300);
+  border-top-color: var(--color-blue-500);
+  border-radius: 50%;
+  animation: dsui-spin 0.6s linear infinite;
+  margin-right: 0.5rem;
+}
+
+/* Toast notification */
+.toast {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.8125rem;
+  color: #fff;
+  z-index: 1000;
+  animation: toast-in 0.2s ease-out;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.toast-error {
+  background-color: #dc3545;
+}
+
+.toast-success {
+  background-color: #198754;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(1rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* Empty state */
 .empty-state {
   display: flex;

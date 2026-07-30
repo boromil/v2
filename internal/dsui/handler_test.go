@@ -361,3 +361,72 @@ func itoa(n int64) string {
 	}
 	return s
 }
+
+func TestSSEWireFormat(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	_ = mtest.CreateTestEntries(t, store, user.ID, feed.ID, 3)
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	req := httptest.NewRequest(http.MethodGet, "/ds/sse/entries?view=unread", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+
+	contentType := w.Header().Get("Content-Type")
+	if !strings.HasPrefix(contentType, "text/event-stream") {
+		t.Errorf("expected text/event-stream, got %q", contentType)
+	}
+
+	body := w.Body.String()
+	// Verify SSE event structure: event line, data lines, blank line separator.
+	if !strings.Contains(body, "event: datastar-patch-elements") {
+		t.Error("expected datastar-patch-elements event in SSE response")
+	}
+	if !strings.Contains(body, "selector #entry-list") {
+		t.Error("expected selector targeting #entry-list")
+	}
+	// The HTML fragment should be on a data: elements line (multiline supported).
+	if !strings.Contains(body, "data: elements ") {
+		t.Error("expected data: elements line with HTML fragment")
+	}
+}
+
+func TestSSEResponseHasNoHtmlWrapper(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	entry := mtest.CreateTestEntry(t, store, user.ID, feed.ID)
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	req := httptest.NewRequest(http.MethodGet, "/ds/sse/entry/"+itoa(entry.ID), nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	// SSE response should NOT contain <html>, <head>, or <body>.
+	body := w.Body.String()
+	if strings.Contains(body, "<html") || strings.Contains(body, "</html>") {
+		t.Error("SSE response contains full HTML document wrapper")
+	}
+	if !strings.Contains(body, entry.Title) {
+		t.Error("SSE response should contain entry title")
+	}
+	// Should contain both entry-row patch and entry-content patch.
+	if strings.Count(body, "event: datastar-patch-elements") < 2 {
+		t.Error("expected at least 2 patch events (entry-content + entry-row)")
+	}
+}
