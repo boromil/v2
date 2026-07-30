@@ -100,6 +100,7 @@ func parseTemplates() *template.Template {
 		"templates/components/entry_list.html",
 		"templates/components/entry_row.html",
 		"templates/components/entry_content.html",
+		"templates/components/article_toolbar.html",
 		"templates/components/feed_node.html",
 		"templates/components/pagination.html",
 	))
@@ -605,11 +606,19 @@ func (h *handler) sseToggleEntryStatus(w http.ResponseWriter, r *http.Request) {
 			WithEntryIDs(firstID).
 			GetEntry()
 		if err == nil && entry != nil {
-			toolbarHTML := buildArticleToolbar(entry)
-			fragments = append(fragments, SSEFragment{
-				HTML:     toolbarHTML,
-				Selector: "#article-toolbar",
-			})
+			var toolbarBuf bytes.Buffer
+			toolbarData := map[string]any{
+				"ID":      entry.ID,
+				"Starred": entry.Starred,
+				"URL":     entry.URL,
+				"Status":  entry.Status,
+			}
+			if err := h.tpl.ExecuteTemplate(&toolbarBuf, "article_toolbar", toolbarData); err == nil {
+				fragments = append(fragments, SSEFragment{
+					HTML:     toolbarBuf.String(),
+					Selector: "#article-toolbar",
+				})
+			}
 		}
 	}
 
@@ -1025,34 +1034,3 @@ func elapsedTime(t time.Time) string {
 	}
 }
 
-// buildArticleToolbar renders an HTML toolbar for the article content panel.
-func buildArticleToolbar(entry *model.Entry) string {
-	toggleLabel := "Mark read"
-	if entry.Status == model.EntryStatusRead {
-		toggleLabel = "Mark unread"
-	}
-	starIcon := "☆"
-	starLabel := "Star"
-	starClass := ""
-	if entry.Starred {
-		starIcon = "★"
-		starLabel = "Starred"
-		starClass = "starred"
-	}
-	return fmt.Sprintf(`<div id="article-toolbar" class="article-toolbar">
-    <button class="toolbar-btn"
-        data-on:click="@post('/ds/sse/entry/star/%d')">
-        <span id="toolbar-star-icon-%d" class="%s">%s</span>
-        <span>%s</span>
-    </button>
-    <a href="%s" target="_blank" rel="noopener" class="toolbar-btn no-underline">
-        Open original
-    </a>
-    <button class="toolbar-btn"
-        data-signals='{\"entryIds\":[%d]}'
-        data-on:click=\"@post('/ds/sse/entry/status')\">
-        %s
-    </button>
-</div>`, entry.ID, entry.ID, starClass, starIcon, starLabel,
-		entry.URL, entry.ID, toggleLabel)
-}

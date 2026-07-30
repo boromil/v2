@@ -1,20 +1,6 @@
 {{define "entry_content"}}
 {{if .SelectedEntry}}
-<div id="article-toolbar" class="article-toolbar">
-    <button class="toolbar-btn"
-        data-on:click="@post('/ds/sse/entry/star/{{.SelectedEntry.ID}}')">
-        <span id="toolbar-star-icon-{{.SelectedEntry.ID}}">{{if .SelectedEntry.Starred}}★{{else}}☆{{end}}</span>
-        <span>{{if .SelectedEntry.Starred}}Starred{{else}}Star{{end}}</span>
-    </button>
-    <a href="{{.SelectedEntry.URL}}" target="_blank" rel="noopener" class="toolbar-btn no-underline">
-        Open original
-    </a>
-    <button class="toolbar-btn"
-        data-signals='{"entryIds":[{{.SelectedEntry.ID}}]}'
-        data-on:click="@post('/ds/sse/entry/status')">
-        {{if eq .SelectedEntry.Status "unread"}}Mark read{{else}}Mark unread{{end}}
-    </button>
-</div>
+{{template "article_toolbar" .SelectedEntry}}
 <div class="article-header">
     <h1 class="article-title">{{.SelectedEntry.Title}}</h1>
     <div class="article-meta">
