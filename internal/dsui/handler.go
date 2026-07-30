@@ -83,6 +83,7 @@ func Serve(store *storage.Storage, pool *worker.Pool) http.Handler {
 	mux.HandleFunc("POST /ds/sse/entry/star/{entryID}", h.sseToggleStar)
 	mux.HandleFunc("POST /ds/sse/entry/status", h.sseToggleEntryStatus)
 	mux.HandleFunc("POST /ds/sse/mark-all-read", h.sseMarkAllRead)
+	mux.HandleFunc("POST /ds/sse/mark-page-read", h.sseMarkPageRead)
 
 	// TODO: settings save endpoint
 	// mux.HandleFunc("POST /ds/sse/settings", h.sseSaveSettings)
@@ -825,6 +826,66 @@ func (h *handler) importOPML(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.HTMLRedirect(w, r, "/ds/unread")
+}
+
+func (h *handler) sseMarkPageRead(w http.ResponseWriter, r *http.Request) {
+	user, err := h.store.UserByID(request.UserID(r))
+	if err != nil {
+		response.HTMLServerError(w, r, err)
+		return
+	}
+
+	var req EntryRequest
+	if err := readSignals(r, &req); err != nil {
+		req = EntryRequest{View: "unread"}
+	}
+	if req.View == "" {
+		req.View = "unread"
+	}
+
+	// Load current page entries and mark them as read.
+	entries, _, err := h.queryEntries(user.ID, req.View, req.FeedID, req.CategoryID, req.SearchQuery, req.Offset, user.EntriesPerPage)
+	if err != nil {
+		response.HTMLServerError(w, r, err)
+		return
+	}
+
+	ids := make([]int64, len(entries))
+	for i, e := range entries {
+		ids[i] = e.ID
+	}
+	if len(ids) > 0 {
+		if err := h.store.SetEntriesStatus(user.ID, ids, model.EntryStatusRead); err != nil {
+			slog.Warn("dsui: unable to mark page read", slog.Any("error", err))
+		}
+	}
+
+	// Reload page for updated statuses and patch.
+	entries, _, _ = h.queryEntries(user.ID, req.View, req.FeedID, req.CategoryID, req.SearchQuery, req.Offset, user.EntriesPerPage)
+	evs := make([]entryView, len(entries))
+	for i, e := range entries {
+		evs[i] = entryView{
+			ID:      e.ID,
+			Title:   e.Title,
+			Status:  e.Status,
+			Starred: e.Starred,
+			Date:    e.Date,
+		}
+		if e.Feed != nil {
+			evs[i].Feed = &feedRef{Title: e.Feed.Title, ID: e.Feed.ID}
+		}
+	}
+
+	var listBuf bytes.Buffer
+	if err := h.tpl.ExecuteTemplate(&listBuf, "entry_list", map[string]any{"Entries": evs}); err != nil {
+		response.HTMLServerError(w, r, fmt.Errorf("entry_list template: %w", err))
+		return
+	}
+
+	nav, _ := h.store.GetNavMetadata(user.ID)
+	sse := datastar.NewSSE(w, r)
+	sse.PatchElements(listBuf.String(), datastar.WithSelector("#entry-list"))
+	sse.MarshalAndPatchSignals(map[string]any{"countUnread": nav.CountUnread})
 }
 
 // ─── Query helpers ───────────────────────────────────────────────────────
