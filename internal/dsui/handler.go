@@ -405,7 +405,9 @@ func (h *handler) sseEntries(w http.ResponseWriter, r *http.Request) {
 		fragments = append(fragments, SSEFragment{HTML: "", Selector: "#pagination"})
 	}
 
-	renderSSEMulti(w, r, fragments)
+	renderSSEResponse(w, r, SSEResponse{
+		Fragments: fragments,
+	})
 }
 
 func (h *handler) sseEntry(w http.ResponseWriter, r *http.Request) {
@@ -470,9 +472,14 @@ func (h *handler) sseEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	renderSSEMulti(w, r, []SSEFragment{
-		{HTML: contentBuf.String(), Selector: "#entry-content"},
-		{HTML: rowBuf.String(), Selector: fmt.Sprintf("#entry-row-%d", entry.ID)},
+	renderSSEResponse(w, r, SSEResponse{
+		Fragments: []SSEFragment{
+			{HTML: contentBuf.String(), Selector: "#entry-content"},
+			{HTML: rowBuf.String(), Selector: fmt.Sprintf("#entry-row-%d", entry.ID)},
+		},
+		Signals: map[string]any{
+			"selectedEntryId": entry.ID,
+		},
 	})
 }
 
@@ -523,6 +530,9 @@ func (h *handler) sseToggleStar(w http.ResponseWriter, r *http.Request) {
 	sse := datastar.NewSSE(w, r)
 	sse.PatchElements(starBuf.String(), datastar.WithSelector(fmt.Sprintf("#star-icon-%d", entry.ID)))
 	sse.PatchElements(starBuf.String(), datastar.WithSelector(fmt.Sprintf("#toolbar-star-icon-%d", entry.ID)))
+	sse.MarshalAndPatchSignals(map[string]any{
+		"starred": newStarred,
+	})
 }
 
 func (h *handler) sseToggleEntryStatus(w http.ResponseWriter, r *http.Request) {
@@ -620,7 +630,9 @@ func (h *handler) sseToggleEntryStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(fragments) > 0 {
-		renderSSEMulti(w, r, fragments)
+	renderSSEResponse(w, r, SSEResponse{
+		Fragments: fragments,
+	})
 	} else {
 		sendSSERedirect(w, r, "/ds/unread")
 	}
@@ -690,9 +702,14 @@ func (h *handler) sseMarkAllRead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	renderSSEMulti(w, r, []SSEFragment{
-		{HTML: listBuf.String(), Selector: "#entry-list"},
-		{HTML: subBuf.String(), Selector: "#subscription-panel .feed-tree"},
+	renderSSEResponse(w, r, SSEResponse{
+		Fragments: []SSEFragment{
+			{HTML: listBuf.String(), Selector: "#entry-list"},
+			{HTML: subBuf.String(), Selector: "#subscription-panel .feed-tree"},
+		},
+		Signals: map[string]any{
+			"countUnread": 0,
+		},
 	})
 }
 
