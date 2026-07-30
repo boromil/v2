@@ -1,21 +1,38 @@
 {{define "subscription_list"}}
 <div class="feed-tree">
     {{range .MenuSections}}
-    <div class="feed-tree-section">{{.Label}}</div>
-    {{range .Items}}
-    <a class="feed-tree-item truncate{{if .Selected}} selected{{end}}"
-        href="{{.URL}}"
-        data-on:click="@get('{{.SSEURL}}')">
-        {{if .ExternalIconID}}<img src="/feed-icon/{{.ExternalIconID}}" class="mr-1" width="16" height="16" loading="lazy" alt="">{{end}}
-        <span class="truncate">{{.Label}}</span>
-        {{if .UnreadCount}}
-        <span class="unread-count">{{.UnreadCount}}</span>
+        {{if .HasChildren}}
+        <details class="feed-tree-category" open>
+            <summary class="feed-tree-section">{{.Label}}</summary>
+            {{range .Items}}
+            <a class="feed-tree-item truncate{{if .Selected}} selected{{end}}"
+                href="{{.URL}}"
+                data-on:click="@get('{{.SSEURL}}')">
+                {{if .ExternalIconID}}<img src="/feed-icon/{{.ExternalIconID}}" class="mr-1" width="16" height="16" loading="lazy" alt="">{{end}}
+                <span class="truncate">{{.Label}}</span>
+                {{if .UnreadCount}}
+                <span class="unread-count">{{.UnreadCount}}</span>
+                {{end}}
+            </a>
+            {{range .Children}}
+            {{template "feed_node" .}}
+            {{end}}
+            {{end}}
+        </details>
+        {{else}}
+        <div class="feed-tree-section">{{.Label}}</div>
+        {{range .Items}}
+        <a class="feed-tree-item truncate{{if .Selected}} selected{{end}}"
+            href="{{.URL}}"
+            data-on:click="@get('{{.SSEURL}}')">
+            {{if .ExternalIconID}}<img src="/feed-icon/{{.ExternalIconID}}" class="mr-1" width="16" height="16" loading="lazy" alt="">{{end}}
+            <span class="truncate">{{.Label}}</span>
+            {{if .UnreadCount}}
+            <span class="unread-count">{{.UnreadCount}}</span>
+            {{end}}
+        </a>
         {{end}}
-    </a>
-    {{range .Children}}
-    {{template "feed_node" .}}
-    {{end}}
-    {{end}}
+        {{end}}
     {{end}}
 </div>
 {{end}}
