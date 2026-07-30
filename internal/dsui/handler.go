@@ -142,11 +142,14 @@ type appViewModel struct {
 	Direction          string
 	CSRFToken          string
 	SearchQuery        string
+	ViewName           string
+	FeedID             int64
+	CategoryID         int64
+	Offset             int
 	StyleChecksum      string
 	JSChecksum         string
 	KeyboardChecksum   string
 	ComponentsChecksum string
-	SignalsJSON        template.JS
 	ListTitle          string
 	CanMarkAllRead     bool
 	Entries            []entryView
@@ -225,6 +228,10 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 		Direction:         "ltr",
 		CSRFToken:         request.WebSession(r).CSRF(),
 		SearchQuery:       searchQuery,
+		ViewName:          viewName,
+		FeedID:            feedID,
+		CategoryID:        categoryID,
+		Offset:            offset,
 		StyleChecksum:     dsstatic.StylesheetBundles["app"].Checksum,
 		JSChecksum:        dsstatic.JavascriptBundles["datastar"].Checksum,
 		KeyboardChecksum:  dsstatic.JavascriptBundles["keyboard"].Checksum,
@@ -298,20 +305,6 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 			vm.SelectedEntry = detail
 		}
 	}
-
-	// Build signals JSON.
-	signals := AppSignals{
-		View:       viewName,
-		FeedID:     feedID,
-		CategoryID: categoryID,
-		Offset:     offset,
-		Loading:    false,
-	}
-	if vm.SelectedEntry != nil {
-		signals.EntryID = vm.SelectedEntry.ID
-	}
-	signalsJSON, _ := json.Marshal(signals)
-	vm.SignalsJSON = template.JS(signalsJSON)
 
 	var buf bytes.Buffer
 	if err := h.tpl.ExecuteTemplate(&buf, "layout", vm); err != nil {
