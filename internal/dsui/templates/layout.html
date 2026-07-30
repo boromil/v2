@@ -13,7 +13,10 @@
     <script src="/ds/js/{{.KeyboardChecksum}}/keyboard" defer></script>
     <script src="/ds/js/{{.ComponentsChecksum}}/components" defer></script>
 </head>
-<body class="m-0 p-0 overflow-hidden h-screen font-sans antialiased" style="background-color: #ffffff; color: #1a1a2e;" data-signals="{{.SignalsJSON}}" data-csrf-token="{{.CSRFToken}}">
+<body class="m-0 p-0 overflow-hidden h-screen font-sans antialiased"
+    style="background-color: #ffffff; color: #1a1a2e;"
+    data-signals='{"selectedIdx": -1, "selectedEntryId": 0, "countUnread": 0, "view": "{{.ViewName}}", "feedId": {{.FeedID}}, "categoryId": {{.CategoryID}}, "offset": {{.Offset}}}'
+    data-csrf-token="{{.CSRFToken}}">
     {{template "app" .}}
 </body>
 </html>
