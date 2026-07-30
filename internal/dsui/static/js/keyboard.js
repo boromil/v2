@@ -93,6 +93,19 @@
         var origLink = document.querySelector("#article-toolbar a[rel='noopener']");
         if (origLink) {
           window.open(origLink.href, "_blank", "noopener");
+        } else {
+          // Load the selected entry first, then open original link.
+          row = getSelectedRow();
+          if (row) {
+            clickElement(row);
+            // Wait briefly for SSE patch to render the toolbar, then open.
+            setTimeout(function () {
+              var link = document.querySelector("#article-toolbar a[rel='noopener']");
+              if (link) {
+                window.open(link.href, "_blank", "noopener");
+              }
+            }, 300);
+          }
         }
         break;
 

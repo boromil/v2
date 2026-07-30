@@ -518,6 +518,9 @@
   .mr-1 {
     margin-right: calc(var(--spacing) * 1);
   }
+  .ml-auto {
+    margin-left: auto;
+  }
   .flex {
     display: flex;
   }
@@ -553,11 +556,21 @@
   .overflow-y-auto {
     overflow-y: auto;
   }
-  .bg-white {
-    background-color: var(--color-white);
+  .rounded {
+    border-radius: 0.25rem;
+  }
+  .border {
+    border-style: var(--tw-border-style);
+    border-width: 1px;
   }
   .p-0 {
     padding: calc(var(--spacing) * 0);
+  }
+  .px-2 {
+    padding-inline: calc(var(--spacing) * 2);
+  }
+  .py-0 {
+    padding-block: calc(var(--spacing) * 0);
   }
   .pl-2 {
     padding-left: calc(var(--spacing) * 2);
@@ -565,8 +578,9 @@
   .font-sans {
     font-family: var(--font-sans);
   }
-  .text-gray-900 {
-    color: var(--color-gray-900);
+  .text-sm {
+    font-size: var(--text-sm);
+    line-height: var(--tw-leading, var(--text-sm--line-height));
   }
   .no-underline {
     text-decoration-line: none;
@@ -602,9 +616,11 @@
     animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
   }
 }
-@import "tailwindcss";
-@source "../templates/**/*.html";
-
+@property --tw-border-style {
+  syntax: "*";
+  inherits: false;
+  initial-value: solid;
+}
 /* Google Reader-inspired custom styles */
 
 /* Three-panel app layout */
