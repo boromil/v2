@@ -18,7 +18,7 @@
         <!-- Content area -->
         <div class="settings-content" id="settings-content">
             <form id="settings-form"
-                data-on:change__debounce(600)="@post('/ds/sse/settings', {headers: {'X-Csrf-Token': $csrfToken}})">
+                data-on:change__debounce(600)="@post('/ds/sse/settings')">
 
             <!-- Reading -->
             <section id="reading" class="settings-section">
@@ -186,7 +186,7 @@
                 <h3 class="settings-heading">Password</h3>
                 <form action="/ds/sse/settings" method="post"
                     enctype="multipart/form-data"
-                    data-on:submit="@post('/ds/sse/settings', {headers: {'X-Csrf-Token': $csrfToken}})"
+                    data-on:submit="@post('/ds/sse/settings')"
                     onsubmit="return false">
                     <div class="settings-grid">
                         <label class="settings-field">
