@@ -70,12 +70,12 @@ func Serve(store *storage.Storage, pool *worker.Pool) http.Handler {
 
 	// SSE fragment endpoints.
 	mux.HandleFunc("GET /ds/sse/entries", h.sseEntries)
-	mux.HandleFunc("GET /ds/sse/entry/{entryID}", h.sseEntry)
 	mux.HandleFunc("GET /ds/sse/subscriptions", h.sseSubscriptions)
+	mux.HandleFunc("POST /ds/sse/import-opml", h.sseImportOPML)
+	mux.HandleFunc("GET /ds/sse/entry/{entryID}", h.sseEntry)
 	mux.HandleFunc("POST /ds/sse/entry/star/{entryID}", h.sseToggleStar)
 	mux.HandleFunc("POST /ds/sse/entry/status", h.sseToggleEntryStatus)
 	mux.HandleFunc("POST /ds/sse/mark-all-read", h.sseMarkAllRead)
-	mux.HandleFunc("POST /ds/sse/import-opml", h.sseImportOPML)
 
 	// Apply middleware chain: secure headers -> session -> CSRF -> handlers.
 	return secureHeadersMiddleware(sessionMiddleware(store)(newCSRFMiddleware().handle(mux)))
