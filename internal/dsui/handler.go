@@ -524,6 +524,7 @@ func (h *handler) sseToggleStar(w http.ResponseWriter, r *http.Request) {
 
 	sse := datastar.NewSSE(w, r)
 	sse.PatchElements(starBuf.String(), datastar.WithSelector(fmt.Sprintf("#star-icon-%d", entry.ID)))
+	sse.PatchElements(starBuf.String(), datastar.WithSelector(fmt.Sprintf("#toolbar-star-icon-%d", entry.ID)))
 }
 
 func (h *handler) sseToggleEntryStatus(w http.ResponseWriter, r *http.Request) {
@@ -1041,7 +1042,7 @@ func buildArticleToolbar(entry *model.Entry) string {
 	return fmt.Sprintf(`<div id="article-toolbar" class="article-toolbar">
     <button class="toolbar-btn"
         data-on:click="@post('/ds/sse/entry/star/%d')">
-        <span id="star-icon-%d" class="%s">%s</span>
+        <span id="toolbar-star-icon-%d" class="%s">%s</span>
         <span>%s</span>
     </button>
     <a href="%s" target="_blank" rel="noopener" class="toolbar-btn no-underline">
