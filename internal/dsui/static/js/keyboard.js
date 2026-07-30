@@ -13,7 +13,7 @@
   }
 
   function getVisibleEntryRows() {
-    return Array.from(document.querySelectorAll("#entry-list .entry-row"));
+    return Array.from(document.querySelectorAll("#entry-list entry-row"));
   }
 
   function scrollToRow(row) {
@@ -21,7 +21,7 @@
   }
 
   function clearSelection() {
-    document.querySelectorAll("#entry-list .entry-row.selected").forEach(function (el) {
+    document.querySelectorAll("#entry-list entry-row.selected").forEach(function (el) {
       el.classList.remove("selected");
     });
   }
@@ -50,7 +50,7 @@
     if (selectedIdx >= 0 && selectedIdx < rows.length) {
       return rows[selectedIdx];
     }
-    var sel = document.querySelector("#entry-list .entry-row.selected");
+    var sel = document.querySelector("#entry-list entry-row.selected");
     if (sel) {
       selectedIdx = rows.indexOf(sel);
     }
