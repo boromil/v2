@@ -15,9 +15,11 @@ import (
 	"strings"
 	"time"
 
+	"miniflux.app/v2/internal/config"
 	"miniflux.app/v2/internal/http/request"
 	"miniflux.app/v2/internal/http/response"
 	"miniflux.app/v2/internal/model"
+	"miniflux.app/v2/internal/reader/opml"
 	"miniflux.app/v2/internal/storage"
 	dsstatic "miniflux.app/v2/internal/dsui/static"
 	"miniflux.app/v2/internal/worker"
@@ -74,6 +76,7 @@ func Serve(store *storage.Storage, pool *worker.Pool) http.Handler {
 	mux.HandleFunc("POST /ds/sse/entry/star/{entryID}", h.sseToggleStar)
 	mux.HandleFunc("POST /ds/sse/entry/status", h.sseToggleEntryStatus)
 	mux.HandleFunc("POST /ds/sse/mark-all-read", h.sseMarkAllRead)
+	mux.HandleFunc("POST /ds/sse/import-opml", h.sseImportOPML)
 
 	// Apply middleware chain: secure headers -> session -> CSRF -> handlers.
 	return secureHeadersMiddleware(sessionMiddleware(store)(newCSRFMiddleware().handle(mux)))
@@ -706,6 +709,64 @@ func (h *handler) sseMarkAllRead(w http.ResponseWriter, r *http.Request) {
 		Signals: map[string]any{
 			"countUnread": 0,
 		},
+	})
+}
+
+func (h *handler) sseImportOPML(w http.ResponseWriter, r *http.Request) {
+	user, err := h.store.UserByID(request.UserID(r))
+	if err != nil {
+		response.HTMLServerError(w, r, err)
+		return
+	}
+
+	// Limit body size to prevent DoS.
+	maxBodySize := config.Opts.HTTPClientMaxBodySize()
+	r.Body = http.MaxBytesReader(w, r.Body, maxBodySize)
+
+	file, fileHeader, err := r.FormFile("file")
+	if err != nil {
+		slog.Error("dsui: OPML file upload error",
+			slog.Int64("user_id", user.ID),
+			slog.Any("error", err),
+		)
+		sse := datastar.NewSSE(w, r)
+		sse.MarshalAndPatchSignals(map[string]any{"importError": "Failed to read file"})
+		return
+	}
+	defer file.Close()
+
+	slog.Info("dsui: OPML file uploaded",
+		slog.Int64("user_id", user.ID),
+		slog.String("file_name", fileHeader.Filename),
+		slog.Int64("file_size", fileHeader.Size),
+	)
+
+	if fileHeader.Size == 0 {
+		sse := datastar.NewSSE(w, r)
+		sse.MarshalAndPatchSignals(map[string]any{"importError": "File is empty"})
+		return
+	}
+
+	if impErr := opml.NewHandler(h.store).Import(user.ID, file); impErr != nil {
+		sse := datastar.NewSSE(w, r)
+		sse.MarshalAndPatchSignals(map[string]any{"importError": impErr.Error()})
+		return
+	}
+
+	// Refresh subscription tree and show success.
+	sections := h.buildMenu(user, "", 0, 0)
+	var subBuf bytes.Buffer
+	if err := h.tpl.ExecuteTemplate(&subBuf, "subscription_list", map[string]any{"MenuSections": sections}); err != nil {
+		response.HTMLServerError(w, r, fmt.Errorf("subscription_list template: %w", err))
+		return
+	}
+
+	nav, _ := h.store.GetNavMetadata(user.ID)
+	sse := datastar.NewSSE(w, r)
+	sse.PatchElements(subBuf.String(), datastar.WithSelector("#subscription-panel .feed-tree"))
+	sse.MarshalAndPatchSignals(map[string]any{
+		"importSuccess": fmt.Sprintf("Imported from %s", fileHeader.Filename),
+		"countUnread":   nav.CountUnread,
 	})
 }
 
