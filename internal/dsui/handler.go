@@ -266,6 +266,30 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Preload content for the first entry so the right panel isn't empty.
+	if len(entries) > 0 {
+		firstEntry, err := h.store.NewEntryQueryBuilder(user.ID).
+			WithEntryIDs(entries[0].ID).
+			WithEnclosures().
+			GetEntry()
+		if err == nil && firstEntry != nil {
+			detail := &entryDetailView{
+				ID:      firstEntry.ID,
+				Title:   firstEntry.Title,
+				Author:  firstEntry.Author,
+				Date:    firstEntry.Date,
+				Content: template.HTML(firstEntry.Content),
+				Starred: firstEntry.Starred,
+				URL:     firstEntry.URL,
+				Status:  firstEntry.Status,
+			}
+			if firstEntry.Feed != nil {
+				detail.Feed = &feedRef{Title: firstEntry.Feed.Title, ID: firstEntry.Feed.ID}
+			}
+			vm.SelectedEntry = detail
+		}
+	}
+
 	// Build signals JSON.
 	signals := AppSignals{
 		View:       viewName,
@@ -273,6 +297,9 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 		CategoryID: categoryID,
 		Offset:     offset,
 		Loading:    false,
+	}
+	if vm.SelectedEntry != nil {
+		signals.EntryID = vm.SelectedEntry.ID
 	}
 	signalsJSON, _ := json.Marshal(signals)
 	vm.SignalsJSON = template.JS(signalsJSON)
