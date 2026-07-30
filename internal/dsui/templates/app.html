@@ -20,6 +20,15 @@
     <main id="entry-list-panel" class="flex flex-col h-full">
         <div class="top-nav">
             <span class="nav-title">{{.ListTitle}}</span>
+            <form class="flex items-center gap-2 ml-auto" 
+                data-on:submit="@get('/ds/sse/entries?view=search&searchQuery=' + $searchQuery)"
+                onsubmit="return false">
+                <input type="search" name="q" placeholder="Search..." 
+                    class="border rounded px-2 py-0 text-sm flex-1"
+                    style="width: 160px;"
+                    data-bind-searchQuery
+                    value="{{.SearchQuery}}">
+            </form>
             {{if .CanMarkAllRead}}
             <button class="mark-read-btn"
                 data-on:click="@post('/ds/sse/mark-all-read')">Mark all read</button>

@@ -66,6 +66,7 @@ func Serve(store *storage.Storage, pool *worker.Pool) http.Handler {
 	mux.HandleFunc("GET /ds/unread", h.showApp)
 	mux.HandleFunc("GET /ds/starred", h.showApp)
 	mux.HandleFunc("GET /ds/history", h.showApp)
+	mux.HandleFunc("GET /ds/search", h.showApp)
 	mux.HandleFunc("GET /ds/feed/{feedID}", h.showApp)
 	mux.HandleFunc("GET /ds/category/{categoryID}", h.showApp)
 
@@ -142,6 +143,7 @@ type appViewModel struct {
 	Language           string
 	Direction          string
 	CSRFToken          string
+	SearchQuery        string
 	StyleChecksum      string
 	JSChecksum         string
 	KeyboardChecksum   string
@@ -217,12 +219,14 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	offset := request.QueryIntParam(r, "offset", 0)
+	searchQuery := request.QueryStringParam(r, "q", "")
 	viewName, feedID, categoryID := parseAppRoute(r)
 
 	vm := appViewModel{
 		Language:          user.Language,
 		Direction:         "ltr",
 		CSRFToken:         request.WebSession(r).CSRF(),
+		SearchQuery:       searchQuery,
 		StyleChecksum:     dsstatic.StylesheetBundles["app"].Checksum,
 		JSChecksum:        dsstatic.JavascriptBundles["datastar"].Checksum,
 		KeyboardChecksum:  dsstatic.JavascriptBundles["keyboard"].Checksum,
@@ -235,7 +239,7 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 	vm.ListTitle = listTitleForView(viewName, feedID, categoryID, h.store, user.ID)
 
 	// Load entries.
-	entries, total, err := h.queryEntries(user.ID, viewName, feedID, categoryID, offset, user.EntriesPerPage)
+	entries, total, err := h.queryEntries(user.ID, viewName, feedID, categoryID, searchQuery, offset, user.EntriesPerPage)
 	if err != nil {
 		response.HTMLServerError(w, r, err)
 		return
@@ -266,7 +270,7 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 			HasNext:       offset+user.EntriesPerPage < total,
 			PrevOffset:    offset - user.EntriesPerPage,
 			NextOffset:    offset + user.EntriesPerPage,
-			SSEEntriesURL: buildSSEEntriesURL(viewName, feedID, categoryID),
+			SSEEntriesURL: buildSSEEntriesURL(viewName, feedID, categoryID, searchQuery),
 		}
 		if vm.Pagination.PrevOffset < 0 {
 			vm.Pagination.PrevOffset = 0
@@ -344,8 +348,11 @@ func (h *handler) sseEntries(w http.ResponseWriter, r *http.Request) {
 	if req.Offset == 0 {
 		req.Offset = request.QueryIntParam(r, "offset", 0)
 	}
+	if req.SearchQuery == "" {
+		req.SearchQuery = request.QueryStringParam(r, "searchQuery", "")
+	}
 
-	entries, total, err := h.queryEntries(user.ID, req.View, req.FeedID, req.CategoryID, req.Offset, user.EntriesPerPage)
+	entries, total, err := h.queryEntries(user.ID, req.View, req.FeedID, req.CategoryID, req.SearchQuery, req.Offset, user.EntriesPerPage)
 	if err != nil {
 		response.HTMLServerError(w, r, err)
 		return
@@ -384,7 +391,7 @@ func (h *handler) sseEntries(w http.ResponseWriter, r *http.Request) {
 			HasNext:       req.Offset+user.EntriesPerPage < total,
 			PrevOffset:    req.Offset - user.EntriesPerPage,
 			NextOffset:    req.Offset + user.EntriesPerPage,
-			SSEEntriesURL: buildSSEEntriesURL(req.View, req.FeedID, req.CategoryID),
+			SSEEntriesURL: buildSSEEntriesURL(req.View, req.FeedID, req.CategoryID, req.SearchQuery),
 		}
 		if pv.PrevOffset < 0 {
 			pv.PrevOffset = 0
@@ -646,7 +653,7 @@ func (h *handler) sseMarkAllRead(w http.ResponseWriter, r *http.Request) {
 
 	// Rebuild entry list and subscription tree for SSE patches.
 	sections := h.buildMenu(user, req.View, req.FeedID, req.CategoryID)
-	entries, _, err := h.queryEntries(user.ID, req.View, req.FeedID, req.CategoryID, 0, user.EntriesPerPage)
+	entries, _, err := h.queryEntries(user.ID, req.View, req.FeedID, req.CategoryID, req.SearchQuery, 0, user.EntriesPerPage)
 	if err != nil {
 		response.HTMLServerError(w, r, err)
 		return
@@ -684,7 +691,7 @@ func (h *handler) sseMarkAllRead(w http.ResponseWriter, r *http.Request) {
 
 // ─── Query helpers ───────────────────────────────────────────────────────
 
-func (h *handler) queryEntries(userID int64, view string, feedID, categoryID int64, offset, limit int) (model.Entries, int, error) {
+func (h *handler) queryEntries(userID int64, view string, feedID, categoryID int64, searchQuery string, offset, limit int) (model.Entries, int, error) {
 	builder := h.store.NewEntryQueryBuilder(userID).WithGloballyVisible()
 
 	switch view {
@@ -694,6 +701,10 @@ func (h *handler) queryEntries(userID int64, view string, feedID, categoryID int
 		builder.WithStarred(true)
 	case "history":
 		builder.WithStatuses(model.EntryStatusRead)
+	case "search":
+		if searchQuery != "" {
+			builder.WithSearchQuery(searchQuery)
+		}
 	case "feed":
 		builder.WithFeedID(feedID)
 	case "category":
@@ -803,6 +814,8 @@ func parseAppRoute(r *http.Request) (view string, feedID, categoryID int64) {
 		return "starred", 0, 0
 	case strings.HasPrefix(path, "/ds/history"):
 		return "history", 0, 0
+	case strings.HasPrefix(path, "/ds/search"):
+		return "search", 0, 0
 	case strings.HasPrefix(path, "/ds/feed/"):
 		feedID = request.RouteInt64Param(r, "feedID")
 		return "feed", feedID, 0
@@ -820,6 +833,8 @@ func listTitleForView(view string, feedID, categoryID int64, store *storage.Stor
 		return "Starred"
 	case "history":
 		return "History"
+	case "search":
+		return "Search"
 	case "feed":
 		f, err := store.FeedByID(userID, feedID)
 		if err == nil && f != nil {
@@ -946,13 +961,16 @@ func dsLoginRedirectURL(requestURI string) string {
 
 // buildSSEEntriesURL creates the base SSE URL for loading entries
 // with the current view/filter parameters.
-func buildSSEEntriesURL(view string, feedID, categoryID int64) string {
+func buildSSEEntriesURL(view string, feedID, categoryID int64, searchQuery string) string {
 	u := "/ds/sse/entries?view=" + view
 	if feedID > 0 {
 		u += fmt.Sprintf("&feedId=%d", feedID)
 	}
 	if categoryID > 0 {
 		u += fmt.Sprintf("&categoryId=%d", categoryID)
+	}
+	if searchQuery != "" {
+		u += "&searchQuery=" + searchQuery
 	}
 	return u
 }
