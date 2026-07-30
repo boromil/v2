@@ -3,7 +3,7 @@
 <div id="article-toolbar" class="article-toolbar">
     <button class="toolbar-btn"
         data-on:click="@post('/ds/sse/entry/star/{{.SelectedEntry.ID}}')">
-        <span id="star-icon-{{.SelectedEntry.ID}}">{{if .SelectedEntry.Starred}}★{{else}}☆{{end}}</span>
+        <span id="toolbar-star-icon-{{.SelectedEntry.ID}}">{{if .SelectedEntry.Starred}}★{{else}}☆{{end}}</span>
         <span>{{if .SelectedEntry.Starred}}Starred{{else}}Star{{end}}</span>
     </button>
     <a href="{{.SelectedEntry.URL}}" target="_blank" rel="noopener" class="toolbar-btn no-underline">
