@@ -17,6 +17,12 @@
     style="background-color: #ffffff; color: #1a1a2e;"
     data-signals='{"selectedIdx": -1, "selectedEntryId": 0, "countUnread": {{.CountUnread}}, "view": "{{.ViewName}}", "feedId": {{.FeedID}}, "categoryId": {{.CategoryID}}, "offset": {{.Offset}}}'
     data-csrf-token="{{.CSRFToken}}">
+    <div id="toast-error" class="toast toast-error" data-show="$importError" style="display:none" data-on:click="$importError = ''">
+        <span data-text="$importError"></span>
+    </div>
+    <div id="toast-success" class="toast toast-success" data-show="$importSuccess" style="display:none" data-on:click="$importSuccess = ''">
+        <span data-text="$importSuccess"></span>
+    </div>
     {{template "app" .}}
 </body>
 </html>
