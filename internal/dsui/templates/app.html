@@ -51,6 +51,13 @@
                 <span data-indicator="!exists">Mark all read</span>
             </button>
             {{end}}
+            {{if .FeedID}}
+            <button class="mark-read-btn"
+                data-on:click="@post('/ds/refresh/{{.FeedID}}')">
+                <span data-indicator>Refreshing...</span>
+                <span data-indicator="!exists">&#8635; Refresh</span>
+            </button>
+            {{end}}
         </div>
         <div id="entry-list" class="flex-1 overflow-y-auto">
             {{template "entry_list" .}}

@@ -1611,3 +1611,7 @@ input[type="file"]::file-selector-button {
     }
   }
 }
+
+.toast-info {
+  background-color: var(--color-blue-600, #2563eb);
+}
