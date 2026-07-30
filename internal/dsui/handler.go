@@ -88,6 +88,7 @@ func Serve(store *storage.Storage, pool *worker.Pool) http.Handler {
 	mux.HandleFunc("POST /ds/sse/mark-all-read", h.sseMarkAllRead)
 	mux.HandleFunc("POST /ds/sse/mark-page-read", h.sseMarkPageRead)
 	mux.HandleFunc("POST /ds/sse/fetch-content/{entryID}", h.sseFetchContent)
+	mux.HandleFunc("POST /ds/sse/share/{entryID}", h.sseToggleShare)
 
 	// TODO: settings save endpoint
 	// mux.HandleFunc("POST /ds/sse/settings", h.sseSaveSettings)
@@ -203,6 +204,7 @@ type entryDetailView struct {
 	URL        string
 	Feed       *feedRef
 	Status     string
+	ShareCode  string
 	Enclosures []enclosureView
 }
 
@@ -962,18 +964,58 @@ func (h *handler) sseFetchContent(w http.ResponseWriter, r *http.Request) {
 	sse.PatchElements(buf.String(), datastar.WithSelector("#entry-content"))
 }
 
+func (h *handler) sseToggleShare(w http.ResponseWriter, r *http.Request) {
+	user, err := h.store.UserByID(request.UserID(r))
+	if err != nil {
+		response.HTMLServerError(w, r, err)
+		return
+	}
+
+	entryID := request.RouteInt64Param(r, "entryID")
+	entry, err := h.store.NewEntryQueryBuilder(user.ID).
+		WithEntryIDs(entryID).
+		GetEntry()
+	if err != nil || entry == nil {
+		response.HTMLNotFound(w, r)
+		return
+	}
+
+	if entry.ShareCode != "" {
+		if err := h.store.UnshareEntry(user.ID, entry.ID); err != nil {
+			response.HTMLServerError(w, r, err)
+			return
+		}
+	} else {
+		if _, err := h.store.EntryShareCode(user.ID, entry.ID); err != nil {
+			response.HTMLServerError(w, r, err)
+			return
+		}
+	}
+
+	// Re-fetch to get updated share state.
+	entry, _ = h.store.NewEntryQueryBuilder(user.ID).
+		WithEntryIDs(entryID).
+		GetEntry()
+
+	sse := datastar.NewSSE(w, r)
+	sse.MarshalAndPatchSignals(map[string]any{
+		"shared": entry.ShareCode != "",
+	})
+}
+
 // ─── Query helpers ───────────────────────────────────────────────────────
 
 func entryToDetailView(entry *model.Entry) *entryDetailView {
 	d := &entryDetailView{
-		ID:      entry.ID,
-		Title:   entry.Title,
-		Author:  entry.Author,
-		Date:    entry.Date,
-		Content: template.HTML(entry.Content),
-		Starred: entry.Starred,
-		URL:     entry.URL,
-		Status:  entry.Status,
+		ID:        entry.ID,
+		Title:     entry.Title,
+		Author:    entry.Author,
+		Date:      entry.Date,
+		Content:   template.HTML(entry.Content),
+		Starred:   entry.Starred,
+		URL:       entry.URL,
+		Status:    entry.Status,
+		ShareCode: entry.ShareCode,
 	}
 	if entry.Feed != nil {
 		d.Feed = &feedRef{Title: entry.Feed.Title, ID: entry.Feed.ID}

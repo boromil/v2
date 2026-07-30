@@ -12,9 +12,9 @@
         Open original
     </a>
     <button class="toolbar-btn"
-        data-on:click="@post('/ds/sse/fetch-content/{{.ID}}')">
-        <span data-indicator>Fetching...</span>
-        <span data-indicator="!exists">Fetch content</span>
+        data-on:click="@post('/ds/sse/share/{{.ID}}')">
+        <span data-indicator>...</span>
+        <span data-indicator="!exists">{{if .ShareCode}}Unshare{{else}}Share{{end}}</span>
     </button>
     <button class="toolbar-btn"
         data-signals='{"entryIds":[{{.ID}}]}'
