@@ -349,10 +349,10 @@ func (h *handler) sseEntry(w http.ResponseWriter, r *http.Request) {
 
 	// Mark as read if configured.
 	if entry.Status == model.EntryStatusUnread && user.MarkReadOnView {
-	if err := h.store.SetEntriesStatus(user.ID, []int64{entry.ID}, model.EntryStatusUnread); err != nil {
-		response.HTMLServerError(w, r, err)
-		return
-	}
+		if err := h.store.SetEntriesStatus(user.ID, []int64{entry.ID}, model.EntryStatusRead); err != nil {
+			response.HTMLServerError(w, r, err)
+			return
+		}
 		entry.Status = model.EntryStatusRead
 	}
 
@@ -370,16 +370,12 @@ func (h *handler) sseEntry(w http.ResponseWriter, r *http.Request) {
 		detail.Feed = &feedRef{Title: entry.Feed.Title, ID: entry.Feed.ID}
 	}
 
-	// Render entry content into #entry-content.
-	data := map[string]any{"SelectedEntry": detail}
-	renderSSEFragment(w, r, h.tpl, "entry_content", data, "#entry-content")
-
-	// Optionally also update the entry row in the list.
-	rowData := map[string]any{
-		"Status":  entry.Status,
-		"Starred": entry.Starred,
+	// Render entry content panel and update the entry row styling.
+	var contentBuf, rowBuf bytes.Buffer
+	if err := h.tpl.ExecuteTemplate(&contentBuf, "entry_content", map[string]any{"SelectedEntry": detail}); err != nil {
+		response.HTMLServerError(w, r, fmt.Errorf("entry_content template: %w", err))
+		return
 	}
-	var rowBuf bytes.Buffer
 	if err := h.tpl.ExecuteTemplate(&rowBuf, "entry_row", map[string]any{
 		"ID":      entry.ID,
 		"Title":   entry.Title,
@@ -387,11 +383,15 @@ func (h *handler) sseEntry(w http.ResponseWriter, r *http.Request) {
 		"Starred": entry.Starred,
 		"Date":    entry.Date,
 		"Feed":    detail.Feed,
-	}); err == nil {
-		// Send additional patch for the entry row (update read/unread styling).
-		_ = rowBuf
-		_ = rowData
+	}); err != nil {
+		response.HTMLServerError(w, r, fmt.Errorf("entry_row template: %w", err))
+		return
 	}
+
+	renderSSEMulti(w, r, []SSEFragment{
+		{HTML: contentBuf.String(), Selector: "#entry-content"},
+		{HTML: rowBuf.String(), Selector: fmt.Sprintf("#entry-row-%d", entry.ID)},
+	})
 }
 
 func (h *handler) sseSubscriptions(w http.ResponseWriter, r *http.Request) {
@@ -482,17 +482,41 @@ func (h *handler) sseToggleEntryStatus(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Patch each entry row to update its read/unread class.
-	sse := datastar.NewSSE(w, r)
+	// Send SSE patches for each affected entry row.
+	fragments := make([]SSEFragment, 0, len(req.EntryIDs))
 	for _, id := range req.EntryIDs {
-		sel := fmt.Sprintf("#entry-row-%d", id)
-		if newStatus == model.EntryStatusRead {
-			sse.PatchElements("", datastar.WithSelector(sel+" .entry-title"))
-			// Instead of patching individual classes, just use JS to reflect state.
+		entry, err := h.store.NewEntryQueryBuilder(user.ID).
+			WithEntryIDs(id).
+			GetEntry()
+		if err != nil || entry == nil {
+			continue
 		}
+		var rowBuf bytes.Buffer
+		rowView := map[string]any{
+			"ID":      entry.ID,
+			"Title":   entry.Title,
+			"Status":  newStatus,
+			"Starred": entry.Starred,
+			"Date":    entry.Date,
+		}
+		if entry.Feed != nil {
+			rowView["Feed"] = &feedRef{Title: entry.Feed.Title, ID: entry.Feed.ID}
+		}
+		if err := h.tpl.ExecuteTemplate(&rowBuf, "entry_row", rowView); err != nil {
+			slog.Warn("dsui: unable to render entry_row template", slog.Int64("entry_id", id), slog.Any("error", err))
+			continue
+		}
+		fragments = append(fragments, SSEFragment{
+			HTML:     rowBuf.String(),
+			Selector: fmt.Sprintf("#entry-row-%d", id),
+		})
 	}
-	// For now, send a script to refresh the entry list.
-	sse.ExecuteScript("document.querySelectorAll('.entry-row').forEach(el => { const id = el.dataset.id; el.classList.toggle('read', true); el.classList.toggle('unread', false); })")
+
+	if len(fragments) > 0 {
+		renderSSEMulti(w, r, fragments)
+	} else {
+		sendSSERedirect(w, r, "/ds/unread")
+	}
 }
 
 func (h *handler) sseMarkAllRead(w http.ResponseWriter, r *http.Request) {
@@ -527,9 +551,14 @@ func (h *handler) sseMarkAllRead(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Refresh subscriptions (to update unread counts) and entry list.
+	// Rebuild entry list and subscription tree for SSE patches.
 	sections := h.buildMenu(user, req.View, req.FeedID, req.CategoryID)
-	entries, _, _ := h.queryEntries(user.ID, req.View, req.FeedID, req.CategoryID, 0, user.EntriesPerPage)
+	entries, _, err := h.queryEntries(user.ID, req.View, req.FeedID, req.CategoryID, 0, user.EntriesPerPage)
+	if err != nil {
+		response.HTMLServerError(w, r, err)
+		return
+	}
+
 	evs := make([]entryView, len(entries))
 	for i, e := range entries {
 		evs[i] = entryView{
@@ -544,11 +573,20 @@ func (h *handler) sseMarkAllRead(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	_ = sections
-	_ = evs
-	// For now, redirect to refresh the page.
-	sse := datastar.NewSSE(w, r)
-	sse.ExecuteScript("window.location.reload()")
+	var listBuf, subBuf bytes.Buffer
+	if err := h.tpl.ExecuteTemplate(&listBuf, "entry_list", map[string]any{"Entries": evs}); err != nil {
+		response.HTMLServerError(w, r, fmt.Errorf("entry_list template: %w", err))
+		return
+	}
+	if err := h.tpl.ExecuteTemplate(&subBuf, "subscription_list", map[string]any{"MenuSections": sections}); err != nil {
+		response.HTMLServerError(w, r, fmt.Errorf("subscription_list template: %w", err))
+		return
+	}
+
+	renderSSEMulti(w, r, []SSEFragment{
+		{HTML: listBuf.String(), Selector: "#entry-list"},
+		{HTML: subBuf.String(), Selector: "#subscription-panel .feed-tree"},
+	})
 }
 
 // ─── Query helpers ───────────────────────────────────────────────────────
