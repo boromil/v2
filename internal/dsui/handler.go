@@ -380,19 +380,19 @@ func (h *handler) sseSaveSettings(w http.ResponseWriter, r *http.Request) {
 	form := parseSettingsForm(r)
 	if form.Password != "" && form.Password != form.Confirmation {
 		sse := datastar.NewSSE(w, r)
-		sse.MarshalAndPatchSignals(map[string]any{"settingsError": "Passwords do not match"})
+		sse.MarshalAndPatchSignals(map[string]any{"importError": "Passwords do not match"})
 		return
 	}
 
 	form.applyToUser(user)
 	if err := h.store.UpdateUser(user); err != nil {
 		sse := datastar.NewSSE(w, r)
-		sse.MarshalAndPatchSignals(map[string]any{"settingsError": err.Error()})
+		sse.MarshalAndPatchSignals(map[string]any{"importError": "Failed to save settings"})
 		return
 	}
 
 	sse := datastar.NewSSE(w, r)
-	sse.MarshalAndPatchSignals(map[string]any{"settingsSaved": true, "settingsError": ""})
+	sse.MarshalAndPatchSignals(map[string]any{"importSuccess": "Settings saved"})
 }
 
 func (h *handler) fetchOPML(w http.ResponseWriter, r *http.Request) {
