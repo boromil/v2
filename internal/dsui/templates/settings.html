@@ -148,6 +148,26 @@
                 <option value="unread_count" {{if eq .Form.CategoriesSortingOrder "unread_count"}}selected{{end}}>By Unread Count</option>
                 <option value="alphabetical" {{if eq .Form.CategoriesSortingOrder "alphabetical"}}selected{{end}}>Alphabetically</option>
             </select>
+
+            <label class="settings-label">Block Filter Rules</label>
+            <textarea name="block_filter_entry_rules" class="settings-textarea" rows="2" data-bind-blockFilterEntryRules>{{.Form.BlockFilterEntryRules}}</textarea>
+
+            <label class="settings-label">Keep Filter Rules</label>
+            <textarea name="keep_filter_entry_rules" class="settings-textarea" rows="2" data-bind-keepFilterEntryRules>{{.Form.KeepFilterEntryRules}}</textarea>
+        </fieldset>
+
+        <!-- Customization -->
+        <fieldset class="settings-group">
+            <legend class="settings-legend">Customization</legend>
+
+            <label class="settings-label">Custom CSS</label>
+            <textarea name="stylesheet" class="settings-textarea" rows="3" data-bind-stylesheet>{{.Form.Stylesheet}}</textarea>
+
+            <label class="settings-label">Custom JavaScript</label>
+            <textarea name="custom_js" class="settings-textarea" rows="3" data-bind-customJs>{{.Form.CustomJS}}</textarea>
+
+            <label class="settings-label">External Font Hosts</label>
+            <input type="text" name="external_font_hosts" class="settings-input" value="{{.Form.ExternalFontHosts}}" data-bind-externalFontHosts placeholder="fonts.example.com, fonts.googleapis.com">
         </fieldset>
 
         <!-- Account -->
