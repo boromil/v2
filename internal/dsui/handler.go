@@ -82,6 +82,7 @@ func Serve(store *storage.Storage, pool *worker.Pool) http.Handler {
 	mux.HandleFunc("GET /ds/sse/entries", h.sseEntries)
 	mux.HandleFunc("GET /ds/sse/subscriptions", h.sseSubscriptions)
 	mux.HandleFunc("POST /ds/refresh", h.refreshFeeds)
+	mux.HandleFunc("POST /ds/refresh/{feedID}", h.refreshFeed)
 	mux.HandleFunc("GET /ds/sse/entry/{entryID}", h.sseEntry)
 	mux.HandleFunc("POST /ds/sse/entry/star/{entryID}", h.sseToggleStar)
 	mux.HandleFunc("POST /ds/sse/entry/status", h.sseToggleEntryStatus)
@@ -468,6 +469,25 @@ func (h *handler) refreshFeeds(w http.ResponseWriter, r *http.Request) {
 	sse := datastar.NewSSE(w, r)
 	sse.MarshalAndPatchSignals(map[string]any{
 		"refreshMessage": fmt.Sprintf("Refreshing %d feeds...", len(jobs)),
+	})
+}
+
+func (h *handler) refreshFeed(w http.ResponseWriter, r *http.Request) {
+	user, err := h.store.UserByID(request.UserID(r))
+	if err != nil {
+		response.HTMLServerError(w, r, err)
+		return
+	}
+
+	feedID := request.RouteInt64Param(r, "feedID")
+	slog.Info("dsui: refresh single feed", slog.Int64("user_id", user.ID), slog.Int64("feed_id", feedID))
+
+	// Build a single job for this feed.
+	h.pool.Push(model.JobList{{FeedID: feedID, UserID: user.ID}})
+
+	sse := datastar.NewSSE(w, r)
+	sse.MarshalAndPatchSignals(map[string]any{
+		"refreshMessage": "Refreshing feed...",
 	})
 }
 
