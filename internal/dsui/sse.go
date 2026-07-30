@@ -11,6 +11,33 @@ import (
 	"github.com/starfederation/datastar-go/datastar"
 )
 
+// SSEFragment represents a single DOM patch in an SSE response.
+type SSEFragment struct {
+	HTML     string
+	Selector string
+}
+
+// SSEResponse bundles element patches and optional signal updates into a
+// single SSE stream. Only one NewSSE call is allowed per HTTP response.
+type SSEResponse struct {
+	Fragments []SSEFragment
+	Signals   map[string]any
+}
+
+// renderSSEResponse sends a complete SSE response with element patches
+// and optional signal updates in a single stream.
+func renderSSEResponse(w http.ResponseWriter, r *http.Request, resp SSEResponse) {
+	sse := datastar.NewSSE(w, r)
+	for _, f := range resp.Fragments {
+		if f.HTML != "" || f.Selector != "" {
+			sse.PatchElements(f.HTML, datastar.WithSelector(f.Selector))
+		}
+	}
+	if len(resp.Signals) > 0 {
+		sse.MarshalAndPatchSignals(resp.Signals)
+	}
+}
+
 // renderSSEFragment renders a template fragment and sends it as a Datastar SSE
 // element patch to the client. The fragment replaces the DOM element matching
 // the given CSS selector.
@@ -23,21 +50,6 @@ func renderSSEFragment(w http.ResponseWriter, r *http.Request, tpl *template.Tem
 
 	sse := datastar.NewSSE(w, r)
 	sse.PatchElements(buf.String(), datastar.WithSelector(selector))
-}
-
-// renderSSEMulti renders multiple template fragments and sends them as
-// separate SSE element patches.
-func renderSSEMulti(w http.ResponseWriter, r *http.Request, fragments []SSEFragment) {
-	sse := datastar.NewSSE(w, r)
-	for _, f := range fragments {
-		sse.PatchElements(f.HTML, datastar.WithSelector(f.Selector))
-	}
-}
-
-// SSEFragment represents a single DOM patch in an SSE response.
-type SSEFragment struct {
-	HTML     string
-	Selector string
 }
 
 // sendSSERedirect sends a client-side redirect via Datastar.
