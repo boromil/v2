@@ -1,13 +1,14 @@
 {{define "settings"}}
-<div id="settings-panel" class="flex flex-col h-full">
-    <div class="top-nav">
-        <a href="/ds/unread" class="nav-title no-underline">&larr; Back to feeds</a>
-    </div>
-    <div class="flex-1 overflow-y-auto px-4 py-3 settings-panel">
-        <form id="settings-form"
-            data-on:submit="@post('/ds/sse/settings')"
-            onsubmit="return false">
-        <h2 class="nav-title mb-3">Settings</h2>
+<div class="settings-page">
+    <div class="settings-page-inner">
+        <div class="top-nav">
+            <a href="/ds/unread" class="nav-title no-underline">&larr; Back to feeds</a>
+        </div>
+        <div class="flex-1 overflow-y-auto px-4 py-3 settings-panel">
+            <form id="settings-form"
+                data-on:submit="@post('/ds/sse/settings')"
+                onsubmit="return false">
+            <h2 class="nav-title mb-3">Settings</h2>
 
         <!-- Import / Export -->
         <fieldset class="settings-group">
@@ -192,7 +193,8 @@
             <span class="ml-3 text-sm" data-show="$settingsSaved" style="color:var(--color-green-600);">&#10003; Saved</span>
             <span class="ml-3 text-sm" data-show="$settingsError" data-text="$settingsError" style="color:var(--color-red-600);"></span>
         </div>
-        </form>
+            </form>
+        </div>
     </div>
 </div>
 {{end}}
