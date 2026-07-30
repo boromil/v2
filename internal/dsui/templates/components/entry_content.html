@@ -17,7 +17,7 @@
     {{.SelectedEntry.Content}}
 </div>
 {{else}}
-<div class="empty-state">
+<div class="empty-state" data-show="!$selectedEntryId">
     <p>Select an entry to read.</p>
 </div>
 {{end}}
