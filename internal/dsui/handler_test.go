@@ -555,3 +555,63 @@ func TestCSSStyleContainsDarkMode(t *testing.T) {
 		}
 	}
 }
+
+func TestSearchSSEFragment(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	// Create entries with specific titles for search.
+	mtest.CreateTestEntryWithContent(t, store, user.ID, feed.ID, "Go Programming", "Go is great")
+	mtest.CreateTestEntryWithContent(t, store, user.ID, feed.ID, "Python Tips", "Python rocks")
+	mtest.CreateTestEntryWithContent(t, store, user.ID, feed.ID, "Rust Patterns", "Rust is safe")
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	// Search via SSE endpoint with query param.
+	req := httptest.NewRequest(http.MethodGet, "/ds/sse/entries?view=search&searchQuery=Go", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "Go Programming") {
+		t.Error("search SSE should return matching entry")
+	}
+	if strings.Contains(body, "Python Tips") {
+		t.Error("search SSE should not return non-matching entry")
+	}
+}
+
+func TestSearchSSEAllResults(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	mtest.CreateTestEntryWithContent(t, store, user.ID, feed.ID, "Entry One", "")
+	mtest.CreateTestEntryWithContent(t, store, user.ID, feed.ID, "Entry Two", "")
+	mtest.CreateTestEntryWithContent(t, store, user.ID, feed.ID, "Entry Three", "")
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	// Empty search should return all entries.
+	req := httptest.NewRequest(http.MethodGet, "/ds/sse/entries?view=search&searchQuery=", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	body := w.Body.String()
+	if strings.Count(body, "entry-row") < 3 {
+		t.Error("empty search should return all entries")
+	}
+}
