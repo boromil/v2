@@ -65,17 +65,22 @@ func Serve(store *storage.Storage, pool *worker.Pool) http.Handler {
 	mux.HandleFunc("GET /ds/starred", h.showApp)
 	mux.HandleFunc("GET /ds/history", h.showApp)
 	mux.HandleFunc("GET /ds/search", h.showApp)
+	// TODO: settings page
+	// mux.HandleFunc("GET /ds/settings", h.showSettings)
 	mux.HandleFunc("GET /ds/feed/{feedID}", h.showApp)
 	mux.HandleFunc("GET /ds/category/{categoryID}", h.showApp)
 
 	// SSE fragment endpoints.
 	mux.HandleFunc("GET /ds/sse/entries", h.sseEntries)
 	mux.HandleFunc("GET /ds/sse/subscriptions", h.sseSubscriptions)
-	mux.HandleFunc("POST /ds/sse/import-opml", h.sseImportOPML)
+	mux.HandleFunc("POST /ds/import-opml", h.importOPML)
 	mux.HandleFunc("GET /ds/sse/entry/{entryID}", h.sseEntry)
 	mux.HandleFunc("POST /ds/sse/entry/star/{entryID}", h.sseToggleStar)
 	mux.HandleFunc("POST /ds/sse/entry/status", h.sseToggleEntryStatus)
 	mux.HandleFunc("POST /ds/sse/mark-all-read", h.sseMarkAllRead)
+
+	// TODO: settings save endpoint
+	// mux.HandleFunc("POST /ds/sse/settings", h.sseSaveSettings)
 
 	// Apply middleware chain: secure headers -> session -> CSRF -> handlers.
 	return secureHeadersMiddleware(sessionMiddleware(store)(newCSRFMiddleware().handle(mux)))
@@ -159,6 +164,11 @@ type appViewModel struct {
 	SelectedEntry      *entryDetailView
 	Pagination         *paginationView
 	MenuSections       []menuSection
+	// Settings page data (TODO)
+	// Form      *settingsFormData
+	// Themes    []selectOption
+	// Languages []selectOption
+	// Timezones []selectOption
 }
 
 type entryView struct {
@@ -318,7 +328,6 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 	}
 	response.HTML(w, r, buf.Bytes())
 }
-
 // ─── SSE fragment handlers ───────────────────────────────────────────────
 
 func (h *handler) sseEntries(w http.ResponseWriter, r *http.Request) {
@@ -711,7 +720,7 @@ func (h *handler) sseMarkAllRead(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *handler) sseImportOPML(w http.ResponseWriter, r *http.Request) {
+func (h *handler) importOPML(w http.ResponseWriter, r *http.Request) {
 	user, err := h.store.UserByID(request.UserID(r))
 	if err != nil {
 		response.HTMLServerError(w, r, err)
@@ -724,45 +733,30 @@ func (h *handler) sseImportOPML(w http.ResponseWriter, r *http.Request) {
 			slog.Int64("user_id", user.ID),
 			slog.Any("error", err),
 		)
-		sse := datastar.NewSSE(w, r)
-		sse.MarshalAndPatchSignals(map[string]any{"importError": "Failed to read file"})
+		response.HTMLRedirect(w, r, "/ds/unread")
 		return
 	}
 	defer file.Close()
 
-	slog.Info("dsui: OPML file uploaded",
+	slog.Info("dsui: OPML file imported",
 		slog.Int64("user_id", user.ID),
 		slog.String("file_name", fileHeader.Filename),
 		slog.Int64("file_size", fileHeader.Size),
 	)
 
 	if fileHeader.Size == 0 {
-		sse := datastar.NewSSE(w, r)
-		sse.MarshalAndPatchSignals(map[string]any{"importError": "File is empty"})
+		response.HTMLRedirect(w, r, "/ds/unread")
 		return
 	}
 
 	if impErr := opml.NewHandler(h.store).Import(user.ID, file); impErr != nil {
-		sse := datastar.NewSSE(w, r)
-		sse.MarshalAndPatchSignals(map[string]any{"importError": impErr.Error()})
-		return
+		slog.Error("dsui: OPML import failed",
+			slog.Int64("user_id", user.ID),
+			slog.Any("error", impErr),
+		)
 	}
 
-	// Refresh subscription tree and show success.
-	sections := h.buildMenu(user, "", 0, 0)
-	var subBuf bytes.Buffer
-	if err := h.tpl.ExecuteTemplate(&subBuf, "subscription_list", map[string]any{"MenuSections": sections}); err != nil {
-		response.HTMLServerError(w, r, fmt.Errorf("subscription_list template: %w", err))
-		return
-	}
-
-	nav, _ := h.store.GetNavMetadata(user.ID)
-	sse := datastar.NewSSE(w, r)
-	sse.PatchElements(subBuf.String(), datastar.WithSelector("#subscription-panel .feed-tree"))
-	sse.MarshalAndPatchSignals(map[string]any{
-		"importSuccess": fmt.Sprintf("Imported from %s", fileHeader.Filename),
-		"countUnread":   nav.CountUnread,
-	})
+	response.HTMLRedirect(w, r, "/ds/unread")
 }
 
 // ─── Query helpers ───────────────────────────────────────────────────────
