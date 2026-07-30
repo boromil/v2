@@ -194,15 +194,22 @@ type feedRef struct {
 }
 
 type entryDetailView struct {
-	ID       int64
-	Title    string
-	Author   string
-	Date     time.Time
-	Content  template.HTML
-	Starred  bool
+	ID         int64
+	Title      string
+	Author     string
+	Date       time.Time
+	Content    template.HTML
+	Starred    bool
+	URL        string
+	Feed       *feedRef
+	Status     string
+	Enclosures []enclosureView
+}
+
+type enclosureView struct {
 	URL      string
-	Feed     *feedRef
-	Status   string
+	MimeType string
+	Size     int64
 }
 
 type paginationView struct {
@@ -313,19 +320,7 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 			WithEnclosures().
 			GetEntry()
 		if err == nil && firstEntry != nil {
-			detail := &entryDetailView{
-				ID:      firstEntry.ID,
-				Title:   firstEntry.Title,
-				Author:  firstEntry.Author,
-				Date:    firstEntry.Date,
-				Content: template.HTML(firstEntry.Content),
-				Starred: firstEntry.Starred,
-				URL:     firstEntry.URL,
-				Status:  firstEntry.Status,
-			}
-			if firstEntry.Feed != nil {
-				detail.Feed = &feedRef{Title: firstEntry.Feed.Title, ID: firstEntry.Feed.ID}
-			}
+			detail := entryToDetailView(firstEntry)
 			vm.SelectedEntry = detail
 		}
 	}
@@ -548,19 +543,7 @@ func (h *handler) sseEntry(w http.ResponseWriter, r *http.Request) {
 		entry.Status = model.EntryStatusRead
 	}
 
-	detail := &entryDetailView{
-		ID:      entry.ID,
-		Title:   entry.Title,
-		Author:  entry.Author,
-		Date:    entry.Date,
-		Content: template.HTML(entry.Content),
-		Starred: entry.Starred,
-		URL:     entry.URL,
-		Status:  entry.Status,
-	}
-	if entry.Feed != nil {
-		detail.Feed = &feedRef{Title: entry.Feed.Title, ID: entry.Feed.ID}
-	}
+	detail := entryToDetailView(entry)
 
 	// Render entry content panel and update the entry row styling.
 	var contentBuf, rowBuf bytes.Buffer
@@ -980,6 +963,30 @@ func (h *handler) sseFetchContent(w http.ResponseWriter, r *http.Request) {
 }
 
 // ─── Query helpers ───────────────────────────────────────────────────────
+
+func entryToDetailView(entry *model.Entry) *entryDetailView {
+	d := &entryDetailView{
+		ID:      entry.ID,
+		Title:   entry.Title,
+		Author:  entry.Author,
+		Date:    entry.Date,
+		Content: template.HTML(entry.Content),
+		Starred: entry.Starred,
+		URL:     entry.URL,
+		Status:  entry.Status,
+	}
+	if entry.Feed != nil {
+		d.Feed = &feedRef{Title: entry.Feed.Title, ID: entry.Feed.ID}
+	}
+	for _, enc := range entry.Enclosures {
+		d.Enclosures = append(d.Enclosures, enclosureView{
+			URL:      enc.URL,
+			MimeType: enc.MimeType,
+			Size:     enc.Size,
+		})
+	}
+	return d
+}
 
 func (h *handler) queryEntries(userID int64, view string, feedID, categoryID int64, searchQuery string, offset, limit int) (model.Entries, int, error) {
 	builder := h.store.NewEntryQueryBuilder(userID).WithGloballyVisible()
