@@ -31,23 +31,6 @@
 
     <!-- RIGHT PANEL: Entry Content -->
     <article id="entry-content-panel" class="flex flex-col h-full">
-        {{if .SelectedEntry}}
-        <div class="article-toolbar">
-            <button class="toolbar-btn"
-                data-on:click="@post('/ds/sse/entry/star/{{.SelectedEntry.ID}}')">
-                <span id="star-icon-{{.SelectedEntry.ID}}">{{if .SelectedEntry.Starred}}&#9733;{{else}}&#9734;{{end}}</span>
-                Star
-            </button>
-            <a href="{{.SelectedEntry.URL}}" target="_blank" rel="noopener" class="toolbar-btn no-underline">
-                Open original
-            </a>
-            <button class="toolbar-btn"
-                data-on:click="@post('/ds/sse/entry/status')"
-                data-entry-id="{{.SelectedEntry.ID}}">
-                Toggle read
-            </button>
-        </div>
-        {{end}}
         <div id="entry-content" class="flex-1 overflow-y-auto">
             {{template "entry_content" .}}
         </div>
