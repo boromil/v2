@@ -1,5 +1,11 @@
 {{define "app"}}
-<div class="app-container">
+<!-- Mobile panel navigation -->
+<nav class="mobile-nav" id="mobile-nav">
+    <button data-panel="subscriptions" class="active">Feeds</button>
+    <button data-panel="list">Articles</button>
+    <button data-panel="content">Reader</button>
+</nav>
+<div class="app-container" data-active-panel="list">
     <!-- LEFT PANEL: Subscriptions -->
     <aside id="subscription-panel" class="flex flex-col h-full">
         <div class="top-nav">

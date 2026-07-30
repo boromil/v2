@@ -226,5 +226,45 @@
     if (rows.length > 0) {
       selectIndex(0);
     }
+
+    // Mobile nav panel toggling.
+    var nav = document.getElementById("mobile-nav");
+    if (nav) {
+      nav.querySelectorAll("button").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var panel = this.dataset.panel;
+          var container = document.querySelector(".app-container");
+          if (container) {
+            container.setAttribute("data-active-panel", panel);
+          }
+          nav.querySelectorAll("button").forEach(function (b) {
+            b.classList.remove("active");
+          });
+          this.classList.add("active");
+        });
+      });
+    }
+
+    // On mobile, switch to content panel when an entry is loaded.
+    // Observe #entry-content for changes (SSE patches).
+    var entryContent = document.getElementById("entry-content");
+    if (entryContent) {
+      var observer = new MutationObserver(function () {
+        if (window.innerWidth <= 768) {
+          var container = document.querySelector(".app-container");
+          if (container) {
+            container.setAttribute("data-active-panel", "content");
+          }
+          if (nav) {
+            nav.querySelectorAll("button").forEach(function (b) {
+              b.classList.remove("active");
+            });
+            var contentBtn = nav.querySelector('button[data-panel="content"]');
+            if (contentBtn) contentBtn.classList.add("active");
+          }
+        }
+      });
+      observer.observe(entryContent, { childList: true, subtree: true });
+    }
   });
 })();
