@@ -849,6 +849,10 @@ func isDsPublicRoute(r *http.Request) bool {
 	if isDsStaticRoute(r) {
 		return true
 	}
+	// The index route just redirects to /ds/unread.
+	if r.URL.Path == "/ds/" || r.URL.Path == "/ds" {
+		return true
+	}
 	return false
 }
 
