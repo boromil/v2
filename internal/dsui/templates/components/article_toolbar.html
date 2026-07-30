@@ -12,6 +12,11 @@
         Open original
     </a>
     <button class="toolbar-btn"
+        data-on:click="@post('/ds/sse/fetch-content/{{.ID}}')">
+        <span data-indicator>Fetching...</span>
+        <span data-indicator="!exists">Fetch content</span>
+    </button>
+    <button class="toolbar-btn"
         data-signals='{"entryIds":[{{.ID}}]}'
         data-on:click="@post('/ds/sse/entry/status')">
         <span data-indicator>Saving...</span>

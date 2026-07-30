@@ -17,6 +17,11 @@
             <a href="/ds/settings" class="no-underline" title="Settings" style="font-size:1rem; color:var(--color-gray-500);">&#9881;</a>
         </div>
         <nav class="flex-1 overflow-y-auto">
+            {{if .CountErrorFeeds}}
+            <div class="px-2 py-1 text-xs" style="color:var(--color-red-600); background:var(--color-red-50);" data-show="$countErrorFeeds">
+                &#9888; {{.CountErrorFeeds}} feed{{if gt .CountErrorFeeds 1}}s{{end}} with errors
+            </div>
+            {{end}}
             {{template "subscription_list" .}}
         </nav>
     </aside>

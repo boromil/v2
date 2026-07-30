@@ -19,9 +19,11 @@ import (
 	"miniflux.app/v2/internal/http/request"
 	"miniflux.app/v2/internal/http/response"
 	"miniflux.app/v2/internal/model"
+	"miniflux.app/v2/internal/mediaproxy"
 	"miniflux.app/v2/internal/proxyrotator"
 	"miniflux.app/v2/internal/reader/fetcher"
 	"miniflux.app/v2/internal/reader/opml"
+	"miniflux.app/v2/internal/reader/processor"
 	"miniflux.app/v2/internal/storage"
 	dsstatic "miniflux.app/v2/internal/dsui/static"
 	"miniflux.app/v2/internal/worker"
@@ -85,6 +87,7 @@ func Serve(store *storage.Storage, pool *worker.Pool) http.Handler {
 	mux.HandleFunc("POST /ds/sse/entry/status", h.sseToggleEntryStatus)
 	mux.HandleFunc("POST /ds/sse/mark-all-read", h.sseMarkAllRead)
 	mux.HandleFunc("POST /ds/sse/mark-page-read", h.sseMarkPageRead)
+	mux.HandleFunc("POST /ds/sse/fetch-content/{entryID}", h.sseFetchContent)
 
 	// TODO: settings save endpoint
 	// mux.HandleFunc("POST /ds/sse/settings", h.sseSaveSettings)
@@ -162,6 +165,7 @@ type appViewModel struct {
 	CategoryID         int64
 	Offset             int
 	CountUnread        int
+	CountErrorFeeds    int
 	StyleChecksum      string
 	JSChecksum         string
 	KeyboardChecksum   string
@@ -261,6 +265,7 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 	vm.ListTitle = listTitleForView(viewName, feedID, categoryID, h.store, user.ID)
 	nav, _ := h.store.GetNavMetadata(user.ID)
 	vm.CountUnread = nav.CountUnread
+	vm.CountErrorFeeds = nav.CountErrorFeeds
 
 	// Load entries.
 	entries, total, err := h.queryEntries(user.ID, viewName, feedID, categoryID, searchQuery, offset, user.EntriesPerPage)
@@ -913,6 +918,65 @@ func (h *handler) sseMarkPageRead(w http.ResponseWriter, r *http.Request) {
 	sse := datastar.NewSSE(w, r)
 	sse.PatchElements(listBuf.String(), datastar.WithSelector("#entry-list"))
 	sse.MarshalAndPatchSignals(map[string]any{"countUnread": nav.CountUnread})
+}
+
+func (h *handler) sseFetchContent(w http.ResponseWriter, r *http.Request) {
+	user, err := h.store.UserByID(request.UserID(r))
+	if err != nil {
+		response.HTMLServerError(w, r, err)
+		return
+	}
+
+	entryID := request.RouteInt64Param(r, "entryID")
+	entry, err := h.store.NewEntryQueryBuilder(user.ID).
+		WithEntryIDs(entryID).
+		GetEntry()
+	if err != nil || entry == nil {
+		response.HTMLNotFound(w, r)
+		return
+	}
+
+	feed, err := h.store.NewFeedQueryBuilder(user.ID).
+		WithFeedID(entry.FeedID).
+		GetFeed()
+	if err != nil || feed == nil {
+		response.HTMLServerError(w, r, err)
+		return
+	}
+
+	if err := processor.ProcessEntryWebPage(feed, entry, user); err != nil {
+		response.HTMLServerError(w, r, err)
+		return
+	}
+
+	if err := h.store.UpdateEntryTitleAndContent(entry); err != nil {
+		response.HTMLServerError(w, r, err)
+		return
+	}
+
+	content := mediaproxy.RewriteDocumentWithRelativeProxyURL(entry.Content)
+	detail := &entryDetailView{
+		ID:      entry.ID,
+		Title:   entry.Title,
+		Author:  entry.Author,
+		Date:    entry.Date,
+		Content: template.HTML(content),
+		Starred: entry.Starred,
+		URL:     entry.URL,
+		Status:  entry.Status,
+	}
+	if entry.Feed != nil {
+		detail.Feed = &feedRef{Title: entry.Feed.Title, ID: entry.Feed.ID}
+	}
+
+	var buf bytes.Buffer
+	if err := h.tpl.ExecuteTemplate(&buf, "entry_content", map[string]any{"SelectedEntry": detail}); err != nil {
+		response.HTMLServerError(w, r, fmt.Errorf("entry_content template: %w", err))
+		return
+	}
+
+	sse := datastar.NewSSE(w, r)
+	sse.PatchElements(buf.String(), datastar.WithSelector("#entry-content"))
 }
 
 // ─── Query helpers ───────────────────────────────────────────────────────
