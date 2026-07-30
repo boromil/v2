@@ -6,7 +6,6 @@ package dsui // import "miniflux.app/v2/internal/dsui"
 import (
 	"net/http"
 	"strconv"
-	"strings"
 
 	"miniflux.app/v2/internal/locale"
 	"miniflux.app/v2/internal/model"
@@ -187,12 +186,17 @@ func applyMarkReadBehavior(behavior string) (onView, onMediaPlayerCompletion boo
 }
 
 func themeOptions() []selectOption {
-	themes := model.Themes()
-	opts := make([]selectOption, 0, len(themes))
-	for key, label := range themes {
-		opts = append(opts, selectOption{Value: key, Label: label})
+	// Map old theme names to clean UI-friendly labels.
+	// The Datastar UI uses system preference for dark/light;
+	// theme setting mainly affects the classic UI at /.
+	return []selectOption{
+		{Value: "system_sans_serif", Label: "System (default)"},
+		{Value: "light_sans_serif", Label: "Light"},
+		{Value: "dark_sans_serif", Label: "Dark"},
+		{Value: "system_serif", Label: "System, serif"},
+		{Value: "light_serif", Label: "Light, serif"},
+		{Value: "dark_serif", Label: "Dark, serif"},
 	}
-	return opts
 }
 
 func languageOptions() []selectOption {
@@ -211,16 +215,3 @@ func timezoneOptions() []selectOption {
 	return opts
 }
 
-func isValidDomainList(s string) bool {
-	if s == "" {
-		return true
-	}
-	parts := strings.Split(s, ",")
-	for _, p := range parts {
-		p = strings.TrimSpace(p)
-		if p == "" {
-			return false
-		}
-	}
-	return true
-}
