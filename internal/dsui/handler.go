@@ -79,6 +79,7 @@ func Serve(store *storage.Storage, pool *worker.Pool) http.Handler {
 	// SSE fragment endpoints.
 	mux.HandleFunc("GET /ds/sse/entries", h.sseEntries)
 	mux.HandleFunc("GET /ds/sse/subscriptions", h.sseSubscriptions)
+	mux.HandleFunc("POST /ds/refresh", h.refreshFeeds)
 	mux.HandleFunc("GET /ds/sse/entry/{entryID}", h.sseEntry)
 	mux.HandleFunc("POST /ds/sse/entry/star/{entryID}", h.sseToggleStar)
 	mux.HandleFunc("POST /ds/sse/entry/status", h.sseToggleEntryStatus)
@@ -395,6 +396,32 @@ func (h *handler) fetchOPML(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.HTMLRedirect(w, r, "/ds/unread")
+}
+
+func (h *handler) refreshFeeds(w http.ResponseWriter, r *http.Request) {
+	user, err := h.store.UserByID(request.UserID(r))
+	if err != nil {
+		response.HTMLServerError(w, r, err)
+		return
+	}
+
+	slog.Info("dsui: refresh feeds triggered", slog.Int64("user_id", user.ID))
+
+	jobs, err := h.store.NewBatchBuilder().
+		WithoutDisabledFeeds().
+		WithUserID(user.ID).
+		FetchJobs()
+	if err != nil {
+		response.HTMLServerError(w, r, err)
+		return
+	}
+
+	go h.pool.Push(jobs)
+
+	sse := datastar.NewSSE(w, r)
+	sse.MarshalAndPatchSignals(map[string]any{
+		"refreshMessage": fmt.Sprintf("Refreshing %d feeds...", len(jobs)),
+	})
 }
 
 // ─── SSE fragment handlers ───────────────────────────────────────────────
