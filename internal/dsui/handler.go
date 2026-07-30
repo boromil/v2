@@ -186,6 +186,7 @@ type paginationView struct {
 	HasNext     bool
 	PrevOffset  int
 	NextOffset  int
+	SSEEntriesURL string // Full SSE URL including view/filter params
 }
 
 type menuSection struct {
@@ -254,12 +255,13 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 		totalPages := int(math.Ceil(float64(total) / float64(user.EntriesPerPage)))
 		currentPage := offset/user.EntriesPerPage + 1
 		vm.Pagination = &paginationView{
-			CurrentPage: currentPage,
-			TotalPages:  totalPages,
-			HasPrev:     offset > 0,
-			HasNext:     offset+user.EntriesPerPage < total,
-			PrevOffset:  offset - user.EntriesPerPage,
-			NextOffset:  offset + user.EntriesPerPage,
+			CurrentPage:   currentPage,
+			TotalPages:    totalPages,
+			HasPrev:       offset > 0,
+			HasNext:       offset+user.EntriesPerPage < total,
+			PrevOffset:    offset - user.EntriesPerPage,
+			NextOffset:    offset + user.EntriesPerPage,
+			SSEEntriesURL: buildSSEEntriesURL(viewName, feedID, categoryID),
 		}
 		if vm.Pagination.PrevOffset < 0 {
 			vm.Pagination.PrevOffset = 0
@@ -338,7 +340,7 @@ func (h *handler) sseEntries(w http.ResponseWriter, r *http.Request) {
 		req.Offset = request.QueryIntParam(r, "offset", 0)
 	}
 
-	entries, _, err := h.queryEntries(user.ID, req.View, req.FeedID, req.CategoryID, req.Offset, user.EntriesPerPage)
+	entries, total, err := h.queryEntries(user.ID, req.View, req.FeedID, req.CategoryID, req.Offset, user.EntriesPerPage)
 	if err != nil {
 		response.HTMLServerError(w, r, err)
 		return
@@ -358,8 +360,42 @@ func (h *handler) sseEntries(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	data := map[string]any{"Entries": evs}
-	renderSSEFragment(w, r, h.tpl, "entry_list", data, "#entry-list")
+	// Build fragments: entry list + optional pagination.
+	fragments := []SSEFragment{}
+	var listBuf bytes.Buffer
+	if err := h.tpl.ExecuteTemplate(&listBuf, "entry_list", map[string]any{"Entries": evs}); err != nil {
+		response.HTMLServerError(w, r, fmt.Errorf("entry_list template: %w", err))
+		return
+	}
+	fragments = append(fragments, SSEFragment{HTML: listBuf.String(), Selector: "#entry-list"})
+
+	if total > user.EntriesPerPage {
+		totalPages := int(math.Ceil(float64(total) / float64(user.EntriesPerPage)))
+		currentPage := req.Offset/user.EntriesPerPage + 1
+		pv := paginationView{
+			CurrentPage:   currentPage,
+			TotalPages:    totalPages,
+			HasPrev:       req.Offset > 0,
+			HasNext:       req.Offset+user.EntriesPerPage < total,
+			PrevOffset:    req.Offset - user.EntriesPerPage,
+			NextOffset:    req.Offset + user.EntriesPerPage,
+			SSEEntriesURL: buildSSEEntriesURL(req.View, req.FeedID, req.CategoryID),
+		}
+		if pv.PrevOffset < 0 {
+			pv.PrevOffset = 0
+		}
+		var pagBuf bytes.Buffer
+		if err := h.tpl.ExecuteTemplate(&pagBuf, "pagination", pv); err != nil {
+			response.HTMLServerError(w, r, fmt.Errorf("pagination template: %w", err))
+			return
+		}
+		fragments = append(fragments, SSEFragment{HTML: pagBuf.String(), Selector: "#pagination"})
+	} else {
+		// Clear pagination if all entries fit on one page.
+		fragments = append(fragments, SSEFragment{HTML: "", Selector: "#pagination"})
+	}
+
+	renderSSEMulti(w, r, fragments)
 }
 
 func (h *handler) sseEntry(w http.ResponseWriter, r *http.Request) {
@@ -899,6 +935,19 @@ func dsLoginRedirectURL(requestURI string) string {
 	values.Set("redirect_url", requestURI)
 	loginURL.RawQuery = values.Encode()
 	return loginURL.String()
+}
+
+// buildSSEEntriesURL creates the base SSE URL for loading entries
+// with the current view/filter parameters.
+func buildSSEEntriesURL(view string, feedID, categoryID int64) string {
+	u := "/ds/sse/entries?view=" + view
+	if feedID > 0 {
+		u += fmt.Sprintf("&feedId=%d", feedID)
+	}
+	if categoryID > 0 {
+		u += fmt.Sprintf("&categoryId=%d", categoryID)
+	}
+	return u
 }
 
 // ─── Time helpers ────────────────────────────────────────────────────────
