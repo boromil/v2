@@ -1396,3 +1396,25 @@ input[type="file"]::file-selector-button {
     border-color: #3a3a5a;
   }
 }
+
+.settings-textarea {
+  display: block;
+  width: 100%;
+  max-width: 480px;
+  font-size: 0.8125rem;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--color-gray-300);
+  border-radius: 0.25rem;
+  color: var(--color-gray-800);
+  background: var(--color-white);
+  resize: vertical;
+  font-family: var(--font-mono, monospace);
+}
+
+@media (prefers-color-scheme: dark) {
+  .settings-textarea {
+    background: #16213e;
+    border-color: #3a3a5a;
+    color: #c0c0d0;
+  }
+}
