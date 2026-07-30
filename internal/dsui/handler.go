@@ -118,7 +118,13 @@ func (h *handler) showStylesheet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) showJavascript(w http.ResponseWriter, r *http.Request) {
-	asset, ok := dsstatic.JavascriptBundles["datastar"]
+	filename := r.PathValue("filename")
+	// Strip extension for lookup key.
+	key := filename
+	if ext := strings.LastIndex(filename, "."); ext != -1 {
+		key = filename[:ext]
+	}
+	asset, ok := dsstatic.JavascriptBundles[key]
 	if !ok {
 		response.HTMLNotFound(w, r)
 		return
@@ -132,18 +138,19 @@ func (h *handler) showJavascript(w http.ResponseWriter, r *http.Request) {
 
 // appViewModel is the data passed to the layout/app template.
 type appViewModel struct {
-	Title         string
-	Language      string
-	Direction     string
-	StyleChecksum string
-	JSChecksum    string
-	SignalsJSON   template.JS
-	ListTitle     string
-	CanMarkAllRead bool
-	Entries       []entryView
-	SelectedEntry *entryDetailView
-	Pagination    *paginationView
-	MenuSections  []menuSection
+	Title           string
+	Language        string
+	Direction       string
+	StyleChecksum   string
+	JSChecksum      string
+	KeyboardChecksum string
+	SignalsJSON     template.JS
+	ListTitle       string
+	CanMarkAllRead  bool
+	Entries         []entryView
+	SelectedEntry   *entryDetailView
+	Pagination      *paginationView
+	MenuSections    []menuSection
 }
 
 type entryView struct {
@@ -208,11 +215,12 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 	viewName, feedID, categoryID := parseAppRoute(r)
 
 	vm := appViewModel{
-		Language:      user.Language,
-		Direction:     "ltr",
-		StyleChecksum: dsstatic.StylesheetBundles["app"].Checksum,
-		JSChecksum:    dsstatic.JavascriptBundles["datastar"].Checksum,
-		CanMarkAllRead: viewName == "unread" || viewName == "feed" || viewName == "category",
+		Language:        user.Language,
+		Direction:       "ltr",
+		StyleChecksum:   dsstatic.StylesheetBundles["app"].Checksum,
+		JSChecksum:      dsstatic.JavascriptBundles["datastar"].Checksum,
+		KeyboardChecksum: dsstatic.JavascriptBundles["keyboard"].Checksum,
+		CanMarkAllRead:  viewName == "unread" || viewName == "feed" || viewName == "category",
 	}
 
 	// Build subscription menu.
