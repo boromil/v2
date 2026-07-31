@@ -5,6 +5,7 @@ package dsui // import "miniflux.app/v2/internal/dsui"
 
 import (
 	"net/http"
+	"sort"
 	"strconv"
 
 	"miniflux.app/v2/internal/locale"
@@ -27,28 +28,28 @@ type settingsFormData struct {
 	Theme                     string  `json:"theme"`
 	Language                  string  `json:"language"`
 	Timezone                  string  `json:"timezone"`
-	EntryDirection            string  `json:"entryDirection"`
-	EntryOrder                string  `json:"entryOrder"`
-	EntriesPerPage            int     `json:"entriesPerPage"`
-	DefaultHomePage           string  `json:"defaultHomePage"`
-	CategoriesSortingOrder    string  `json:"categoriesSortingOrder"`
-	DisplayMode               string  `json:"displayMode"`
-	GestureNav                string  `json:"gestureNav"`
-	DefaultReadingSpeed       int     `json:"defaultReadingSpeed"`
-	CJKReadingSpeed           int     `json:"cjkReadingSpeed"`
-	MediaPlaybackRate         float64 `json:"mediaPlaybackRate"`
-	ShowReadingTime           bool    `json:"showReadingTime"`
-	KeyboardShortcuts         bool    `json:"keyboardShortcuts"`
-	EntrySwipe                bool    `json:"entrySwipe"`
-	AlwaysOpenExternalLinks   bool    `json:"alwaysOpenExternalLinks"`
-	OpenExternalLinksInNewTab bool    `json:"openExternalLinksInNewTab"`
-	AutoFetchShortEntries     bool    `json:"autoFetchShortEntries"`
-	BlockFilterEntryRules     string  `json:"blockFilterEntryRules"`
-	KeepFilterEntryRules      string  `json:"keepFilterEntryRules"`
+	EntryDirection            string  `json:"entry_direction"`
+	EntryOrder                string  `json:"entry_order"`
+	EntriesPerPage            int     `json:"entries_per_page"`
+	DefaultHomePage           string  `json:"default_home_page"`
+	CategoriesSortingOrder    string  `json:"categories_sorting_order"`
+	DisplayMode               string  `json:"display_mode"`
+	GestureNav                string  `json:"gesture_nav"`
+	DefaultReadingSpeed       int     `json:"default_reading_speed"`
+	CJKReadingSpeed           int     `json:"cjk_reading_speed"`
+	MediaPlaybackRate         float64 `json:"media_playback_rate"`
+	ShowReadingTime           bool    `json:"show_reading_time"`
+	KeyboardShortcuts         bool    `json:"keyboard_shortcuts"`
+	EntrySwipe                bool    `json:"entry_swipe"`
+	AlwaysOpenExternalLinks   bool    `json:"always_open_external_links"`
+	OpenExternalLinksInNewTab bool    `json:"open_external_links_in_new_tab"`
+	AutoFetchShortEntries     bool    `json:"auto_fetch_short_entries"`
+	BlockFilterEntryRules     string  `json:"block_filter_entry_rules"`
+	KeepFilterEntryRules      string  `json:"keep_filter_entry_rules"`
 	Stylesheet                string  `json:"stylesheet"`
-	CustomJS                  string  `json:"customJs"`
-	ExternalFontHosts         string  `json:"externalFontHosts"`
-	MarkReadBehavior          string  `json:"markReadBehavior"`
+	CustomJS                  string  `json:"custom_js"`
+	ExternalFontHosts         string  `json:"external_font_hosts"`
+	MarkReadBehavior          string  `json:"mark_read_behavior"`
 }
 
 func settingsFormFromUser(user *model.User) *settingsFormData {
@@ -204,6 +205,7 @@ func languageOptions() []selectOption {
 	for lang, label := range locale.AvailableLanguages {
 		opts = append(opts, selectOption{Value: lang, Label: label})
 	}
+	sort.Slice(opts, func(i, j int) bool { return opts[i].Label < opts[j].Label })
 	return opts
 }
 
@@ -212,6 +214,7 @@ func timezoneOptions() []selectOption {
 	for tz := range timezone.AvailableTimezones() {
 		opts = append(opts, selectOption{Value: tz, Label: tz})
 	}
+	sort.Slice(opts, func(i, j int) bool { return opts[i].Label < opts[j].Label })
 	return opts
 }
 
