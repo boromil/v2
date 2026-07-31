@@ -125,18 +125,18 @@ func (f *settingsFormData) applyToUser(user *model.User) {
 	if f.Password != "" {
 		user.Password = f.Password
 	}
-	user.Theme = f.Theme
-	user.Language = f.Language
-	user.Timezone = f.Timezone
-	user.EntryDirection = f.EntryDirection
-	user.EntryOrder = f.EntryOrder
+	if f.Theme != "" { user.Theme = f.Theme }
+	if f.Language != "" { user.Language = f.Language }
+	if f.Timezone != "" { user.Timezone = f.Timezone }
+	if f.EntryDirection != "" { user.EntryDirection = f.EntryDirection }
+	if f.EntryOrder != "" { user.EntryOrder = f.EntryOrder }
 	if f.EntriesPerPage > 0 {
 		user.EntriesPerPage = f.EntriesPerPage
 	}
-	user.DefaultHomePage = f.DefaultHomePage
-	user.CategoriesSortingOrder = f.CategoriesSortingOrder
-	user.DisplayMode = f.DisplayMode
-	user.GestureNav = f.GestureNav
+	if f.DefaultHomePage != "" { user.DefaultHomePage = f.DefaultHomePage }
+	if f.CategoriesSortingOrder != "" { user.CategoriesSortingOrder = f.CategoriesSortingOrder }
+	if f.DisplayMode != "" { user.DisplayMode = f.DisplayMode }
+	if f.GestureNav != "" { user.GestureNav = f.GestureNav }
 	if f.DefaultReadingSpeed > 0 {
 		user.DefaultReadingSpeed = f.DefaultReadingSpeed
 	}
@@ -152,11 +152,11 @@ func (f *settingsFormData) applyToUser(user *model.User) {
 	user.AlwaysOpenExternalLinks = f.AlwaysOpenExternalLinks
 	user.OpenExternalLinksInNewTab = f.OpenExternalLinksInNewTab
 	user.AutoFetchShortEntries = f.AutoFetchShortEntries
-	user.BlockFilterEntryRules = f.BlockFilterEntryRules
-	user.KeepFilterEntryRules = f.KeepFilterEntryRules
-	user.Stylesheet = f.Stylesheet
-	user.CustomJS = f.CustomJS
-	user.ExternalFontHosts = f.ExternalFontHosts
+	if f.BlockFilterEntryRules != "" { user.BlockFilterEntryRules = f.BlockFilterEntryRules }
+	if f.KeepFilterEntryRules != "" { user.KeepFilterEntryRules = f.KeepFilterEntryRules }
+	if f.Stylesheet != "" { user.Stylesheet = f.Stylesheet }
+	if f.CustomJS != "" { user.CustomJS = f.CustomJS }
+	if f.ExternalFontHosts != "" { user.ExternalFontHosts = f.ExternalFontHosts }
 	user.MarkReadOnView, user.MarkReadOnMediaPlayerCompletion = applyMarkReadBehavior(f.MarkReadBehavior)
 }
 

@@ -144,7 +144,7 @@
 
             <div class="py-2">
                 <button type="button" class="toolbar-btn" style="background:var(--color-blue-600);color:#fff;border-color:var(--color-blue-600);"
-                    data-on:click="@post('/ds/sse/settings')">
+                    data-on:click="@post('/ds/sse/settings', {contentType: 'form'})">
                     Save Settings
                 </button>
             </div>
