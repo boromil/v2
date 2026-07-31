@@ -519,6 +519,12 @@ func (h *handler) sseEntries(w http.ResponseWriter, r *http.Request) {
 		response.HTMLServerError(w, r, err)
 		return
 	}
+	slog.Debug("dsui: sseEntries",
+		slog.String("view", req.View),
+		slog.String("searchQuery", req.SearchQuery),
+		slog.Int("total", total),
+		slog.Int("n_entries", len(entries)),
+	)
 
 	evs := make([]entryView, len(entries))
 	for i, e := range entries {
