@@ -626,7 +626,7 @@
 /* Three-panel app layout */
 .app-container {
   display: grid;
-  grid-template-columns: 240px 1fr 1fr;
+  grid-template-columns: 240px 1fr 4px 1fr;
   height: 100vh;
   overflow: hidden;
 }
@@ -641,11 +641,31 @@
 /* Entry list panel */
 #entry-list-panel {
   overflow-y: auto;
-  border-right: 1px solid var(--color-gray-200);
+  border-right: none;
   background-color: var(--color-white);
-  min-width: 260px;
-  max-width: 600px;
-  resize: horizontal;
+}
+
+/* Resize handle between entry list and content */
+.resize-handle {
+  width: 4px;
+  cursor: col-resize;
+  background: var(--color-gray-200);
+  flex-shrink: 0;
+  transition: background-color 100ms;
+}
+.resize-handle:hover,
+.resize-handle.active {
+  background: var(--color-blue-400);
+}
+
+@media (prefers-color-scheme: dark) {
+  .resize-handle {
+    background: #2a2a4a;
+  }
+  .resize-handle:hover,
+  .resize-handle.active {
+    background: #4a9eff;
+  }
 }
 
 /* Entry content panel */

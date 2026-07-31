@@ -2,25 +2,23 @@
 <div id="article-toolbar" class="article-toolbar" data-show="$selectedEntryId">
     <button class="toolbar-btn"
         data-on:click="@post('/ds/sse/entry/star/{{.ID}}')">
-        <span id="toolbar-star-icon-{{.ID}}" class="{{if .Starred}}starred{{end}}">
-            {{if .Starred}}★{{else}}☆{{end}}
-        </span>
-        <span data-indicator>Updating...</span>
-        <span data-indicator="!exists">{{if .Starred}}Starred{{else}}Star{{end}}</span>
+        {{if .Starred}}★ Unstar{{else}}☆ Star{{end}}
     </button>
     <a href="{{.URL}}" target="_blank" rel="noopener" class="toolbar-btn no-underline">
-        Open original
+        Open
     </a>
     <button class="toolbar-btn"
+        data-on:click="@post('/ds/sse/fetch-content/{{.ID}}')">
+        Fetch
+    </button>
+    <button class="toolbar-btn"
         data-on:click="@post('/ds/sse/share/{{.ID}}')">
-        <span data-indicator>...</span>
-        <span data-indicator="!exists">{{if .ShareCode}}Unshare{{else}}Share{{end}}</span>
+        {{if .ShareCode}}Unshare{{else}}Share{{end}}
     </button>
     <button class="toolbar-btn"
         data-signals='{"entryIds":[{{.ID}}]}'
         data-on:click="@post('/ds/sse/entry/status')">
-        <span data-indicator>Saving...</span>
-        <span data-indicator="!exists">{{if eq .Status "unread"}}Mark read{{else}}Mark unread{{end}}</span>
+        {{if eq .Status "unread"}}Read{{else}}Unread{{end}}
     </button>
 </div>
 {{end}}

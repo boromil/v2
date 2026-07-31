@@ -219,5 +219,39 @@
         });
       }
     }
+
+    // Panel resize handle (drag to resize entry list vs content)
+    var handle = document.getElementById('panel-resize-handle');
+    if (handle) {
+      var container = document.querySelector('.app-container');
+      var startX, startWidth;
+      handle.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        startX = e.clientX;
+        var entryList = document.getElementById('entry-list-panel');
+        startWidth = entryList ? entryList.offsetWidth : 400;
+        handle.classList.add('active');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+      });
+      document.addEventListener('mousemove', function(e) {
+        if (!startX) return;
+        var diff = e.clientX - startX;
+        var newWidth = startWidth + diff;
+        if (newWidth < 260) newWidth = 260;
+        if (newWidth > 800) newWidth = 800;
+        if (container) {
+          container.style.gridTemplateColumns = container.style.gridTemplateColumns.replace(
+            /1fr 4px 1fr/, newWidth + 'px 4px 1fr'
+          );
+        }
+      });
+      document.addEventListener('mouseup', function() {
+        startX = null;
+        if (handle) handle.classList.remove('active');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      });
+    }
   });
 })();
