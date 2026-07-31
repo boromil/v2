@@ -31,8 +31,7 @@
         <div class="top-nav">
             <span class="nav-title">{{.ListTitle}}</span>
             <form class="flex items-center gap-1" style="flex-shrink:0;"
-                data-on:submit="@get('/ds/sse/entries?view=search&searchQuery=' + $searchQuery)"
-                onsubmit="return false">
+                data-on:submit="@get('/ds/sse/entries?view=search&searchQuery=' + $searchQuery)">
                 <input type="search" name="q" placeholder="Search..." 
                     style="width:120px;font-size:0.75rem;padding:0.125rem 0.375rem;border:1px solid var(--color-gray-300);border-radius:0.25rem;color:inherit;"
                     data-bind-searchQuery
