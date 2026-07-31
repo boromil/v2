@@ -191,5 +191,33 @@
       });
       observer.observe(entryContent, { childList: true, subtree: true });
     }
+
+    // Settings page scroll spy for sidebar nav
+    var nav = document.querySelector('.settings-nav');
+    if (nav) {
+      var links = nav.querySelectorAll('a');
+      var sections = document.querySelectorAll('.settings-section');
+      var content = document.getElementById('settings-content');
+      if (content) {
+        links.forEach(function(link) {
+          link.addEventListener('click', function(e) {
+            e.preventDefault();
+            var target = document.querySelector(this.getAttribute('href'));
+            if (target) target.scrollIntoView({behavior:'smooth', block:'start'});
+            links.forEach(function(l) { l.classList.remove('active'); });
+            this.classList.add('active');
+          });
+        });
+        content.addEventListener('scroll', function() {
+          var scrollPos = content.scrollTop + 60;
+          sections.forEach(function(section, i) {
+            if (section.offsetTop <= scrollPos) {
+              links.forEach(function(l) { l.classList.remove('active'); });
+              if (links[i]) links[i].classList.add('active');
+            }
+          });
+        });
+      }
+    }
   });
 })();
