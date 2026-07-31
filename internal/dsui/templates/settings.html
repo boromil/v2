@@ -26,7 +26,7 @@
                 <div class="settings-grid">
                     <label class="settings-field">
                         <span class="settings-field-label">Default home page</span>
-                        <select name="default_home_page" class="settings-select" data-bind-defaultHomePage>
+                        <select name="default_home_page" class="settings-select" data-bind:defaultHomePage>
                             <option value="unread" {{if eq .Form.DefaultHomePage "unread"}}selected{{end}}>Unread</option>
                             <option value="starred" {{if eq .Form.DefaultHomePage "starred"}}selected{{end}}>Starred</option>
                             <option value="history" {{if eq .Form.DefaultHomePage "history"}}selected{{end}}>History</option>
@@ -36,25 +36,25 @@
                     </label>
                     <label class="settings-field">
                         <span class="settings-field-label">Entry order</span>
-                        <select name="entry_order" class="settings-select" data-bind-entryOrder>
+                        <select name="entry_order" class="settings-select" data-bind:entryOrder>
                             <option value="published_at" {{if eq .Form.EntryOrder "published_at"}}selected{{end}}>Published date</option>
                             <option value="created_at" {{if eq .Form.EntryOrder "created_at"}}selected{{end}}>Created date</option>
                         </select>
                     </label>
                     <label class="settings-field">
                         <span class="settings-field-label">Entry direction</span>
-                        <select name="entry_direction" class="settings-select" data-bind-entryDirection>
+                        <select name="entry_direction" class="settings-select" data-bind:entryDirection>
                             <option value="desc" {{if eq .Form.EntryDirection "desc"}}selected{{end}}>Newest first</option>
                             <option value="asc" {{if eq .Form.EntryDirection "asc"}}selected{{end}}>Oldest first</option>
                         </select>
                     </label>
                     <label class="settings-field">
                         <span class="settings-field-label">Per page</span>
-                        <input type="number" name="entries_per_page" class="settings-input" min="1" max="1000" value="{{.Form.EntriesPerPage}}" data-bind-entriesPerPage>
+                        <input type="number" name="entries_per_page" class="settings-input" min="1" max="1000" value="{{.Form.EntriesPerPage}}" data-bind:entriesPerPage>
                     </label>
                     <label class="settings-field">
                         <span class="settings-field-label">Mark read</span>
-                        <select name="mark_read_behavior" class="settings-select" data-bind-markReadBehavior>
+                        <select name="mark_read_behavior" class="settings-select" data-bind:markReadBehavior>
                             <option value="no-auto" {{if eq .Form.MarkReadBehavior "no-auto"}}selected{{end}}>Manual only</option>
                             <option value="on-view" {{if eq .Form.MarkReadBehavior "on-view"}}selected{{end}}>On view</option>
                             <option value="on-view-but-wait-for-player-completion" {{if eq .Form.MarkReadBehavior "on-view-but-wait-for-player-completion"}}selected{{end}}>On view, wait for media</option>
@@ -70,25 +70,25 @@
                 <div class="settings-grid">
                     <label class="settings-field">
                         <span class="settings-field-label">Theme</span>
-                        <select name="theme" class="settings-select" data-bind-theme>
+                        <select name="theme" class="settings-select" data-bind:theme>
                             {{range .Themes}}<option value="{{.Value}}" {{if eq $.Form.Theme .Value}}selected{{end}}>{{.Label}}</option>{{end}}
                         </select>
                     </label>
                     <label class="settings-field">
                         <span class="settings-field-label">Language</span>
-                        <select name="language" class="settings-select" data-bind-language>
+                        <select name="language" class="settings-select" data-bind:language>
                             {{range .Languages}}<option value="{{.Value}}" {{if eq $.Form.Language .Value}}selected{{end}}>{{.Label}}</option>{{end}}
                         </select>
                     </label>
                     <label class="settings-field">
                         <span class="settings-field-label">Timezone</span>
-                        <select name="timezone" class="settings-select" data-bind-timezone>
+                        <select name="timezone" class="settings-select" data-bind:timezone>
                             {{range .Timezones}}<option value="{{.Value}}" {{if eq $.Form.Timezone .Value}}selected{{end}}>{{.Label}}</option>{{end}}
                         </select>
                     </label>
                     <label class="settings-field">
                         <span class="settings-field-label">Display mode</span>
-                        <select name="display_mode" class="settings-select" data-bind-displayMode>
+                        <select name="display_mode" class="settings-select" data-bind:displayMode>
                             <option value="fullscreen" {{if eq .Form.DisplayMode "fullscreen"}}selected{{end}}>Fullscreen</option>
                             <option value="standalone" {{if eq .Form.DisplayMode "standalone"}}selected{{end}}>Standalone</option>
                             <option value="minimal-ui" {{if eq .Form.DisplayMode "minimal-ui"}}selected{{end}}>Minimal UI</option>
@@ -103,15 +103,15 @@
                 <h3 class="settings-heading">Interaction</h3>
                 <div class="settings-grid">
                     <label class="settings-field settings-field-checkbox">
-                        <input type="checkbox" name="keyboard_shortcuts" value="1" {{if .Form.KeyboardShortcuts}}checked{{end}} data-bind-keyboardShortcuts>
+                        <input type="checkbox" name="keyboard_shortcuts" value="1" {{if .Form.KeyboardShortcuts}}checked{{end}} data-bind:keyboardShortcuts>
                         <span class="settings-field-label">Keyboard shortcuts</span>
                     </label>
                     <label class="settings-field settings-field-checkbox">
-                        <input type="checkbox" name="open_external_links_in_new_tab" value="1" {{if .Form.OpenExternalLinksInNewTab}}checked{{end}} data-bind-openExternalLinksInNewTab>
+                        <input type="checkbox" name="open_external_links_in_new_tab" value="1" {{if .Form.OpenExternalLinksInNewTab}}checked{{end}} data-bind:openExternalLinksInNewTab>
                         <span class="settings-field-label">Open links in new tab</span>
                     </label>
                     <label class="settings-field settings-field-checkbox">
-                        <input type="checkbox" name="show_reading_time" value="1" {{if .Form.ShowReadingTime}}checked{{end}} data-bind-showReadingTime>
+                        <input type="checkbox" name="show_reading_time" value="1" {{if .Form.ShowReadingTime}}checked{{end}} data-bind:showReadingTime>
                         <span class="settings-field-label">Show reading time</span>
                     </label>
                 </div>
@@ -123,22 +123,22 @@
                 <div class="settings-grid">
                     <label class="settings-field">
                         <span class="settings-field-label">Category sorting</span>
-                        <select name="categories_sorting_order" class="settings-select" data-bind-categoriesSortingOrder>
+                        <select name="categories_sorting_order" class="settings-select" data-bind:categoriesSortingOrder>
                             <option value="unread_count" {{if eq .Form.CategoriesSortingOrder "unread_count"}}selected{{end}}>By unread count</option>
                             <option value="alphabetical" {{if eq .Form.CategoriesSortingOrder "alphabetical"}}selected{{end}}>Alphabetically</option>
                         </select>
                     </label>
                     <label class="settings-field">
                         <span class="settings-field-label">Reading speed</span>
-                        <input type="number" name="default_reading_speed" class="settings-input" min="1" value="{{.Form.DefaultReadingSpeed}}" data-bind-defaultReadingSpeed>
+                        <input type="number" name="default_reading_speed" class="settings-input" min="1" value="{{.Form.DefaultReadingSpeed}}" data-bind:defaultReadingSpeed>
                     </label>
                     <label class="settings-field">
                         <span class="settings-field-label">CJK reading speed</span>
-                        <input type="number" name="cjk_reading_speed" class="settings-input" min="1" value="{{.Form.CJKReadingSpeed}}" data-bind-cjkReadingSpeed>
+                        <input type="number" name="cjk_reading_speed" class="settings-input" min="1" value="{{.Form.CJKReadingSpeed}}" data-bind:cjkReadingSpeed>
                     </label>
                     <label class="settings-field">
                         <span class="settings-field-label">Media playback rate</span>
-                        <input type="number" name="media_playback_rate" class="settings-input" min="0.25" max="4.0" step="0.25" value="{{printf "%.2f" .Form.MediaPlaybackRate}}" data-bind-mediaPlaybackRate>
+                        <input type="number" name="media_playback_rate" class="settings-input" min="0.25" max="4.0" step="0.25" value="{{printf "%.2f" .Form.MediaPlaybackRate}}" data-bind:mediaPlaybackRate>
                     </label>
                 </div>
             </section>
@@ -180,11 +180,11 @@
                 <div class="settings-grid">
                     <label class="settings-field">
                         <span class="settings-field-label">Username</span>
-                        <input type="text" name="username" class="settings-input" value="{{.Form.Username}}" data-bind-username required>
+                        <input type="text" name="username" class="settings-input" value="{{.Form.Username}}" data-bind:username required>
                     </label>
                     <label class="settings-field">
                         <span class="settings-field-label">Custom CSS</span>
-                        <textarea name="stylesheet" class="settings-textarea" rows="3" data-bind-stylesheet>{{.Form.Stylesheet}}</textarea>
+                        <textarea name="stylesheet" class="settings-textarea" rows="3" data-bind:stylesheet>{{.Form.Stylesheet}}</textarea>
                     </label>
                 </div>
             </section>
