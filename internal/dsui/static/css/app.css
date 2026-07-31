@@ -643,6 +643,9 @@
   overflow-y: auto;
   border-right: 1px solid var(--color-gray-200);
   background-color: var(--color-white);
+  min-width: 260px;
+  max-width: 600px;
+  resize: horizontal;
 }
 
 /* Entry content panel */
@@ -883,6 +886,8 @@
   background-color: var(--color-white);
   color: var(--color-gray-700);
   transition: background-color 100ms, border-color 100ms;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .toolbar-btn:hover {
@@ -917,8 +922,9 @@
   border-radius: 0.25rem;
   background: none;
   border: none;
-  margin-left: auto;
   transition: background-color 100ms;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .mark-read-btn:hover {
