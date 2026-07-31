@@ -30,33 +30,20 @@
     <main id="entry-list-panel" class="flex flex-col h-full">
         <div class="top-nav">
             <span class="nav-title">{{.ListTitle}}</span>
-            <form class="flex items-center gap-2 ml-auto" 
+            <form class="flex items-center gap-1" style="flex-shrink:0;"
                 data-on:submit="@get('/ds/sse/entries?view=search&searchQuery=' + $searchQuery)"
                 onsubmit="return false">
                 <input type="search" name="q" placeholder="Search..." 
-                    class="border rounded px-2 py-0 text-sm flex-1"
-                    style="width: 160px;"
+                    style="width:120px;font-size:0.75rem;padding:0.125rem 0.375rem;border:1px solid var(--color-gray-300);border-radius:0.25rem;color:inherit;"
                     data-bind-searchQuery
                     value="{{.SearchQuery}}">
             </form>
             {{if .CanMarkAllRead}}
-            <button class="mark-read-btn"
-                data-on:click="@post('/ds/sse/mark-page-read')">
-                <span data-indicator>Marking...</span>
-                <span data-indicator="!exists">Mark page read</span>
-            </button>
-            <button class="mark-read-btn"
-                data-on:click="@post('/ds/sse/mark-all-read')">
-                <span data-indicator>Marking...</span>
-                <span data-indicator="!exists">Mark all read</span>
-            </button>
+            <button class="mark-read-btn" data-on:click="@post('/ds/sse/mark-page-read')">Mark page</button>
+            <button class="mark-read-btn" data-on:click="@post('/ds/sse/mark-all-read')">Mark all</button>
             {{end}}
             {{if .FeedID}}
-            <button class="mark-read-btn"
-                data-on:click="@post('/ds/refresh/{{.FeedID}}')">
-                <span data-indicator>Refreshing...</span>
-                <span data-indicator="!exists">&#8635; Refresh</span>
-            </button>
+            <button class="mark-read-btn" data-on:click="@post('/ds/refresh/{{.FeedID}}')">&#8635;</button>
             {{end}}
         </div>
         <div id="entry-list" class="flex-1 overflow-y-auto">
@@ -68,6 +55,8 @@
         </div>
         {{end}}
     </main>
+
+    <div class="resize-handle" id="panel-resize-handle"></div>
 
     <!-- RIGHT PANEL: Entry Content -->
     <article id="entry-content-panel" class="flex flex-col h-full">
