@@ -18,43 +18,8 @@
         <!-- Content area -->
         <div class="settings-content" id="settings-content">
             <form id="settings-form">
-<script>
-(function(){
-    var form = document.getElementById('settings-form');
-    if (!form) return;
-    var timer;
-    form.addEventListener('change', function(e) {
-        clearTimeout(timer);
-        timer = setTimeout(function() {
-            var signals = {};
-            form.querySelectorAll('input,select,textarea').forEach(function(el) {
-                var name = el.getAttribute('name');
-                if (!name) return;
-                var val = el.type === 'checkbox' ? el.checked : el.value;
-                if (el.type === 'number' && val !== '') val = parseFloat(val) || 0;
-                signals[name] = val;
-            });
-            var csrf = document.body.dataset.csrfToken;
-            fetch('/ds/sse/settings', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Datastar-Request': 'true',
-                    'X-Csrf-Token': csrf
-                },
-                body: JSON.stringify(signals)
-            }).then(function(r) {
-                if (r.ok) {
-                    var toast = document.getElementById('toast-success');
-                    if (toast) { toast.style.display = 'block'; toast.querySelector('span').textContent = 'Settings saved'; setTimeout(function(){ toast.style.display = 'none'; }, 2000); }
-                }
-            });
-        }, 600);
-    });
-})();
-</script>
-})();
-</script>>>
+            <div data-on-signal-patch__debounce.500ms="@post('/ds/sse/settings')"
+                 data-on-signal-patch-filter="{exclude: /^(selectedIdx|selectedEntryId|countUnread|countErrorFeeds|csrfToken|view|feedId|categoryId|offset|refreshMessage|importError|importSuccess|settingsSaved)$/}">
 
             <!-- Reading -->
             <section id="reading" class="settings-section">
@@ -179,6 +144,8 @@
                 </div>
             </section>
 
+            </div><!-- end data-on-signal-patch -->
+
             <!-- Import & Export -->
             <section id="import" class="settings-section">
                 <h3 class="settings-heading">Import &amp; Export</h3>
@@ -246,38 +213,4 @@
         </div>
     </div>
 </div>
-
-<script>
-// Scroll spy for sidebar nav
-(function(){
-    var nav = document.querySelector('.settings-nav');
-    if (!nav) return;
-    var links = nav.querySelectorAll('a');
-    var sections = document.querySelectorAll('.settings-section');
-    var content = document.getElementById('settings-content');
-    if (!content) return;
-
-    // Click handler for smooth scroll
-    links.forEach(function(link) {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            var target = document.querySelector(this.getAttribute('href'));
-            if (target) target.scrollIntoView({behavior:'smooth', block:'start'});
-            links.forEach(function(l) { l.classList.remove('active'); });
-            this.classList.add('active');
-        });
-    });
-
-    // Scroll spy
-    content.addEventListener('scroll', function() {
-        var scrollPos = content.scrollTop + 60;
-        sections.forEach(function(section, i) {
-            if (section.offsetTop <= scrollPos) {
-                links.forEach(function(l) { l.classList.remove('active'); });
-                if (links[i]) links[i].classList.add('active');
-            }
-        });
-    });
-})();
-</script>
 {{end}}
