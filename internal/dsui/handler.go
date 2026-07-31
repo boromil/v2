@@ -378,22 +378,8 @@ func (h *handler) sseSaveSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Read settings from Datastar signals (JSON body) or form values.
-	var form *settingsFormData
-	if r.Header.Get("Datastar-Request") != "" {
-		form = &settingsFormData{}
-		if err := readSignals(r, form); err != nil {
-			slog.Error("dsui: readSignals failed", slog.Any("error", err))
-			slog.Warn("dsui: failed to read settings signals", slog.Any("error", err))
-			sse := datastar.NewSSE(w, r)
-			sse.MarshalAndPatchSignals(map[string]any{"importError": "Invalid settings data"})
-			return
-		}
-		slog.Info("dsui: settings saved via signals", slog.String("language", form.Language), slog.String("theme", form.Theme))
-	} else {
-		// Fallback: regular form POST (password change form)
-		form = parseSettingsForm(r)
-	}
+	// Read settings from form values.
+	form := parseSettingsForm(r)
 	if form.Password != "" && form.Password != form.Confirmation {
 		sse := datastar.NewSSE(w, r)
 		sse.MarshalAndPatchSignals(map[string]any{"importError": "Passwords do not match"})
