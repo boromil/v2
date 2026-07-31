@@ -7,6 +7,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -585,6 +586,66 @@ func TestSearchSSEFragment(t *testing.T) {
 	}
 	if strings.Contains(body, "Python Tips") {
 		t.Error("search SSE should not return non-matching entry")
+	}
+}
+
+// TestSearchSSEWithDatastarSignals reproduces EXACTLY what the browser sends
+// when a Datastar search form submits via data-on:submit="@get(...)".
+//
+// Datastar merges the bound signals (data-bind:*) into a JSON payload and sends
+// them as a percent-encoded "datastar" query parameter on GET requests. For a
+// search term "Go", the browser sends:
+//
+//	GET /ds/sse/entries?view=search&datastar=%7B%22searchQuery%22%3A%22Go%22%7D
+//
+// The server-side storage.EntryRequest.SearchQuery (json:"searchQuery") is
+// populated by datastar-go's ReadSignals from the "datastar" query param, so the
+// handler filters results via builder.WithSearchQuery.
+func TestSearchSSEWithDatastarSignals(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	// Create entries with distinct titles for search.
+	mtest.CreateTestEntryWithContent(t, store, user.ID, feed.ID, "Go Programming", "Go is great")
+	mtest.CreateTestEntryWithContent(t, store, user.ID, feed.ID, "Python Tips", "Python rocks")
+	mtest.CreateTestEntryWithContent(t, store, user.ID, feed.ID, "Rust Patterns", "Rust is safe")
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	// Build the URL exactly as the Datastar client does: set the "datastar"
+	// query param to the percent-encoded JSON signals object, appended onto the
+	// form action URL.
+	action := "/ds/sse/entries"
+	actionURL, err := url.Parse(action)
+	if err != nil {
+		t.Fatalf("unexpected error parsing action URL: %v", err)
+	}
+	q := actionURL.Query()
+	q.Set("view", "search")
+	// This is the JSON payload of the current signals object (camelCase keys).
+	q.Set("datastar", `{"searchQuery":"Go"}`)
+	actionURL.RawQuery = q.Encode()
+
+	req := httptest.NewRequest(http.MethodGet, actionURL.String(), nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "Go Programming") {
+		t.Error("search via datastar signals should return matching entry")
+	}
+	if strings.Contains(body, "Python Tips") {
+		t.Error("search via datastar signals should not return non-matching entry")
+	}
+	if strings.Contains(body, "Rust Patterns") {
+		t.Error("search via datastar signals should not return non-matching entry")
 	}
 }
 
