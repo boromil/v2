@@ -221,3 +221,34 @@
     }
   });
 })();
+
+// Panel resize — drag handle between entry list and content panels
+(function(){
+    var h = document.getElementById('panel-resize-handle');
+    if (!h) return;
+    var c = document.querySelector('.app-container');
+    var sx, sw;
+    h.onmousedown = function(e) {
+        e.preventDefault();
+        sx = e.clientX;
+        sw = document.getElementById('entry-list-panel').offsetWidth;
+        h.classList.add('active');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+    };
+    window.addEventListener('mousemove', function(e) {
+        if (!sx) return;
+        var w = Math.max(260, Math.min(800, sw + e.clientX - sx));
+        c.style.gridTemplateColumns = c.style.gridTemplateColumns.replace(/1fr 4px 1fr/, w + 'px 4px 1fr');
+        try { localStorage.setItem('dsui-entryListWidth', w); } catch(_) {}
+    });
+    window.addEventListener('mouseup', function() {
+        sx = null; h.classList.remove('active');
+        document.body.style.cursor = ''; document.body.style.userSelect = '';
+    });
+    try {
+        var w = parseInt(localStorage.getItem('dsui-entryListWidth'));
+        if (w && w >= 260 && w <= 800)
+            c.style.gridTemplateColumns = c.style.gridTemplateColumns.replace(/1fr 4px 1fr/, w + 'px 4px 1fr');
+    } catch(_) {}
+})();
