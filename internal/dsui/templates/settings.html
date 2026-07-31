@@ -19,29 +19,20 @@
         <div class="settings-content" id="settings-content">
             <form id="settings-form">
 <script>
-// Auto-save settings on any change within the form
 (function(){
     var form = document.getElementById('settings-form');
     if (!form) return;
     var timer;
     form.addEventListener('change', function(e) {
-        var el = e.target;
-        // Only trigger for form elements with data-bind
-        if (!el.closest('[data-bind-]') && !el.hasAttribute('data-bind-')) return;
         clearTimeout(timer);
         timer = setTimeout(function() {
-            // Trigger Datastar post
-            var evt = new Event('datastar-action', {bubbles: true});
-            // Use fetch directly as fallback
             var signals = {};
-            form.querySelectorAll('[data-bind-]').forEach(function(el) {
-                var name = Array.from(el.attributes).find(function(a) { return a.name.startsWith('data-bind-'); });
-                if (name) {
-                    var key = name.name.replace('data-bind-', '');
-                    var val = el.type === 'checkbox' ? el.checked : el.value;
-                    if (el.type === 'number') val = parseFloat(val) || 0;
-                    signals[key] = val;
-                }
+            form.querySelectorAll('input,select,textarea').forEach(function(el) {
+                var name = el.getAttribute('name');
+                if (!name) return;
+                var val = el.type === 'checkbox' ? el.checked : el.value;
+                if (el.type === 'number' && val !== '') val = parseFloat(val) || 0;
+                signals[name] = val;
             });
             var csrf = document.body.dataset.csrfToken;
             fetch('/ds/sse/settings', {
@@ -53,10 +44,15 @@
                 },
                 body: JSON.stringify(signals)
             }).then(function(r) {
-                if (r.ok) console.log('Settings saved');
+                if (r.ok) {
+                    var toast = document.getElementById('toast-success');
+                    if (toast) { toast.style.display = 'block'; toast.querySelector('span').textContent = 'Settings saved'; setTimeout(function(){ toast.style.display = 'none'; }, 2000); }
+                }
             });
         }, 600);
     });
+})();
+</script>
 })();
 </script>>>
 
