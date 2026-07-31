@@ -383,6 +383,7 @@ func (h *handler) sseSaveSettings(w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("Datastar-Request") != "" {
 		form = &settingsFormData{}
 		if err := readSignals(r, form); err != nil {
+			slog.Error("dsui: readSignals failed", slog.Any("error", err))
 			slog.Warn("dsui: failed to read settings signals", slog.Any("error", err))
 			sse := datastar.NewSSE(w, r)
 			sse.MarshalAndPatchSignals(map[string]any{"importError": "Invalid settings data"})
@@ -401,6 +402,7 @@ func (h *handler) sseSaveSettings(w http.ResponseWriter, r *http.Request) {
 
 	form.applyToUser(user)
 	if err := h.store.UpdateUser(user); err != nil {
+		slog.Error("dsui: UpdateUser failed", slog.Int64("user_id", user.ID), slog.Any("error", err))
 		sse := datastar.NewSSE(w, r)
 		sse.MarshalAndPatchSignals(map[string]any{"importError": "Failed to save settings"})
 		return
