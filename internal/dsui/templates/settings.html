@@ -18,8 +18,6 @@
         <!-- Content area -->
         <div class="settings-content" id="settings-content">
             <form id="settings-form">
-            <div data-on-signal-patch__debounce.500ms="@post('/ds/sse/settings')"
-                 data-on-signal-patch-filter="{exclude: /^(selectedIdx|selectedEntryId|countUnread|countErrorFeeds|csrfToken|view|feedId|categoryId|offset|refreshMessage|importError|importSuccess|settingsSaved)$/}">
 
             <!-- Reading -->
             <section id="reading" class="settings-section">
@@ -144,7 +142,14 @@
                 </div>
             </section>
 
-            </div><!-- end data-on-signal-patch -->
+            <div class="py-2">
+                <button type="button" class="toolbar-btn" style="background:var(--color-blue-600);color:#fff;border-color:var(--color-blue-600);"
+                    data-on:click="@post('/ds/sse/settings')">
+                    <span data-indicator>Saving...</span>
+                    <span data-indicator="!exists">Save Settings</span>
+                </button>
+                <span class="ml-3 text-sm" data-show="$importSuccess" data-text="$importSuccess" style="color:var(--color-green-600);"></span>
+            </div>
 
             <!-- Import & Export -->
             <section id="import" class="settings-section">
