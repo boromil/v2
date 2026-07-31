@@ -497,6 +497,10 @@ func (h *handler) sseEntries(w http.ResponseWriter, r *http.Request) {
 	if req.View == "" {
 		req.View = request.QueryStringParam(r, "view", "unread")
 	}
+	// Always prefer URL query param for search queries.
+	if q := request.QueryStringParam(r, "searchQuery", ""); q != "" {
+		req.SearchQuery = q
+	}
 	if req.FeedID == 0 {
 		req.FeedID = request.QueryInt64Param(r, "feedId", 0)
 	}
