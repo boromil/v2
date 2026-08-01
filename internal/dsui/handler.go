@@ -490,28 +490,30 @@ func (h *handler) sseEntries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Read from signals first, then fall back to query params.
+	// URL query params express explicit request intent (e.g. a nav link or the
+	// search box) and must take precedence over the persistent page signals,
+	// which carry the *previous* view. Signals are the fallback so that
+	// Datastar's automatic signal sync still drives requests without a URL.
 	var req EntryRequest
 	readSignals(r, &req)
 
+	if v := r.URL.Query().Has("view"); v {
+		req.View = request.QueryStringParam(r, "view", req.View)
+	}
 	if req.View == "" {
-		req.View = request.QueryStringParam(r, "view", "unread")
+		req.View = "unread"
 	}
-	// Always prefer URL query param for search queries.
-	if q := request.QueryStringParam(r, "searchQuery", ""); q != "" {
-		req.SearchQuery = q
+	if r.URL.Query().Has("searchQuery") {
+		req.SearchQuery = request.QueryStringParam(r, "searchQuery", "")
 	}
-	if req.FeedID == 0 {
+	if r.URL.Query().Has("feedId") {
 		req.FeedID = request.QueryInt64Param(r, "feedId", 0)
 	}
-	if req.CategoryID == 0 {
+	if r.URL.Query().Has("categoryId") {
 		req.CategoryID = request.QueryInt64Param(r, "categoryId", 0)
 	}
-	if req.Offset == 0 {
+	if r.URL.Query().Has("offset") {
 		req.Offset = request.QueryIntParam(r, "offset", 0)
-	}
-	if req.SearchQuery == "" {
-		req.SearchQuery = request.QueryStringParam(r, "searchQuery", "")
 	}
 
 	entries, total, err := h.queryEntries(user.ID, req.View, req.FeedID, req.CategoryID, req.SearchQuery, req.Offset, user.EntriesPerPage)
