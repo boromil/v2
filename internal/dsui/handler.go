@@ -543,7 +543,7 @@ func (h *handler) sseEntries(w http.ResponseWriter, r *http.Request) {
 		response.HTMLServerError(w, r, fmt.Errorf("entry_list template: %w", err))
 		return
 	}
-	fragments = append(fragments, SSEFragment{HTML: listBuf.String(), Selector: "#entry-list"})
+	fragments = append(fragments, SSEFragment{HTML: listBuf.String(), Selector: "#entry-list", Mode: datastar.ElementPatchModeInner})
 
 	if total > user.EntriesPerPage {
 		totalPages := int(math.Ceil(float64(total) / float64(user.EntriesPerPage)))
@@ -565,10 +565,10 @@ func (h *handler) sseEntries(w http.ResponseWriter, r *http.Request) {
 			response.HTMLServerError(w, r, fmt.Errorf("pagination template: %w", err))
 			return
 		}
-		fragments = append(fragments, SSEFragment{HTML: pagBuf.String(), Selector: "#pagination"})
+		fragments = append(fragments, SSEFragment{HTML: pagBuf.String(), Selector: "#pagination", Mode: datastar.ElementPatchModeInner})
 	} else {
 		// Clear pagination if all entries fit on one page.
-		fragments = append(fragments, SSEFragment{HTML: "", Selector: "#pagination"})
+		fragments = append(fragments, SSEFragment{HTML: "", Selector: "#pagination", Mode: datastar.ElementPatchModeInner})
 	}
 
 	renderSSEResponse(w, r, SSEResponse{
@@ -628,7 +628,7 @@ func (h *handler) sseEntry(w http.ResponseWriter, r *http.Request) {
 
 	renderSSEResponse(w, r, SSEResponse{
 		Fragments: []SSEFragment{
-			{HTML: contentBuf.String(), Selector: "#entry-content"},
+			{HTML: contentBuf.String(), Selector: "#entry-content", Mode: datastar.ElementPatchModeInner},
 			{HTML: rowBuf.String(), Selector: fmt.Sprintf("#entry-row-%d", entry.ID)},
 		},
 		Signals: map[string]any{
@@ -858,8 +858,8 @@ func (h *handler) sseMarkAllRead(w http.ResponseWriter, r *http.Request) {
 
 	renderSSEResponse(w, r, SSEResponse{
 		Fragments: []SSEFragment{
-			{HTML: listBuf.String(), Selector: "#entry-list"},
-			{HTML: subBuf.String(), Selector: "#subscription-panel .feed-tree"},
+			{HTML: listBuf.String(), Selector: "#entry-list", Mode: datastar.ElementPatchModeInner},
+			{HTML: subBuf.String(), Selector: "#subscription-panel .feed-tree", Mode: datastar.ElementPatchModeInner},
 		},
 		Signals: map[string]any{
 			"countUnread": 0,

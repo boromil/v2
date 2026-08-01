@@ -12,9 +12,14 @@ import (
 )
 
 // SSEFragment represents a single DOM patch in an SSE response.
+// Mode is optional: empty means the Datastar default (ElementPatchModeOuter).
+// Use ElementPatchModeInner when the fragment should replace the *children* of
+// the selector (e.g. a list container like #entry-list whose id must persist
+// across patches).
 type SSEFragment struct {
 	HTML     string
 	Selector string
+	Mode     datastar.ElementPatchMode
 }
 
 // SSEResponse bundles element patches and optional signal updates into a
@@ -30,7 +35,11 @@ func renderSSEResponse(w http.ResponseWriter, r *http.Request, resp SSEResponse)
 	sse := datastar.NewSSE(w, r)
 	for _, f := range resp.Fragments {
 		if f.HTML != "" || f.Selector != "" {
-			sse.PatchElements(f.HTML, datastar.WithSelector(f.Selector))
+			opts := []datastar.PatchElementOption{datastar.WithSelector(f.Selector)}
+			if f.Mode != "" {
+				opts = append(opts, datastar.WithMode(f.Mode))
+			}
+			sse.PatchElements(f.HTML, opts...)
 		}
 	}
 	if len(resp.Signals) > 0 {
