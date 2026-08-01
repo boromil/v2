@@ -723,3 +723,41 @@ func TestSearchURLViewWinsOverSignal(t *testing.T) {
 		t.Error("non-matching entry should be excluded when searchQuery is applied")
 	}
 }
+
+// TestSearchNoMatchShowsEmptyState verifies that a search with zero matches
+// returns an empty entry list (not the previous list) and uses ElementPatchMode
+// "inner" so the #entry-list container persists across patches.
+func TestSearchNoMatchShowsEmptyState(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	mtest.CreateTestEntryWithContent(t, store, user.ID, feed.ID, "Go Programming", "Go is great")
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	// Browser wire format: URL view=search, signal carries the no-match term
+	// plus the stale view=unread.
+	signals := `{"searchQuery":"czxczxc","view":"unread"}`
+	u := "/ds/sse/entries?view=search&datastar=" + url.QueryEscape(signals)
+	req := httptest.NewRequest(http.MethodGet, u, nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if strings.Contains(body, "Go Programming") {
+		t.Error("no-match search must not return existing entries")
+	}
+	if !strings.Contains(body, "No entries to display") {
+		t.Error("no-match search should render the empty state")
+	}
+	if !strings.Contains(body, "selector #entry-list") || !strings.Contains(body, "mode inner") {
+		t.Error("entry-list patch must use mode inner so the container persists")
+	}
+}
