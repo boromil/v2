@@ -669,10 +669,57 @@ func TestSearchSSEAllResults(t *testing.T) {
 	handler.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 	}
 	body := w.Body.String()
 	if strings.Count(body, "entry-row") < 3 {
 		t.Error("empty search should return all entries")
+	}
+}
+
+// TestSearchURLViewWinsOverSignal is a regression test for the bug where the
+// search box's @get('/ds/sse/entries?view=search') was silently ignored.
+//
+// The page seeds the "view" signal to "unread" (layout.html data-signals).
+// When the user types in the search box, Datastar fires the @get and sends ALL
+// signals — including "view":"unread" — as the datastar query param. The URL
+// has view=search. The handler MUST let the explicit URL param win, otherwise
+// queryEntries runs with view=unread (ignoring the search term entirely) and
+// search appears completely broken.
+func TestSearchURLViewWinsOverSignal(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	mtest.CreateTestEntryWithContent(t, store, user.ID, feed.ID, "Go Programming", "Go is great")
+	mtest.CreateTestEntryWithContent(t, store, user.ID, feed.ID, "Python Tips", "Python rocks")
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	// Exactly what the browser sends: URL view=search, but the datastar signal
+	// payload carries view=unread (stale page state) + the typed searchQuery.
+	action := "/ds/sse/entries"
+	actionURL, _ := url.Parse(action)
+	q := actionURL.Query()
+	q.Set("view", "search")
+	q.Set("datastar", `{"searchQuery":"Go","view":"unread"}`)
+	actionURL.RawQuery = q.Encode()
+
+	req := httptest.NewRequest(http.MethodGet, actionURL.String(), nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "Go Programming") {
+		t.Error("URL view=search must win over signal view=unread; search term should filter results")
+	}
+	if strings.Contains(body, "Python Tips") {
+		t.Error("non-matching entry should be excluded when searchQuery is applied")
 	}
 }
