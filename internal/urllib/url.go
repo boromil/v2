@@ -76,7 +76,19 @@ func IsValidProxyURL(inputURL string) bool {
 func resolveToAbsoluteURL(parsedBaseURL *url.URL, baseURL, relativeURL string) (string, error) {
 	// Avoid parsing the relative URL if it's already absolute
 	if strings.HasPrefix(relativeURL, "//") {
-		return "https:" + relativeURL, nil
+		// Protocol-relative URL, e.g. //cdn.example.com/x.png -> https://cdn.example.com/x.png.
+		// Only take the fast path when prepending https: actually yields a URL
+		// with an authority. Bare "//", "///x", "//?x", "//@" carry no real host
+		// and would fabricate a hostless https://... URL; those fall through to
+		// ResolveReference. Fuzz-identified edge case.
+		if out := "https:" + relativeURL; func() bool {
+			if parsed, err := url.Parse(out); err == nil && parsed.Host != "" {
+				return true
+			}
+			return false
+		}() {
+			return "https:" + relativeURL, nil
+		}
 	}
 	if hasHTTPPrefix(relativeURL) {
 		return relativeURL, nil
