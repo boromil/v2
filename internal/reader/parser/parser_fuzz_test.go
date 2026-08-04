@@ -8,6 +8,10 @@
 // byte-soup feeding DetectFeedFormat/ParseFeed must always be "parse-or-error,
 // never panic, never hang". A failure is reproducible by re-running with the
 // printed seed.
+//
+// TODO(fuzzing-strategy): this file ALSO gains Go-native testing.F fuzzers
+// below. Both styles coexist intentionally (breadth + determinism) and are a
+// candidate for consolidation.
 package parser
 
 import (
@@ -88,4 +92,17 @@ func TestFuzzParseFeedNeverPanics(t *testing.T) {
 		data := fuzzFeedBytes(r, 8096)
 		_, _ = ParseFeed("https://example.com", strings.NewReader(string(data)))
 	}
+}
+
+// FuzzParseFeed_Native is a Go-native coverage-guided fuzzer over the full
+// feed-format pipeline (detect + parse). It complements the seeded-PRNG
+// ParseFeed test above with coverage-guided byte mutation. Run with:
+//   go test -fuzz=FuzzParseFeed_Native -run=X ./internal/reader/parser
+func FuzzParseFeed_Native(f *testing.F) {
+	f.Add("https://example.com", []byte("<?xml version=\"1.0\"?><rss version=\"2.0\"><channel><item><title>t</title></item></channel></rss>"))
+	f.Add("https://example.com", []byte("<feed xmlns=\"http://www.w3.org/2005/Atom\"><entry><title>x</title></entry></feed>"))
+	f.Add("https://example.com", []byte("{\"version\":\"https://jsonfeed.org/version/1.1\",\"items\":[{}]}"))
+	f.Fuzz(func(t *testing.T, baseURL string, data []byte) {
+		_, _ = ParseFeed(baseURL, strings.NewReader(string(data)))
+	})
 }
