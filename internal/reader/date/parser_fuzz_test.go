@@ -5,9 +5,13 @@
 //
 // Feed date strings are untrusted input parsed against ~200 hand-rolled
 // layouts, with a timezone-replacer and an offset-clamping step. These seeded-
-// PRNG tests (distinct from the coverage-guided FuzzParse) assert parse-or-error
-// and that any success is a sane, well-formed time — never a panic or a
-// timezone out of the RFC-blessed [-12h,+14h] offset range.
+// PRNG tests (distinct from the coverage-guided FuzzParse in parser_test.go)
+// assert parse-or-error and that any success is a sane, well-formed time —
+// never a panic or a timezone out of the RFC-blessed [-12h,+14h] offset range.
+//
+// TODO(fuzzing-strategy): FuzzParseTimezoneRange below adds Go-native
+// coverage-guided fuzzing alongside this PRNG file; both continue until a
+// consolidation decision is made.
 package date
 
 import (
@@ -103,4 +107,26 @@ func itoa(v uint64) string {
 		v /= 10
 	}
 	return string(b[i:])
+}
+
+// FuzzParseTimezoneRange is a Go-native coverage-guided fuzzer asserting the
+// checkTimezoneRange invariant on any successful parse: the resulting offset
+// must stay within [-12h,+14h] and Parse must never panic. complements
+// TestFuzzDateTimezoneRange; run with:
+//   go test -fuzz=FuzzParseTimezoneRange -run=X ./internal/reader/date
+func FuzzParseTimezoneRange(f *testing.F) {
+	f.Add("2017-12-22T22:09:49+14:00")
+	f.Add("2017-12-22T22:09:49-12:00")
+	f.Add("Fri, 31 Mar 2023 20:19:00 PST")
+	f.Add("2006-01-02T15:04:05 EST")
+	f.Fuzz(func(t *testing.T, s string) {
+		parsed, err := Parse(s)
+		if err != nil {
+			return
+		}
+		_, offset := parsed.Zone()
+		if offset > 14*60*60 || offset < -12*60*60 {
+			t.Fatalf("offset %d out of [-12h,+14h] for input %q", offset, s)
+		}
+	})
 }

@@ -3,11 +3,11 @@
 
 // Generative / negative-space tests for the entry filter rules engine.
 //
-// These follow the project's seeded-PRNG fuzzing pattern (distinct from the
-// coverage-guided Fuzz* targets): the filter engine consumes user-supplied
-// rule grammars (block/keep regex rules, date patterns, durations), which are
-// untrusted input. A failure is reproducible by re-running with the printed
-// seed.
+// TODO(fuzzing-strategy): this file carries BOTH project fuzzing styles — the
+// seeded-PRNG generative tests below AND Go-native testing.F coverage fuzzers
+// at the end. That is intentional for now (breadth + determinism), but is a
+// candidate for consolidation: decide whether to standardize on one style and
+// collapse the overlap.
 package filter
 
 import (
@@ -138,4 +138,41 @@ func TestFuzzIsDateMatchingPattern(t *testing.T) {
 		entryDate := time.Unix(int64(r.Uint64()>>1), 0)
 		_ = isDateMatchingPattern(pattern, entryDate)
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Go-native coverage-guided fuzzing (testing.F) — added alongside the seeded
+// PRNG tests above. Run with: go test -fuzz=Fuzz -run=X ./internal/reader/filter
+// These provide coverage-guided byte mutation on top of the deterministic PRNG
+// property checks. Both styles are kept until a consolidation decision is made;
+// see the TODO note at the top of this file.
+// ---------------------------------------------------------------------------
+
+// FuzzParseRules exercises the user-supplied rules grammar with coverage-guided
+// input, asserting it never panics.
+func FuzzParseRules(f *testing.F) {
+	f.Add("EntryTitle=.*golang.*", "")
+	f.Add("EntryDate before=2024-01-01", "")
+	f.Add("EntryDate max-age=30d", "")
+	f.Add("EntryDate max-age=121170d", "") // regression: overflow case feeds rules too
+	f.Fuzz(func(t *testing.T, userRules, feedRules string) {
+		_ = ParseRules(userRules, feedRules)
+	})
+}
+
+// FuzzIsDateMatchingPattern fuzzes the date-pattern grammar, asserting it never
+// panics on coverage-guided dates and patterns.
+func FuzzIsDateMatchingPattern(f *testing.F) {
+	f.Add("before", "2024-01-01")
+	f.Add("between", "2024-01-01,2025-01-01")
+	f.Add("max-age", "30d")
+	for _, p := range []string{"future", "before", "after", "between", "max-age", "bogus"} {
+		f.Add(p, "2024-06-01")
+	}
+	// A fixed reference entry date keeps the fuzz case deterministic; the input
+	// being fuzzed is the pattern/user string, not the clock.
+	entryDate := time.Date(2024, 6, 1, 12, 0, 0, 0, time.UTC)
+	f.Fuzz(func(t *testing.T, pattern string, _ string) {
+		_ = isDateMatchingPattern(pattern, entryDate)
+	})
 }
