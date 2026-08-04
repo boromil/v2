@@ -373,14 +373,19 @@ func toolDefinitions() []mcpTool {
 	}
 }
 
-func (h *MCPHandler) toolListFeeds(userID int64, args json.RawMessage) (*mcpResult, error) {
-	var p struct {
-		CategoryID int64 `json:"category_id"`
-		Limit      int   `json:"limit"`
-		Offset     int   `json:"offset"`
-	}
+// listFeedsParams is the decoded and normalized arguments for the list_feeds tool.
+type listFeedsParams struct {
+	CategoryID int64 `json:"category_id"`
+	Limit      int   `json:"limit"`
+	Offset     int   `json:"offset"`
+}
+
+// parseListFeedsParams decodes and normalizes list_feeds arguments.
+// Pure: no store, no I/O; deterministic for deterministic input.
+func parseListFeedsParams(args json.RawMessage) (listFeedsParams, error) {
+	var p listFeedsParams
 	if err := json.Unmarshal(args, &p); err != nil {
-		return nil, err
+		return p, err
 	}
 	if p.Limit <= 0 {
 		p.Limit = 100
@@ -390,6 +395,14 @@ func (h *MCPHandler) toolListFeeds(userID int64, args json.RawMessage) (*mcpResu
 	}
 	if p.Offset < 0 {
 		p.Offset = 0
+	}
+	return p, nil
+}
+
+func (h *MCPHandler) toolListFeeds(userID int64, args json.RawMessage) (*mcpResult, error) {
+	p, err := parseListFeedsParams(args)
+	if err != nil {
+		return nil, err
 	}
 
 	builder := h.store.NewFeedQueryBuilder(userID).
@@ -423,20 +436,25 @@ func (h *MCPHandler) toolListFeeds(userID int64, args json.RawMessage) (*mcpResu
 	}), nil
 }
 
-func (h *MCPHandler) toolGetEntries(userID int64, args json.RawMessage) (*mcpResult, error) {
-	var p struct {
-		FeedID     int64  `json:"feed_id"`
-		CategoryID int64  `json:"category_id"`
-		Status     string `json:"status"`
-		Starred    *bool  `json:"starred"`
-		Search     string `json:"search"`
-		Order      string `json:"order"`
-		Direction  string `json:"direction"`
-		Limit      int    `json:"limit"`
-		Offset     int    `json:"offset"`
-	}
+// getEntriesParams is the decoded and normalized arguments for the get_entries tool.
+type getEntriesParams struct {
+	FeedID     int64  `json:"feed_id"`
+	CategoryID int64  `json:"category_id"`
+	Status     string `json:"status"`
+	Starred    *bool  `json:"starred"`
+	Search     string `json:"search"`
+	Order      string `json:"order"`
+	Direction  string `json:"direction"`
+	Limit      int    `json:"limit"`
+	Offset     int    `json:"offset"`
+}
+
+// parseGetEntriesParams decodes and normalizes get_entries arguments.
+// Pure: no store, no I/O; deterministic for deterministic input.
+func parseGetEntriesParams(args json.RawMessage) (getEntriesParams, error) {
+	var p getEntriesParams
 	if err := json.Unmarshal(args, &p); err != nil {
-		return nil, err
+		return p, err
 	}
 	if p.Limit <= 0 {
 		p.Limit = 50
@@ -453,11 +471,18 @@ func (h *MCPHandler) toolGetEntries(userID int64, args json.RawMessage) (*mcpRes
 	if p.Direction == "" {
 		p.Direction = model.DefaultSortingDirection
 	}
-
 	if p.Status != "" {
 		if err := validator.ValidateEntryStatus(p.Status); err != nil {
-			return nil, err
+			return p, err
 		}
+	}
+	return p, nil
+}
+
+func (h *MCPHandler) toolGetEntries(userID int64, args json.RawMessage) (*mcpResult, error) {
+	p, err := parseGetEntriesParams(args)
+	if err != nil {
+		return nil, err
 	}
 
 	builder := h.store.NewEntryQueryBuilder(userID).
@@ -488,6 +513,15 @@ func (h *MCPHandler) toolGetEntries(userID int64, args json.RawMessage) (*mcpRes
 	return textResult(map[string]any{"total": total, "entries": entries}), nil
 }
 
+// validateRequiredID rejects a non-positive id, mirroring the "X is required"
+// checks shared by several tools. Pure and deterministic.
+func validateRequiredID(id int64, name string) error {
+	if id <= 0 {
+		return fmt.Errorf("%s is required", name)
+	}
+	return nil
+}
+
 func (h *MCPHandler) toolMarkEntries(userID int64, args json.RawMessage) (*mcpResult, error) {
 	var p struct {
 		EntryIDs []int64 `json:"entry_ids"`
@@ -496,10 +530,7 @@ func (h *MCPHandler) toolMarkEntries(userID int64, args json.RawMessage) (*mcpRe
 	if err := json.Unmarshal(args, &p); err != nil {
 		return nil, err
 	}
-	if len(p.EntryIDs) == 0 {
-		return nil, fmt.Errorf("entry_ids is required")
-	}
-	if err := validator.ValidateEntryStatus(p.Status); err != nil {
+	if err := validateMarkEntries(p.EntryIDs, p.Status); err != nil {
 		return nil, err
 	}
 
@@ -510,6 +541,18 @@ func (h *MCPHandler) toolMarkEntries(userID int64, args json.RawMessage) (*mcpRe
 	return textResult(map[string]any{"updated": len(p.EntryIDs), "status": p.Status}), nil
 }
 
+// validateMarkEntries validates mark_entries arguments (non-empty entry_ids and a
+// valid entry status). Pure and deterministic.
+func validateMarkEntries(entryIDs []int64, status string) error {
+	if len(entryIDs) == 0 {
+		return fmt.Errorf("entry_ids is required")
+	}
+	if err := validator.ValidateEntryStatus(status); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (h *MCPHandler) toolToggleBookmark(userID int64, args json.RawMessage) (*mcpResult, error) {
 	var p struct {
 		EntryID int64 `json:"entry_id"`
@@ -517,8 +560,8 @@ func (h *MCPHandler) toolToggleBookmark(userID int64, args json.RawMessage) (*mc
 	if err := json.Unmarshal(args, &p); err != nil {
 		return nil, err
 	}
-	if p.EntryID <= 0 {
-		return nil, fmt.Errorf("entry_id is required")
+	if err := validateRequiredID(p.EntryID, "entry_id"); err != nil {
+		return nil, err
 	}
 
 	if err := h.store.ToggleStarred(userID, p.EntryID); err != nil {
@@ -543,8 +586,8 @@ func (h *MCPHandler) toolMarkFeedAsRead(userID int64, args json.RawMessage) (*mc
 	if err := json.Unmarshal(args, &p); err != nil {
 		return nil, err
 	}
-	if p.FeedID <= 0 {
-		return nil, fmt.Errorf("feed_id is required")
+	if err := validateRequiredID(p.FeedID, "feed_id"); err != nil {
+		return nil, err
 	}
 
 	if err := h.store.MarkFeedAsRead(userID, p.FeedID, time.Now()); err != nil {
@@ -560,8 +603,8 @@ func (h *MCPHandler) toolMarkCategoryAsRead(userID int64, args json.RawMessage) 
 	if err := json.Unmarshal(args, &p); err != nil {
 		return nil, err
 	}
-	if p.CategoryID <= 0 {
-		return nil, fmt.Errorf("category_id is required")
+	if err := validateRequiredID(p.CategoryID, "category_id"); err != nil {
+		return nil, err
 	}
 
 	if err := h.store.MarkCategoryAsRead(userID, p.CategoryID, time.Now()); err != nil {
@@ -577,8 +620,8 @@ func (h *MCPHandler) toolRefreshFeed(userID int64, args json.RawMessage) (*mcpRe
 	if err := json.Unmarshal(args, &p); err != nil {
 		return nil, err
 	}
-	if p.FeedID <= 0 {
-		return nil, fmt.Errorf("feed_id is required")
+	if err := validateRequiredID(p.FeedID, "feed_id"); err != nil {
+		return nil, err
 	}
 
 	if !h.store.FeedExists(userID, p.FeedID) {
