@@ -24,7 +24,9 @@
 package filter // import "miniflux.app/v2/internal/reader/filter"
 
 import (
+	"fmt"
 	"log/slog"
+	"math"
 	"regexp"
 	"slices"
 	"strconv"
@@ -266,17 +268,32 @@ func parseDuration(duration string) (time.Duration, error) {
 	// Handle common duration formats like "30d", "7d", "1h", "1m", etc.
 	// Go's time.ParseDuration doesn't support days, so we handle them manually
 	if daysStr, ok := strings.CutSuffix(duration, "d"); ok {
-		days := 0
+		days := int64(0)
 		if daysStr != "" {
 			var err error
-			days, err = strconv.Atoi(daysStr)
+			days, err = strconv.ParseInt(daysStr, 10, 64)
 			if err != nil {
 				return 0, err
 			}
 		}
-		return time.Duration(days) * 24 * time.Hour, nil
+		return durationFromDays(days)
 	}
 
 	// For other durations (hours, minutes, seconds), use Go's built-in parser
 	return time.ParseDuration(duration)
+}
+
+// durationFromDays converts a day count to a time.Duration, returning an error
+// when the value would overflow (or is negative). Multiplying days by 24 hours
+// can silently wrap under int64, which would turn a max-age filter cutoff from
+// the past into a future date.
+func durationFromDays(days int64) (time.Duration, error) {
+	if days < 0 {
+		return 0, fmt.Errorf("invalid duration: negative day count %d", days)
+	}
+	const hoursPerDay = int64(24 * time.Hour)
+	if days > math.MaxInt64/hoursPerDay {
+		return 0, fmt.Errorf("invalid duration: day count %d overflows duration", days)
+	}
+	return time.Duration(days) * 24 * time.Hour, nil
 }
