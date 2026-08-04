@@ -84,5 +84,9 @@ func TruncateHTML(input string, limit int) string {
 		dst.WriteRune('…')
 	}
 
-	return dst.String()
+	// The tokenizer may slice a word mid multi-byte rune when the source contains
+	// invalid/partial UTF-8 sequences (common in messy feed HTML), which would
+	// otherwise return invalid UTF-8. Normalize to a valid string so the title is
+	// always renderable. (Fuzz-identified: truncate_fuzz_test.go.)
+	return strings.ToValidUTF8(dst.String(), "\uFFFD")
 }
