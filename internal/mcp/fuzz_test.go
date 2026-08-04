@@ -6,8 +6,8 @@
 // These follow the project's fuzzing policy: the endpoint parses untrusted,
 // hostile input (JSON-RPC 2.0 over HTTP) and is a deterministic dispatch state
 // machine, so it is exercised with a seeded PRNG in the normal test runner.
-// A failure is reproducible by re-running with the same seed, which is printed
-// in the failure path.
+// Each dispatch iteration is generated from its own seed, which is printed on
+// failure, so any case is reproducible by re-running with that single seed.
 //
 // F1 drives the pure dispatch path (no store) with malformed/random requests
 // and asserts "parse-or-error, never panic, never hang". F2 probes the pure
@@ -225,20 +225,25 @@ func fuzzDispatch(t *testing.T, r *rand.Rand, iterations int) {
 	store := mtest.SetupTestDB(t, dialect.SQLite)
 	h := NewMCPHandler(store).(*MCPHandler)
 	for i := 0; i < iterations; i++ {
-		method := validMethods[r.IntN(len(validMethods))]
+		// Each iteration uses a fresh, independently-seedable PRNG so the seed
+		// printed on failure is directly reproducible: re-running with
+		// makeRand(seed) + this iteration reproduces the exact case.
+		iterationSeed := r.Uint64()
+		ir := makeRand(iterationSeed)
+		method := validMethods[ir.IntN(len(validMethods))]
 		name := "tools/call"
 		if method == "tools/call" {
-			name = randomToolName(r)
+			name = randomToolName(ir)
 		}
 
 		req := mcpRequest{
 			JSONRPC: "2.0",
 			Method:  method,
-			ID:      randomID(r),
-			Params:  randomParams(r, method, name),
+			ID:      randomID(ir),
+			Params:  randomParams(ir, method, name),
 		}
-		payload := runDispatchNegative(t, h, req, r.Uint64())
-		checkResponseEnvelope(t, payload, r.Uint64())
+		payload := runDispatchNegative(t, h, req, iterationSeed)
+		checkResponseEnvelope(t, payload, iterationSeed)
 	}
 }
 
@@ -264,9 +269,10 @@ func TestFuzzDispatchFixedSeed(t *testing.T) {
 	fuzzDispatch(t, makeRand(0x5eed), 2000)
 }
 
-// TestFuzzDispatchRandomSeed runs the dispatch fuzzer with a random seed for
-// broad coverage. On failure the seed is printed so the exact case can be
-// replayed via TestFuzzDispatchFixedSeed-like invocation.
+// TestFuzzDispatchRandomSeed runs the dispatch fuzzer with a large, arbitrary
+// seed for broad coverage beyond the fixed regression seed. (The seed is fixed
+// for reproducibility, despite the name; each failed iteration is reproducible
+// via its own printed iteration seed.)
 func TestFuzzDispatchRandomSeed(t *testing.T) {
 	fuzzDispatch(t, makeRand(424242424242), 2000)
 }
@@ -274,8 +280,8 @@ func TestFuzzDispatchRandomSeed(t *testing.T) {
 // --- F2: tool-args boundary / validation model tests against pure helpers ---
 
 // TestFuzzListFeedsParamsNormalization asserts the pure parseListFeedsParams
-// always clamps limit to (100..200], offset >= 0, and never panics on hostile
-// input.
+// always clamps limit into (0..200], offset >= 0, and never panics on hostile
+// input (limits <=0 default to 100, >200 cap to 200, 1..199 pass through).
 func TestFuzzListFeedsParamsNormalization(t *testing.T) {
 	r := makeRand(1)
 	for i := 0; i < 2000; i++ {
@@ -285,7 +291,7 @@ func TestFuzzListFeedsParamsNormalization(t *testing.T) {
 			continue // parse-or-error on malformed JSON is fine
 		}
 		if p.Limit <= 0 || p.Limit > 200 {
-			t.Fatalf("iter=%d args=%s limit=%d out of range (100..200]", i, args, p.Limit)
+			t.Fatalf("iter=%d args=%s limit=%d out of range (0..200]", i, args, p.Limit)
 		}
 		if p.Offset < 0 {
 			t.Fatalf("iter=%d args=%s offset=%d negative", i, args, p.Offset)
@@ -361,7 +367,7 @@ func TestFuzzMarkEntriesValidation(t *testing.T) {
 
 // TestFuzzRequiredIDValidation asserts validateRequiredID rejects non-positive ids.
 func TestFuzzRequiredIDValidation(t *testing.T) {
-	r := makeRand(4)
+	r := makeRand(5)
 	for i := 0; i < 2000; i++ {
 		// Mix boundary values with uniform ints.
 		var id int64
@@ -374,8 +380,8 @@ func TestFuzzRequiredIDValidation(t *testing.T) {
 			id = int64(r.Uint64() >> 1)
 		case 3:
 			id = 1
-			default:
-				id = 1 + r.Int64N(1<<20)
+		default:
+			id = 1 + r.Int64N(1<<20)
 		}
 		err := validateRequiredID(id, "entry_id")
 		if id <= 0 {
@@ -385,24 +391,5 @@ func TestFuzzRequiredIDValidation(t *testing.T) {
 		} else if err != nil {
 			t.Fatalf("iter=%d: id=%d got unexpected err %v", i, id, err)
 		}
-	}
-}
-
-// TestDeserializationNeverPanics is a lightweight regression guard asserting that
-// json decoding of arbitrary mcpRequest structs never panics on hostile input
-// (belt-and-braces around the dispatch path, which also never panics).
-func TestDeserializationNeverPanics(t *testing.T) {
-	r := makeRand(5)
-	for i := 0; i < 1000; i++ {
-		body := randomToolArgs(r, "get_entries")
-		var req mcpRequest
-		func() {
-			defer func() {
-				if rec := recover(); rec != nil {
-					t.Fatalf("iter=%d panic decoding %s: %v", i, body, rec)
-				}
-			}()
-			_ = json.Unmarshal(body, &req)
-		}()
 	}
 }

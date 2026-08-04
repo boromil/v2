@@ -15,6 +15,8 @@
 package rewrite
 
 import (
+	"encoding/base64"
+	"html"
 	"math/rand/v2"
 	"strings"
 	"testing"
@@ -70,27 +72,34 @@ func TestFuzzParseRulesNeverPanics(t *testing.T) {
 	}
 }
 
-// TestFuzzReplaceCustomReDoS asserts replaceCustom never hangs and never panics
-// even when the user search-term is a classic catastrophic-backtracking regex.
-func TestFuzzReplaceCustomReDoS(t *testing.T) {
+// TestFuzzReplaceCustomNoPanic exercises replaceCustom over ReDoS-shaped search
+// terms and long content. Go's regexp is RE2 (linear-time, no backtracking), so
+// these cannot actually hang; the test guards that no search-term/content
+// combination panics or errors, and that invalid regexes fall through to the
+// unchanged-content branch (the meaningful `return entryContent` path).
+func TestFuzzReplaceCustomNoPanic(t *testing.T) {
 	r := rand.New(rand.NewPCG(63, 64))
-	// ReDoS-shaped search terms: nested quantifiers have no matching payload in
-	// the content, so the RE2 regex engine must fail fast (no backtracking blowup).
-	dangerousSearch := []string{
+	searchPatterns := []string{
 		`(a+)+$`, `(a|a)+$`, `(x+x+)+y`, `([a-zA-Z]+)*$`,
-		`^(a|aa)+$`, `(.*)*x`,
+		`^(a|aa)+$`, `(.*)*x`, `bogus[`, `[`, `\`, `(`,
 	}
 	for i := 0; i < 5000; i++ {
 		content := strings.Repeat("a", 1+r.IntN(200))
-		search := dangerousSearch[r.IntN(len(dangerousSearch))]
-		// Bounded iteration asserts a hang would surface as a timeout/failure.
+		search := searchPatterns[r.IntN(len(searchPatterns))]
 		_ = replaceCustom(content, search, "…")
+
+		// Invalid regex must leave content unchanged.
+		if strings.HasPrefix(search, "bogus") || search == "[" || search == "\\" {
+			if out := replaceCustom("some body text", search, "x"); out != "some body text" {
+				t.Fatalf("iter=%d: invalid regex %q should return input unchanged, got %q", i, search, out)
+			}
+		}
 	}
 }
 
 // TestFuzzTransformersNeverPanic drives the pure goquery-based transformers and
 // the regex/base64 helpers over adversarial HTML, asserting they always return
-// (no panic) and never return invalid UTF-8.
+// (no panic).
 func TestFuzzTransformersNeverPanic(t *testing.T) {
 	r := rand.New(rand.NewPCG(65, 66))
 	base64ish := func() string {
@@ -109,11 +118,19 @@ func TestFuzzTransformersNeverPanic(t *testing.T) {
 			fixGhostCards(html),
 			removeTables(html),
 			removeImgBlurParams(html),
-			decodeBase64Content(base64ish()),
 			replaceCustom(html, `bogus[`, "x"), // invalid regex -> unchanged
 		} {
 			_ = out
 		}
+
+		// decodeBase64Content must never panic on arbitrary input.
+		_ = decodeBase64Content(base64ish())
+	}
+
+	// Real round-trip: a valid base64 payload decodes to the HTML-escaped plaintext.
+	want := html.EscapeString("hello <b>world</b>")
+	if got := decodeBase64Content(base64.StdEncoding.EncodeToString([]byte("hello <b>world</b>"))); got != want {
+		t.Fatalf("decodeBase64Content round-trip: got %q, want %q", got, want)
 	}
 }
 
