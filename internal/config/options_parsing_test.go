@@ -348,6 +348,50 @@ func TestDatabaseMinConnsOptionParsing(t *testing.T) {
 	}
 }
 
+func TestDatabaseVacuumPagesOptionParsing(t *testing.T) {
+	configParser := NewConfigParser()
+
+	if configParser.options.DatabaseVacuumPages() != 8192 {
+		t.Fatalf("Expected DATABASE_VACUUM_PAGES to be 8192 by default")
+	}
+
+	if err := configParser.parseLines([]string{"DATABASE_VACUUM_PAGES=2048"}); err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if configParser.options.DatabaseVacuumPages() != 2048 {
+		t.Fatalf("Expected DATABASE_VACUUM_PAGES to be 2048")
+	}
+
+	if err := configParser.parseLines([]string{"DATABASE_VACUUM_PAGES=0"}); err == nil {
+		t.Fatal("Expected an error for DATABASE_VACUUM_PAGES=0")
+	}
+}
+
+func TestDatabaseVacuumPercentOptionParsing(t *testing.T) {
+	configParser := NewConfigParser()
+
+	if configParser.options.DatabaseVacuumPercent() != 25 {
+		t.Fatalf("Expected DATABASE_VACUUM_PERCENT to be 25 by default")
+	}
+
+	if err := configParser.parseLines([]string{"DATABASE_VACUUM_PERCENT=50"}); err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if configParser.options.DatabaseVacuumPercent() != 50 {
+		t.Fatalf("Expected DATABASE_VACUUM_PERCENT to be 50")
+	}
+
+	if err := configParser.parseLines([]string{"DATABASE_VACUUM_PERCENT=101"}); err == nil {
+		t.Fatal("Expected an error for DATABASE_VACUUM_PERCENT=101")
+	}
+
+	if err := configParser.parseLines([]string{"DATABASE_VACUUM_PERCENT=-1"}); err == nil {
+		t.Fatal("Expected an error for DATABASE_VACUUM_PERCENT=-1")
+	}
+}
+
 func TestDatabaseURLOptionParsing(t *testing.T) {
 	configParser := NewConfigParser()
 
