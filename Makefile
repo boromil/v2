@@ -136,7 +136,19 @@ lint:
 # input" invariant. Coverage-guided fuzzing reliably (re)discovers such inputs,
 # so including it makes `make fuzz` (and any corpus replay) fail. It is an
 # upstream fuzzer/invariant, not one added here; revisit once upstream fixes it.
+# Each target's fuzzing phase is bounded by FUZZTIME; minimize candidates are
+# additionally bounded by FUZZMINIMIZE so a target that discovers many interesting
+# inputs does not stall far past its FUZZTIME budget (the Go fuzz runner minimizes
+# corpus entries single-threaded on top of -fuzztime). -timeout=0 disables Go's
+# default 10m per-invocation test timeout: fuzzing is bounded by FUZZTIME +
+# FUZZMINIMIZE, and disabling the unrelated hand-off deadline prevents a long but
+# legitimate active-fuzz run from being killed wholesale. The targets are run
+# concurrently (package fuzz targets are independent) so wall-clock tracks the slowest
+# target rather than their sum; without this, 16 sequential -fuzztime runs blow
+# far past any reasonable global timeout.
 FUZZTIME ?= 10s
+FUZZMINIMIZE ?= 5s
+FUZZ_PROCS ?= 8
 FUZZ_TARGETS := \
 	internal/reader/filter=FuzzParseRules \
 	internal/reader/filter=FuzzIsDateMatchingPattern \
@@ -155,11 +167,18 @@ FUZZ_TARGETS := \
 	internal/storage=FuzzEscapeFTS5Query \
 	internal/storage=FuzzParsePostgresArray
 fuzz:
-	@for pkg_target in $(FUZZ_TARGETS); do \
+	@fails=0; pids=""; wave=0; \
+	for pkg_target in $(FUZZ_TARGETS); do \
 		pkg=$${pkg_target%%=*}; tgt=$${pkg_target##*=}; \
-		echo "== fuzzing $$pkg / $$tgt =="; \
-		go test -run=X -fuzz=^$$tgt$$ -fuzztime=$(FUZZTIME) ./$$pkg || exit 1; \
-	done
+		( set +e; go test -run=X -fuzz=^$$tgt$$ -fuzztime=$(FUZZTIME) \
+			-fuzzminimizetime=$(FUZZMINIMIZE) -timeout=0 ./$$pkg; exit $$? ) & \
+		pid=$$!; pids="$$pids $$pid"; wave=$$((wave + 1)); \
+		if [ $$wave -lt $(FUZZ_PROCS) ]; then continue; fi; \
+		for p in $$pids; do wait $$p || fails=$$((fails + 1)); done; \
+		pids=""; wave=0; \
+	done; \
+	for p in $$pids; do wait $$p || fails=$$((fails + 1)); done; \
+	[ $$fails -eq 0 ]
 
 integration-test:
 	psql -U postgres -c 'drop database if exists miniflux_test;'
