@@ -13,7 +13,14 @@ import (
 	"miniflux.app/v2/internal/storage"
 )
 
-func runCleanupTasks(store *storage.Storage) {
+// runCleanupTasks runs the periodic maintenance tasks (session cleanup,
+// entry archiving, orphan icon cleanup) and, probabilistically, an incremental
+// vacuum to reclaim free SQLite pages.
+//
+// intN is the random source used for the probabilistic vacuum decision
+// (a func returning a value in [0, n)). Production callers pass math/rand/v2's
+// global IntN; tests pass a deterministic function.
+func runCleanupTasks(store *storage.Storage, intN func(int) int) {
 	if nbWebSessions, err := store.CleanOldWebSessions(config.Opts.CleanupRemoveSessionsInterval()); err != nil {
 		slog.Error("Unable to clean old web sessions", slog.Any("error", err))
 	} else {
@@ -55,4 +62,28 @@ func runCleanupTasks(store *storage.Storage) {
 			slog.Int64("orphan_icons_removed", nbIcons),
 		)
 	}
+
+	if shouldVacuumIncremental(intN, config.Opts.DatabaseVacuumPercent()) {
+		if err := store.VacuumIncremental(config.Opts.DatabaseVacuumPages()); err != nil {
+			slog.Error("Unable to run incremental vacuum", slog.Any("error", err))
+		} else {
+			slog.Info("Incremental vacuum completed",
+				slog.Int("pages", config.Opts.DatabaseVacuumPages()),
+			)
+		}
+	}
+}
+
+// shouldVacuumIncremental decides whether an incremental vacuum should be run
+// on the current cleanup pass, with a given probability (percent in [0,100]).
+// intN returns a value in [0, n); the decision is intN(100) < percent. Passing
+// a deterministic intN makes the decision fully reproducible.
+func shouldVacuumIncremental(intN func(int) int, percent int) bool {
+	if percent <= 0 {
+		return false
+	}
+	if percent >= 100 {
+		return true
+	}
+	return intN(100) < percent
 }

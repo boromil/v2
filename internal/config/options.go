@@ -203,6 +203,22 @@ func NewConfigOptions() *configOptions {
 					return validateChoices(rawValue, []string{"postgres", "sqlite"})
 				},
 			},
+			"DATABASE_VACUUM_PAGES": {
+				parsedIntValue: 8192,
+				rawValue:       "8192",
+				valueType:      intType,
+				validator: func(rawValue string) error {
+					return validateGreaterOrEqualThan(rawValue, 1)
+				},
+			},
+			"DATABASE_VACUUM_PERCENT": {
+				parsedIntValue: 25,
+				rawValue:       "25",
+				valueType:      intType,
+				validator: func(rawValue string) error {
+					return validateRange(rawValue, 0, 100)
+				},
+			},
 			"DISABLE_API": {
 				parsedBoolValue: false,
 				rawValue:        "0",
@@ -710,6 +726,18 @@ func (c *configOptions) DatabaseURL() string {
 
 func (c *configOptions) DatabaseType() string {
 	return c.options["DATABASE_TYPE"].parsedStringValue
+}
+
+// DatabaseVacuumPages returns the maximum number of pages reclaimed per
+// incremental vacuum run on SQLite.
+func (c *configOptions) DatabaseVacuumPages() int {
+	return c.options["DATABASE_VACUUM_PAGES"].parsedIntValue
+}
+
+// DatabaseVacuumPercent returns the percentage of cleanup-task runs on which
+// an incremental vacuum should be performed (0 = never, 100 = always).
+func (c *configOptions) DatabaseVacuumPercent() int {
+	return c.options["DATABASE_VACUUM_PERCENT"].parsedIntValue
 }
 
 func (c *configOptions) DisableHSTS() bool {

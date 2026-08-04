@@ -98,3 +98,20 @@ func (s *Storage) DBSize() (string, error) {
 
 	return size, nil
 }
+
+// VacuumIncremental reclaims free pages on SQLite via incremental vacuum.
+// It is a no-op on PostgreSQL, which relies on its autovacuum daemon.
+// maxPages bounds the number of pages reclaimed per call so the operation
+// stays short and does not hold one long write lock on the live database.
+func (s *Storage) VacuumIncremental(maxPages int) error {
+	if s.dialect.DatabaseType() != dialect.SQLite {
+		return nil
+	}
+
+	_, err := s.db.Exec(fmt.Sprintf("PRAGMA incremental_vacuum(%d)", maxPages))
+	if err != nil {
+		return fmt.Errorf("incremental vacuum failed: %w", err)
+	}
+
+	return nil
+}

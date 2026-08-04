@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	mrand "math/rand/v2"
 	"os"
 
 	"miniflux.app/v2/internal/config"
@@ -262,7 +263,7 @@ func Parse() {
 	}
 
 	if flagRunCleanupTasks {
-		runCleanupTasks(store)
+		runCleanupTasks(store, mrand.IntN)
 		return
 	}
 

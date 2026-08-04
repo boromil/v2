@@ -5,6 +5,7 @@ package cli // import "miniflux.app/v2/internal/cli"
 
 import (
 	"log/slog"
+	mrand "math/rand/v2"
 	"time"
 
 	"miniflux.app/v2/internal/config"
@@ -52,6 +53,6 @@ func feedScheduler(store *storage.Storage, pool *worker.Pool, frequency time.Dur
 
 func cleanupScheduler(store *storage.Storage, frequency time.Duration) {
 	for range time.Tick(frequency) {
-		runCleanupTasks(store)
+		runCleanupTasks(store, mrand.IntN)
 	}
 }
