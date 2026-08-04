@@ -78,24 +78,30 @@ func TestFuzzTruncateHTMLProperties(t *testing.T) {
 	}
 }
 
-// TestFuzzTruncateHTMLTagBalance asserts a truncation of balanced HTML does not
-// leave an unbalanced opening tag in the output (which would render as markup in
-// a title). It compares opener/closer counts on the subset of tokens we feed.
-func TestFuzzTruncateHTMLTagBalance(t *testing.T) {
+// TestFuzzTruncateHTMLNoTagLeak asserts truncation never leaks raw markup into
+// the output. TruncateHTML strips tags via an HTML tokenizer and only emits text
+// tokens, so for input whose text nodes contain no '<' or '>' characters the
+// output must contain no tag delimiters at all — an unbalanced opener surviving
+// into a title would otherwise render as markup. NOTE: this assertion is only
+// valid for input without a literal '<' in its textual content (e.g. "a < b");
+// the document's text can legitimately contain '<' and pass through unchanged,
+// so we constrain the corpus to controlled markup where text nodes are clean.
+// (Replaces a vacuous tag-count check: count("</") <= count("<") is always true.)
+func TestFuzzTruncateHTMLNoTagLeak(t *testing.T) {
 	r := rand.New(rand.NewPCG(33, 34))
 	cases := []string{
 		"<a>hello</a>",
 		"<a><b>nest</b></a>",
 		"<div>x</div><span>y</span>",
 		"<img src=\"x\"> standalone",
+		"<p>some words</p><p>more</p>",
+		"<ul><li>one</li><li>two</li></ul>",
 	}
 	for i := 0; i < 4000; i++ {
-		seed := cases[r.IntN(len(cases))] + fuzzHTML(r, 60)
+		seed := cases[r.IntN(len(cases))]
 		out := TruncateHTML(seed, r.IntN(len(seed)+5))
-		open := strings.Count(out, "<")
-		close_ := strings.Count(out, "</")
-		if open < close_ {
-			t.Fatalf("iter=%d in=%q out=%q: more closers than openers", i, seed, out)
+		if strings.Contains(out, "<") || strings.Contains(out, ">") {
+			t.Fatalf("iter=%d in=%q out=%q: raw tag delimiter leaked into truncation", i, seed, out)
 		}
 	}
 }
