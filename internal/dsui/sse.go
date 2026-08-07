@@ -4,8 +4,6 @@
 package dsui // import "miniflux.app/v2/internal/dsui"
 
 import (
-	"bytes"
-	"html/template"
 	"net/http"
 
 	"github.com/starfederation/datastar-go/datastar"
@@ -45,20 +43,6 @@ func renderSSEResponse(w http.ResponseWriter, r *http.Request, resp SSEResponse)
 	if len(resp.Signals) > 0 {
 		sse.MarshalAndPatchSignals(resp.Signals)
 	}
-}
-
-// renderSSEFragment renders a template fragment and sends it as a Datastar SSE
-// element patch to the client. The fragment replaces the DOM element matching
-// the given CSS selector.
-func renderSSEFragment(w http.ResponseWriter, r *http.Request, tpl *template.Template, name string, data any, selector string) {
-	var buf bytes.Buffer
-	if err := tpl.ExecuteTemplate(&buf, name, data); err != nil {
-		http.Error(w, "Template render error: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	sse := datastar.NewSSE(w, r)
-	sse.PatchElements(buf.String(), datastar.WithSelector(selector))
 }
 
 // sendSSERedirect sends a client-side redirect via Datastar.
