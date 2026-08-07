@@ -160,6 +160,17 @@ func ProcessFeedEntries(store *storage.Storage, feed *model.Feed, userID int64, 
 				)
 			} else if extractedContent != "" {
 				// We replace the entry content only if the scraper doesn't return any error.
+				if user.StripContentBeforeFirstHeading {
+					extractedContent = sanitizer.StripContentBeforeFirstHeading(extractedContent)
+					slog.Debug("Stripped scraped content before first heading",
+						slog.Int64("user_id", user.ID),
+						slog.String("entry_url", entry.URL),
+						slog.String("entry_hash", entry.Hash),
+						slog.String("entry_title", entry.Title),
+						slog.Int64("feed_id", feed.ID),
+						slog.String("feed_url", feed.FeedURL),
+					)
+				}
 				entry.Content = minifyContent(extractedContent)
 				contentExtractedSuccessfully = true
 			}
@@ -235,6 +246,17 @@ func ProcessEntryWebPage(feed *model.Feed, entry *model.Entry, user *model.User)
 	}
 
 	if extractedContent != "" {
+		if user.StripContentBeforeFirstHeading {
+			extractedContent = sanitizer.StripContentBeforeFirstHeading(extractedContent)
+			slog.Debug("Stripped scraped content before first heading",
+				slog.Int64("user_id", user.ID),
+				slog.String("entry_url", entry.URL),
+				slog.String("entry_hash", entry.Hash),
+				slog.String("entry_title", entry.Title),
+				slog.Int64("feed_id", feed.ID),
+				slog.String("feed_url", feed.FeedURL),
+			)
+		}
 		entry.Content = minifyContent(extractedContent)
 		if user.ShowReadingTime {
 			entry.ReadingTime = readingtime.EstimateReadingTime(entry.Content, user.DefaultReadingSpeed, user.CJKReadingSpeed)
