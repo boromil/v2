@@ -122,13 +122,12 @@
 
       case "m":
         e.preventDefault();
-        // Click the toggle read button in the article toolbar.
-        var toolbarBtns = document.querySelectorAll("#article-toolbar .toolbar-btn");
-        for (var bi = 0; bi < toolbarBtns.length; bi++) {
-          if (toolbarBtns[bi].textContent.indexOf("Mark") !== -1) {
-            clickElement(toolbarBtns[bi]);
-            break;
-          }
+        // Click the status-toggle (Read/Unread) button in the article toolbar.
+        // It is identified by the stable data-action marker rather than by its
+        // label, which switches between "Read" and "Unread".
+        var statusBtn = document.querySelector('#article-toolbar button[data-action="toggle-status"]');
+        if (statusBtn) {
+          clickElement(statusBtn);
         }
         break;
 
@@ -174,28 +173,59 @@
     // On mobile, switch to content panel when an entry loads via SSE.
     var entryContent = document.getElementById("entry-content");
     if (entryContent) {
+      // Only auto-switch when the content panel is actually displaying an
+      // entry (i.e. an article toolbar is rendered). This avoids yanking the
+      // mobile user to the content panel on unrelated child-list changes, and
+      // when they've navigated to a different panel (e.g. Feeds).
       var observer = new MutationObserver(function () {
-        if (window.innerWidth <= 768) {
-          var container = document.querySelector(".app-container");
-          if (container) {
-            container.setAttribute("data-active-panel", "content");
-          }
-          if (nav) {
-            nav.querySelectorAll("button").forEach(function (b) {
-              b.classList.remove("active");
-            });
-            var contentBtn = nav.querySelector('button[data-panel="content"]');
-            if (contentBtn) contentBtn.classList.add("active");
-          }
+        if (window.innerWidth > 768) return;
+        var container = document.querySelector(".app-container");
+        if (!container || container.getAttribute("data-active-panel") === "content") return;
+        if (!entryContent.querySelector("#article-toolbar .toolbar-btn")) return;
+        container.setAttribute("data-active-panel", "content");
+        if (nav) {
+          nav.querySelectorAll("button").forEach(function (b) {
+            b.classList.remove("active");
+          });
+          var contentBtn = nav.querySelector('button[data-panel="content"]');
+          if (contentBtn) contentBtn.classList.add("active");
         }
       });
       observer.observe(entryContent, { childList: true, subtree: true });
+
+      // The observer is only needed on mobile; disconnect it on desktop so it
+      // stops firing on every content/panel change, and re-connect when back
+      // to a mobile viewport.
+      var syncObserver = function () {
+        if (window.innerWidth > 768) {
+          observer.disconnect();
+        } else if (document.getElementById(entryContent.id)) {
+          observer.observe(entryContent, { childList: true, subtree: true });
+        }
+      };
+      window.addEventListener("resize", syncObserver);
+    }
+
+    // Reset keyboard selection whenever the entry list is re-rendered via SSE.
+    // A re-render replaces the entry-row nodes (dropping any .selected class),
+    // so a stale index would otherwise point at the wrong row.
+    var entryList = document.getElementById("entry-list");
+    if (entryList) {
+      var listObserver = new MutationObserver(function () {
+        selectedIdx = -1;
+        var sel = entryList.querySelector("entry-row.selected");
+        if (sel) {
+          var rows = getVisibleEntryRows();
+          selectedIdx = rows.indexOf(sel);
+        }
+      });
+      listObserver.observe(entryList, { childList: true });
     }
 
     // Settings page scroll spy for sidebar nav
-    var nav = document.querySelector('.settings-nav');
-    if (nav) {
-      var links = nav.querySelectorAll('a');
+    var settingsNav = document.querySelector('.settings-nav');
+    if (settingsNav) {
+      var links = settingsNav.querySelectorAll('a');
       var sections = document.querySelectorAll('.settings-section');
       var content = document.getElementById('settings-content');
       if (content) {

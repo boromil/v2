@@ -19,7 +19,7 @@
 {{define "star_button"}}
 <button class="star-btn {{if .Starred}}starred{{end}} flex-shrink-0"
     id="star-icon-{{.ID}}"
-    data-on:click="@post('/ds/sse/entry/star/{{.ID}}')">
+    data-on:click__stop="@post('/ds/sse/entry/star/{{.ID}}')">
     {{if .Starred}}★{{else}}☆{{end}}
 </button>
 {{end}}
