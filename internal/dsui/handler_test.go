@@ -821,6 +821,40 @@ func TestSSESaveSettingsPasswordMismatch(t *testing.T) {
 	}
 }
 
+// TestSSESaveSettingsStripContentBeforeFirstHeading verifies the new boolean
+// setting round-trips: posting the checkbox form field persists it on the user,
+// and omitting it turns it off.
+func TestSSESaveSettingsStripContentBeforeFirstHeading(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	// Enable it.
+	w := postSettings(t, store, user, map[string]string{"strip_content_before_first_heading": "1"})
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	saved, err := store.UserByID(user.ID)
+	if err != nil {
+		t.Fatalf("fetch user: %v", err)
+	}
+	if !saved.StripContentBeforeFirstHeading {
+		t.Error("expected StripContentBeforeFirstHeading to be enabled after save")
+	}
+
+	// Disable it by omitting the checkbox field.
+	w = postSettings(t, store, user, map[string]string{"strip_content_before_first_heading": ""})
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	saved, err = store.UserByID(user.ID)
+	if err != nil {
+		t.Fatalf("fetch user: %v", err)
+	}
+	if saved.StripContentBeforeFirstHeading {
+		t.Error("expected StripContentBeforeFirstHeading to be disabled when checkbox omitted")
+	}
+}
+
 func TestSearchNoMatchShowsEmptyState(t *testing.T) {
 	store := mtest.SetupTestDB(t, dialect.SQLite)
 	user := mtest.CreateTestUser(t, store)

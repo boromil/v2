@@ -114,6 +114,10 @@
                         <input type="checkbox" name="show_reading_time" value="1" {{if .Form.ShowReadingTime}}checked{{end}} data-bind:showReadingTime>
                         <span class="settings-field-label">Show reading time</span>
                     </label>
+                    <label class="settings-field settings-field-checkbox">
+                        <input type="checkbox" name="strip_content_before_first_heading" value="1" {{if .Form.StripContentBeforeFirstHeading}}checked{{end}} data-bind:stripContentBeforeFirstHeading>
+                        <span class="settings-field-label">Remove page content above the first heading</span>
+                    </label>
                 </div>
             </section>
 
