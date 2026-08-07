@@ -1563,4 +1563,10 @@ var migrations = [...]func(tx *sql.Tx) error{
 		`)
 		return err
 	},
+	func(tx *sql.Tx) (err error) {
+		_, err = tx.Exec(`
+			ALTER TABLE users ADD COLUMN strip_content_before_first_heading boolean default 'f';
+		`)
+		return err
+	},
 }

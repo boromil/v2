@@ -44,6 +44,7 @@ type User struct {
 	AlwaysOpenExternalLinks         bool       `json:"always_open_external_links"`
 	OpenExternalLinksInNewTab       bool       `json:"open_external_links_in_new_tab"`
 	AutoFetchShortEntries           bool       `json:"auto_fetch_short_entries"`
+	StripContentBeforeFirstHeading  bool       `json:"strip_content_before_first_heading"`
 }
 
 // UserCreationRequest represents the request to create a user.
@@ -86,6 +87,7 @@ type UserModificationRequest struct {
 	AlwaysOpenExternalLinks         *bool    `json:"always_open_external_links"`
 	OpenExternalLinksInNewTab       *bool    `json:"open_external_links_in_new_tab"`
 	AutoFetchShortEntries           *bool    `json:"auto_fetch_short_entries"`
+	StripContentBeforeFirstHeading  *bool    `json:"strip_content_before_first_heading"`
 }
 
 // Patch updates the User object with the modification request.
@@ -204,6 +206,10 @@ func (u *UserModificationRequest) Patch(user *User) {
 
 	if u.AutoFetchShortEntries != nil {
 		user.AutoFetchShortEntries = *u.AutoFetchShortEntries
+	}
+
+	if u.StripContentBeforeFirstHeading != nil {
+		user.StripContentBeforeFirstHeading = *u.StripContentBeforeFirstHeading
 	}
 }
 

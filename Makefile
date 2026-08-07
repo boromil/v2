@@ -156,6 +156,7 @@ FUZZ_TARGETS := \
 	internal/reader/parser=FuzzParse \
 	internal/reader/date=FuzzParseTimezoneRange \
 	internal/reader/date=FuzzParse \
+	internal/reader/sanitizer=FuzzStripContentBeforeFirstHeading \
 	internal/reader/sanitizer=FuzzTruncateHTML \
 	internal/reader/encoding=FuzzNewCharsetReader \
 	internal/reader/urlcleaner=FuzzRemoveTrackingParameters \

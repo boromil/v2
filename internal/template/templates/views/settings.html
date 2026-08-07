@@ -226,6 +226,8 @@
 
         <label><input type="checkbox" name="auto_fetch_short_entries" value="1" {{ if .form.AutoFetchShortEntries }}checked{{ end }}> {{ t "form.prefs.label.auto_fetch_short_entries" }}</label>
 
+        <label><input type="checkbox" name="strip_content_before_first_heading" value="1" {{ if .form.StripContentBeforeFirstHeading }}checked{{ end }}> {{ t "form.prefs.label.strip_content_before_first_heading" }}</label>
+
         <label for="form-custom-css">{{t "form.prefs.label.custom_css" }}</label>
         <textarea id="form-custom-css" name="custom_css" cols="40" rows="10" spellcheck="false">{{ .form.CustomCSS }}</textarea>
 

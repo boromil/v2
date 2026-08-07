@@ -26,7 +26,7 @@ func NewSQLiteMigrationProvider() MigrationProvider {
 //go:embed schema/sqlite/schema.sql
 var sqliteSchema string
 
-var sqliteSchemaVersion = 4
+var sqliteSchemaVersion = 5
 
 var sqliteMigrations = []func(tx *sql.Tx) error{
 	func(tx *sql.Tx) (err error) {
@@ -51,6 +51,12 @@ var sqliteMigrations = []func(tx *sql.Tx) error{
 	func(tx *sql.Tx) (err error) {
 		_, err = tx.Exec(`
 			ALTER TABLE users ADD COLUMN auto_fetch_short_entries int default 0;
+		`)
+		return err
+	},
+	func(tx *sql.Tx) (err error) {
+		_, err = tx.Exec(`
+			ALTER TABLE users ADD COLUMN strip_content_before_first_heading int default 0;
 		`)
 		return err
 	},

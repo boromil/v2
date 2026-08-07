@@ -110,3 +110,25 @@ func TestMergeAutoFetchShortEntries(t *testing.T) {
 		t.Error("expected AutoFetchShortEntries to be true after merge")
 	}
 }
+
+func TestMergeStripContentBeforeFirstHeading(t *testing.T) {
+	// Regression test: the strip_content_before_first_heading preference must
+	// propagate from the settings form into the user model on save, and from
+	// the user model back into the form on page load (see settings_show.go).
+	config.Opts = config.NewConfigOptions()
+	user := &model.User{}
+
+	// Disabled by default.
+	form := &SettingsForm{StripContentBeforeFirstHeading: false}
+	form.Merge(user)
+	if user.StripContentBeforeFirstHeading {
+		t.Error("expected StripContentBeforeFirstHeading to be false after merge")
+	}
+
+	// Enabled via form.
+	form = &SettingsForm{StripContentBeforeFirstHeading: true}
+	form.Merge(user)
+	if !user.StripContentBeforeFirstHeading {
+		t.Error("expected StripContentBeforeFirstHeading to be true after merge")
+	}
+}

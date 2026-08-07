@@ -379,6 +379,7 @@
     "form.prefs.label.media_playback_rate": "Скорость воспроизведения аудио/видео",
     "form.prefs.label.open_external_links_in_new_tab": "Открывать внешние ссылки в новой вкладке (добавляет target=\"_blank\" к ссылкам)",
     "form.prefs.label.show_reading_time": "Показать примерное время чтения статей",
+    "form.prefs.label.strip_content_before_first_heading": "Удалить содержимое страницы над первым заголовком",
     "form.prefs.label.theme": "Тема",
     "form.prefs.label.timezone": "Часовой пояс",
     "form.prefs.select.alphabetical": "В алфавитном порядке",
