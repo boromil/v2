@@ -163,16 +163,16 @@ func FuzzParseRules(f *testing.F) {
 // FuzzIsDateMatchingPattern fuzzes the date-pattern grammar, asserting it never
 // panics on coverage-guided dates and patterns.
 func FuzzIsDateMatchingPattern(f *testing.F) {
-	f.Add("before", "2024-01-01")
-	f.Add("between", "2024-01-01,2025-01-01")
-	f.Add("max-age", "30d")
-	for _, p := range []string{"future", "before", "after", "between", "max-age", "bogus"} {
-		f.Add(p, "2024-06-01")
+	f.Add("before:2024-01-01")
+	f.Add("between:2024-01-01,2025-01-01")
+	f.Add("max-age:30d")
+	for _, p := range []string{"future", "before", "after", "between", "bogus"} {
+		f.Add(p + ":2024-06-01")
 	}
 	// A fixed reference entry date keeps the fuzz case deterministic; the input
 	// being fuzzed is the pattern/user string, not the clock.
 	entryDate := time.Date(2024, 6, 1, 12, 0, 0, 0, time.UTC)
-	f.Fuzz(func(t *testing.T, pattern string, _ string) {
+	f.Fuzz(func(t *testing.T, pattern string) {
 		_ = isDateMatchingPattern(pattern, entryDate)
 	})
 }
