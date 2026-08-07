@@ -16,6 +16,7 @@ package urlcleaner
 import (
 	"math/rand/v2"
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -128,13 +129,18 @@ func mustParse(s string) *url.URL {
 }
 
 // FuzzRemoveTrackingParameters is the Go-native coverage-guided complement,
-// asserting no panic on mutated URL bytes (nil args already unit-tested).
+// asserting a real invariant over mutated URL bytes: cleaning preserves
+// scheme/host/path and the output's query is a param-subset of the input's
+// (cleaning only ever removes params, never adds or renames them). Arg sets are
+// compared through url.Values so re-ordering/percent-re-encoding by Encode
+// doesn't cause false positives.
 func FuzzRemoveTrackingParameters(f *testing.F) {
 	f.Add("https://example.com/page?utm_source=news&id=1")
 	f.Add("https://example.com/?fbclid=abc&page=2")
 	f.Add("https://example.com/?ref=https://feed.example.com/")
 	f.Add("http://localhost:8080/x?utm=1")
 	f.Add("?utm_source=a")
+	f.Add("https://example.com/?a=%20&b=x&c&utm_bogus=1")
 	f.Fuzz(func(t *testing.T, raw string) {
 		fp, _ := url.Parse("https://feed.example.com/")
 		sp, _ := url.Parse("https://example.com/")
@@ -142,6 +148,35 @@ func FuzzRemoveTrackingParameters(f *testing.F) {
 		if err != nil {
 			return
 		}
-		_, _ = RemoveTrackingParameters(fp, sp, in)
+		out, err := RemoveTrackingParameters(fp, sp, in)
+		if err != nil {
+			return // nil-arg/parse errors are acceptable fall-through
+		}
+
+		// Normalize both URLs through their String() serialization so Go's
+		// percent-escape/path canonicalization doesn't turn equivalent URLs into
+		// literal string mismatches (e.g. path ": " serialized as "./: %20").
+		inN, _ := url.Parse(in.String())
+		outN, _ := url.Parse(out)
+		if inN == nil || outN == nil {
+			return
+		}
+		inQ, outQ := inN.Query(), outN.Query()
+		inN.RawQuery, outN.RawQuery = "", ""
+		if outN.String() != inN.String() {
+			t.Fatalf("non-query parts changed: %q -> %q", raw, out)
+		}
+
+		for k, vals := range outQ {
+			inVals, ok := inQ[k]
+			if !ok {
+				t.Fatalf("param %q introduced by cleaning: %q -> %q", k, raw, out)
+			}
+			for _, v := range vals {
+				if !slices.Contains(inVals, v) {
+					t.Fatalf("value %q added under key %q: %q -> %q", v, k, raw, out)
+				}
+			}
+		}
 	})
 }
