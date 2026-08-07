@@ -69,7 +69,13 @@ func filterValidXMLChars(s []byte) []byte {
 		if r >= utf8.RuneSelf {
 			r, wid = utf8.DecodeRune(s[i:])
 		}
-		if r != utf8.RuneError {
+		// Only drop a rune when the encoding is actually invalid. A genuine
+		// REPLACEMENT CHARACTER (U+FFFD) decodes with wid == 3, but utf8.RuneError
+		// has the same value, so we must not conflate "decode failure" (wid == 1)
+		// with a legitimate U+FFFD that belongs in the stream (it is a legal XML
+		// character) — otherwise feed text "a\uFFFDb" would be silently stripped.
+		invalid := wid == 1 && r == utf8.RuneError
+		if !invalid {
 			if r = filterValidXMLChar(r); r >= 0 {
 				utf8.EncodeRune(s[j:], r)
 				j += wid

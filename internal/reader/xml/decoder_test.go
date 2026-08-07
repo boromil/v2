@@ -223,7 +223,36 @@ func TestFilterValidXMLCharsWithInvalidUTF8Sequence(t *testing.T) {
 }
 
 func FuzzFilterValidXMLChars(f *testing.F) {
+	f.Add([]byte("plain ascii"))
+	f.Add([]byte("a\uFFFDb")) // literal REPLACEMENT CHARACTER is a legal XML char
+	f.Add([]byte("a\xFFb"))   // invalid byte must be dropped
+	f.Add([]byte("\x00control"))
+	f.Add([]byte("<tag>\u00E9\u00E9</tag>"))
 	f.Fuzz(func(t *testing.T, s []byte) {
-		filterValidXMLChars(s)
+		// filterValidXMLChars compacts in-place and returns a shorter slice, so
+		// snapshot the input first for integrity checks.
+		input := append([]byte(nil), s...)
+		out := filterValidXMLChars(s)
+
+		// The filter only ever writes the valid UTF-8 encoding of a kept rune or
+		// drops invalid bytes, so its output must always itself be valid UTF-8.
+		if !utf8.Valid(out) {
+			t.Fatalf("filterValidXMLChars(%q) produced invalid UTF-8: %q", input, out)
+		}
+
+		// For a valid UTF-8 input, filtering must preserve every legal XML
+		// character (incl. U+FFFD) and only strip illegal ones — never drop a
+		// legal rune that appeared in the stream.
+		if utf8.Valid(input) {
+			var compact []byte
+			for _, r := range string(input) {
+				if filterValidXMLChar(r) >= 0 {
+					compact = append(compact, string(r)...)
+				}
+			}
+			if string(out) != string(compact) {
+				t.Fatalf("filterValidXMLChars(%q) = %q, want %q", input, out, compact)
+			}
+		}
 	})
 }
