@@ -10,10 +10,13 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
+	"miniflux.app/v2/internal/config"
 	"miniflux.app/v2/internal/database/dialect"
 	"miniflux.app/v2/internal/http/request"
 	"miniflux.app/v2/internal/model"
+	"miniflux.app/v2/internal/storage"
 	mtest "miniflux.app/v2/internal/storage/testing"
 	"miniflux.app/v2/internal/worker"
 )
@@ -727,6 +730,97 @@ func TestSearchURLViewWinsOverSignal(t *testing.T) {
 // TestSearchNoMatchShowsEmptyState verifies that a search with zero matches
 // returns an empty entry list (not the previous list) and uses ElementPatchMode
 // "inner" so the #entry-list container persists across patches.
+// postSettings sends a form-encoded POST to /ds/sse/settings with the CSRF
+// token in the "csrf" field (mirroring how the Datastar form adapter submits
+// form data from the password form). It returns the recorder.
+func postSettings(t *testing.T, store interface {
+	CreateWebSession(*model.WebSession) error
+	RotateWebSession(string, *model.WebSession) error
+}, user *model.User, form map[string]string) *httptest.ResponseRecorder {
+	t.Helper()
+
+	values := url.Values{}
+	for k, v := range form {
+		values.Set(k, v)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/ds/sse/settings", strings.NewReader(values.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	req, csrf := authenticateTestSession(t, store, req, user)
+	req.Header.Set("X-Csrf-Token", csrf)
+
+	pool := worker.NewPool(store.(*storage.Storage), 1)
+	handler := Serve(store.(*storage.Storage), pool)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	return w
+}
+
+// TestSSESaveSettingsPasswordChange reproduces the password-form submit: the
+// password and confirmation arrive as form-urlencoded fields (Datastar's
+// contentType: 'form' adapter collects named inputs). It asserts the user's
+// stored password is actually updated.
+func TestSSESaveSettingsPasswordChange(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	// Sanity: the original test password works before the change.
+	if err := store.CheckPassword(user.Username, "testpassword"); err != nil {
+		t.Fatalf("expected default test password to be valid before update: %v", err)
+	}
+
+	w := postSettings(t, store, user, map[string]string{
+		"password":     "NewPassword123",
+		"confirmation": "NewPassword123",
+	})
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// The SSE response patches the importSuccess signal.
+	if !strings.Contains(w.Body.String(), "importSuccess") {
+		t.Errorf("expected importSuccess signal in SSE response, got: %s", w.Body.String())
+	}
+
+	// Old password must now fail.
+	if err := store.CheckPassword(user.Username, "testpassword"); err == nil {
+		t.Error("old password should no longer be valid after password change")
+	}
+	// New password must now succeed.
+	if err := store.CheckPassword(user.Username, "NewPassword123"); err != nil {
+		t.Errorf("new password should be valid after change: %v", err)
+	}
+}
+
+// TestSSESaveSettingsPasswordMismatch verifies that a mismatched password and
+// confirmation are rejected without persisting any change.
+func TestSSESaveSettingsPasswordMismatch(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	w := postSettings(t, store, user, map[string]string{
+		"password":     "NewPassword123",
+		"confirmation": "DifferentPassword",
+	})
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 (SSE error patch), got %d: %s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "importError") {
+		t.Errorf("expected importError signal for password mismatch, got: %s", w.Body.String())
+	}
+
+	// The original password should be untouched.
+	if err := store.CheckPassword(user.Username, "testpassword"); err != nil {
+		t.Errorf("original password should be unaffected after mismatch: %v", err)
+	}
+	if err := store.CheckPassword(user.Username, "NewPassword123"); err == nil {
+		t.Error("mismatched new password must not be applied")
+	}
+}
+
 func TestSearchNoMatchShowsEmptyState(t *testing.T) {
 	store := mtest.SetupTestDB(t, dialect.SQLite)
 	user := mtest.CreateTestUser(t, store)
@@ -759,5 +853,219 @@ func TestSearchNoMatchShowsEmptyState(t *testing.T) {
 	}
 	if !strings.Contains(body, "selector #entry-list") || !strings.Contains(body, "mode inner") {
 		t.Error("entry-list patch must use mode inner so the container persists")
+	}
+}
+
+// TestArticleToolbarStatusToggleMarker verifies that the read-status (Read/Unread)
+// toggle button in article_toolbar carries a stable data-action marker. The
+// keyboard 'm' shortcut keys off this marker rather than the button's label,
+// which alternates between "Read" and "Unread".
+func TestArticleToolbarStatusToggleMarker(t *testing.T) {
+	tpl := parseTemplates()
+
+	for _, status := range []string{model.EntryStatusUnread, model.EntryStatusRead} {
+		var buf strings.Builder
+		data := map[string]any{
+			"ID":      int64(42),
+			"Starred": false,
+			"URL":     "https://example.com/42",
+			"Status":  status,
+		}
+		if err := tpl.ExecuteTemplate(&buf, "article_toolbar", data); err != nil {
+			t.Fatalf("executing article_toolbar for %q: %v", status, err)
+		}
+		out := buf.String()
+
+		if !strings.Contains(out, `data-action="toggle-status"`) {
+			t.Errorf("status button outputs for %q must carry data-action=\"toggle-status\"\noutput:\n%s", status, out)
+		}
+		if !strings.Contains(out, `data-on:click="@post('/ds/sse/entry/status')"`) {
+			t.Errorf("status button for %q must post to entry/status\noutput:\n%s", status, out)
+		}
+		// The button must still render its human-facing label (Read for unread
+		// entries, Unread for read ones).
+		want := "Read"
+		if status == model.EntryStatusRead {
+			want = "Unread"
+		}
+		if !strings.Contains(out, want) {
+			t.Errorf("status button for %q must show label %q\noutput:\n%s", status, want, out)
+		}
+	}
+}
+
+// TestEntryRowStarButtonStopsPropagation verifies the star button in each entry
+// row uses Datastar's __stop click modifier so a star click never bubbles up to
+// the entry-row's @get (which would otherwise load the entry too).
+func TestEntryRowStarButtonStopsPropagation(t *testing.T) {
+	tpl := parseTemplates()
+
+	var buf strings.Builder
+	data := map[string]any{
+		"ID":      int64(7),
+		"Title":   "Some Entry",
+		"Status":  model.EntryStatusUnread,
+		"Starred": false,
+		"Date":    time.Now(),
+		"Feed":    &feedRef{Title: "Feed", ID: int64(1)},
+	}
+	if err := tpl.ExecuteTemplate(&buf, "entry_row", data); err != nil {
+		t.Fatalf("executing entry_row: %v", err)
+	}
+	out := buf.String()
+
+	if !strings.Contains(out, `data-on:click__stop="@post('/ds/sse/entry/star/7')"`) {
+		t.Errorf("star button must use data-on:click__stop to prevent bubbling to the row @get\noutput:\n%s", out)
+	}
+	if !strings.Contains(out, `data-on:click="@get('/ds/sse/entry/7')"`) {
+		t.Errorf("entry row must keep its click-to-load action\noutput:\n%s", out)
+	}
+}
+
+// TestKeyboardSelectionResetMarker verifies the rendered app page includes the
+// #entry-list container that the keyboard.js selection-reset observer targets.
+func TestKeyboardSelectionResetMarker(t *testing.T) {
+	tpl := parseTemplates()
+
+	// The "app" template is defined in app.html; a minimal data shape suffices
+	// for checking the static structural markers.
+	var buf strings.Builder
+	data := appViewModel{
+		ListTitle:       "Unread",
+		Pagination:      nil,
+		FeedID:          0,
+		CanMarkAllRead:  false,
+		CountErrorFeeds: 0,
+		SearchQuery:     "",
+	}
+	if err := tpl.ExecuteTemplate(&buf, "app", data); err != nil {
+		t.Fatalf("executing app template: %v", err)
+	}
+	out := buf.String()
+
+	if !strings.Contains(out, `id="entry-list"`) {
+		t.Errorf("app template must render the #entry-list container for keyboard selection state\noutput:\n%s", out)
+	}
+	if !strings.Contains(out, `id="entry-content"`) {
+		t.Errorf("app template must render the #entry-content container for the mobile observer\noutput:\n%s", out)
+	}
+	if !strings.Contains(out, `id="mobile-nav"`) {
+		t.Errorf("app template must render the #mobile-nav panel switcher\noutput:\n%s", out)
+	}
+}
+
+// TestSSEFetchContentUsesInnerMode verifies that sseFetchContent patches the
+// #entry-content container with ElementPatchModeInner (so its id persists),
+// matching sseEntry instead of the default outer mode.
+func TestSSEFetchContentUsesInnerMode(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+
+	// sseFetchContent scrapes the entry's URL, so point it at a local server
+	// serving HTML content and allow private-network fetches in the test env.
+	t.Setenv("FETCHER_ALLOW_PRIVATE_NETWORKS", "1")
+	configParser := config.NewConfigParser()
+	parsedOptions, err := configParser.ParseEnvironmentVariables()
+	if err != nil {
+		t.Fatalf("unable to configure test options: %v", err)
+	}
+	prevOpts := config.Opts
+	config.Opts = parsedOptions
+	t.Cleanup(func() { config.Opts = prevOpts })
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(`<html><body><h1>Scraped Title</h1><p>Scraped body</p></body></html>`))
+	}))
+	t.Cleanup(srv.Close)
+
+	entry := &model.Entry{
+		UserID:  user.ID,
+		FeedID:  feed.ID,
+		Hash:    "hash_fetch_content_" + t.Name(),
+		Title:   "Fetch Content",
+		Content: "original body",
+		URL:     srv.URL + "/article",
+		Date:    time.Now(),
+	}
+	if _, err := store.InsertEntryForFeed(user.ID, feed.ID, entry); err != nil {
+		t.Fatalf("failed to insert test entry: %v", err)
+	}
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	req := httptest.NewRequest(http.MethodPost, "/ds/sse/fetch-content/"+itoa(entry.ID), strings.NewReader(`{}`))
+	req.Header.Set("Content-Type", "application/json")
+	req, csrf := authenticateTestSession(t, store, req, user)
+	req.Header.Set("X-Csrf-Token", csrf)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "selector #entry-content") || !strings.Contains(body, "mode inner") {
+		t.Errorf("entry-content patch must use mode inner so the container persists, got: %s", body)
+	}
+}
+
+// TestSSEMarkPageReadUsesInnerMode verifies that sseMarkPageRead patches the
+// #entry-list container with ElementPatchModeInner so its id persists.
+func TestSSEMarkPageReadUsesInnerMode(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	_ = mtest.CreateTestEntries(t, store, user.ID, feed.ID, 3)
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	req := httptest.NewRequest(http.MethodPost, "/ds/sse/mark-page-read", strings.NewReader(`{"view":"unread"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req, csrf := authenticateTestSession(t, store, req, user)
+	req.Header.Set("X-Csrf-Token", csrf)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "selector #entry-list") || !strings.Contains(body, "mode inner") {
+		t.Errorf("entry-list patch must use mode inner so the container persists, got: %s", body)
+	}
+}
+
+// TestSSESubscriptionsUsesFeedTreeInner verifies that sseSubscriptions patches
+// the #subscription-panel .feed-tree element with ElementPatchModeInner, keeping
+// the #subscription-panel aside, its .top-nav and <nav> shell intact.
+func TestSSESubscriptionsUsesFeedTreeInner(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	_ = mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	req := httptest.NewRequest(http.MethodGet, "/ds/sse/subscriptions", nil)
+	req, csrf := authenticateTestSession(t, store, req, user)
+	_ = csrf
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "selector #subscription-panel .feed-tree") || !strings.Contains(body, "mode inner") {
+		t.Errorf("subscription patch must target the feed tree with mode inner, got: %s", body)
 	}
 }
