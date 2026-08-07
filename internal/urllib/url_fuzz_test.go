@@ -86,21 +86,28 @@ func TestFuzzDomainNeverPanics(t *testing.T) {
 	}
 }
 
-// TestFuzzIsAbsoluteURLConsistency asserts IsAbsoluteURL agrees with net/url on
-// what is an absolute (scheme-bearing) URL.
+// TestFuzzIsAbsoluteURLConsistency asserts IsAbsoluteURL stays in sync with
+// net/url: it must report true exactly when the input is an http(s)-scheme URL
+// that net/url parses as absolute, and false otherwise (including URLs that
+// parse as absolute but carry a non-http(s) scheme). This cross-checks both
+// branches over adversarial relative/absolute fragments.
 func TestFuzzIsAbsoluteURLConsistency(t *testing.T) {
 	r := rand.New(rand.NewPCG(75, 76))
 	for i := 0; i < 6000; i++ {
-		u := r.IntN(2) == 0
 		var s string
-		if u {
+		switch r.IntN(3) {
+		case 0:
 			s = "https://x/y"
-		} else {
+		case 1:
 			s = fuzzRelativeURL(r)
+		default:
+			s = "ftp://" + fuzzRelativeURL(r) // absolute but not http(s)
 		}
-		isAbs := IsAbsoluteURL(s)
-		if u && !isAbs {
-			t.Fatalf("iter=%d: %q should be absolute", i, s)
+
+		parsed, perr := url.Parse(s)
+		want := perr == nil && parsed.IsAbs() && (strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://"))
+		if got := IsAbsoluteURL(s); got != want {
+			t.Fatalf("iter=%d: IsAbsoluteURL(%q)=%v, net/url-parity want %v", i, s, got, want)
 		}
 	}
 }
