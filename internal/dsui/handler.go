@@ -12,20 +12,21 @@ import (
 	"log/slog"
 	"math"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
 	"miniflux.app/v2/internal/config"
+	dsstatic "miniflux.app/v2/internal/dsui/static"
 	"miniflux.app/v2/internal/http/request"
 	"miniflux.app/v2/internal/http/response"
-	"miniflux.app/v2/internal/model"
 	"miniflux.app/v2/internal/mediaproxy"
+	"miniflux.app/v2/internal/model"
 	"miniflux.app/v2/internal/proxyrotator"
 	"miniflux.app/v2/internal/reader/fetcher"
 	"miniflux.app/v2/internal/reader/opml"
 	"miniflux.app/v2/internal/reader/processor"
 	"miniflux.app/v2/internal/storage"
-	dsstatic "miniflux.app/v2/internal/dsui/static"
 	"miniflux.app/v2/internal/worker"
 
 	"github.com/starfederation/datastar-go/datastar"
@@ -60,7 +61,6 @@ func Serve(store *storage.Storage, pool *worker.Pool) http.Handler {
 	// Static assets.
 	mux.HandleFunc("GET /ds/stylesheets/{checksum}/{filename}", h.showStylesheet)
 	mux.HandleFunc("GET /ds/js/{checksum}/{filename}", h.showJavascript)
-	
 
 	// Full page renders.
 	mux.HandleFunc("GET /ds/", func(w http.ResponseWriter, r *http.Request) {
@@ -184,12 +184,12 @@ type appViewModel struct {
 }
 
 type entryView struct {
-	ID       int64
-	Title    string
-	Status   string
-	Starred  bool
-	Date     time.Time
-	Feed     *feedRef
+	ID      int64
+	Title   string
+	Status  string
+	Starred bool
+	Date    time.Time
+	Feed    *feedRef
 }
 
 type feedRef struct {
@@ -218,12 +218,12 @@ type enclosureView struct {
 }
 
 type paginationView struct {
-	CurrentPage int
-	TotalPages  int
-	HasPrev     bool
-	HasNext     bool
-	PrevOffset  int
-	NextOffset  int
+	CurrentPage   int
+	TotalPages    int
+	HasPrev       bool
+	HasNext       bool
+	PrevOffset    int
+	NextOffset    int
 	SSEEntriesURL string // Full SSE URL including view/filter params
 }
 
@@ -257,19 +257,19 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 	viewName, feedID, categoryID := parseAppRoute(r)
 
 	vm := appViewModel{
-		Language:          user.Language,
-		Direction:         "ltr",
-		CSRFToken:         request.WebSession(r).CSRF(),
-		SearchQuery:       searchQuery,
-		ViewName:          viewName,
-		FeedID:            feedID,
-		CategoryID:        categoryID,
-		Offset:            offset,
-		StyleChecksum:     dsstatic.StylesheetBundles["app"].Checksum,
-		JSChecksum:        dsstatic.JavascriptBundles["datastar"].Checksum,
-		KeyboardChecksum:  dsstatic.JavascriptBundles["keyboard"].Checksum,
+		Language:           user.Language,
+		Direction:          "ltr",
+		CSRFToken:          request.WebSession(r).CSRF(),
+		SearchQuery:        searchQuery,
+		ViewName:           viewName,
+		FeedID:             feedID,
+		CategoryID:         categoryID,
+		Offset:             offset,
+		StyleChecksum:      dsstatic.StylesheetBundles["app"].Checksum,
+		JSChecksum:         dsstatic.JavascriptBundles["datastar"].Checksum,
+		KeyboardChecksum:   dsstatic.JavascriptBundles["keyboard"].Checksum,
 		ComponentsChecksum: dsstatic.JavascriptBundles["components"].Checksum,
-		CanMarkAllRead:    viewName == "unread" || viewName == "feed" || viewName == "category",
+		CanMarkAllRead:     viewName == "unread" || viewName == "feed" || viewName == "category",
 	}
 
 	// Build subscription menu.
@@ -646,7 +646,18 @@ func (h *handler) sseSubscriptions(w http.ResponseWriter, r *http.Request) {
 
 	sections := h.buildMenu(user, "", 0, 0)
 	data := map[string]any{"MenuSections": sections}
-	renderSSEFragment(w, r, h.tpl, "subscription_list", data, "#subscription-panel")
+	var buf bytes.Buffer
+	if err := h.tpl.ExecuteTemplate(&buf, "subscription_list", data); err != nil {
+		response.HTMLServerError(w, r, fmt.Errorf("subscription_list template: %w", err))
+		return
+	}
+	renderSSEResponse(w, r, SSEResponse{
+		Fragments: []SSEFragment{
+			// Patch the feed tree inner, not the whole #subscription-panel, so the
+			// aside's id, .top-nav, and <nav> shell persist across updates.
+			{HTML: buf.String(), Selector: "#subscription-panel .feed-tree", Mode: datastar.ElementPatchModeInner},
+		},
+	})
 }
 
 func (h *handler) sseToggleStar(w http.ResponseWriter, r *http.Request) {
@@ -784,9 +795,9 @@ func (h *handler) sseToggleEntryStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(fragments) > 0 {
-	renderSSEResponse(w, r, SSEResponse{
-		Fragments: fragments,
-	})
+		renderSSEResponse(w, r, SSEResponse{
+			Fragments: fragments,
+		})
 	} else {
 		sendSSERedirect(w, r, "/ds/unread")
 	}
@@ -960,10 +971,17 @@ func (h *handler) sseMarkPageRead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Patch #entry-list with inner mode so the container id persists (the
+	// entry_list template emits children only).
 	nav, _ := h.store.GetNavMetadata(user.ID)
-	sse := datastar.NewSSE(w, r)
-	sse.PatchElements(listBuf.String(), datastar.WithSelector("#entry-list"))
-	sse.MarshalAndPatchSignals(map[string]any{"countUnread": nav.CountUnread})
+	renderSSEResponse(w, r, SSEResponse{
+		Fragments: []SSEFragment{
+			{HTML: listBuf.String(), Selector: "#entry-list", Mode: datastar.ElementPatchModeInner},
+		},
+		Signals: map[string]any{
+			"countUnread": nav.CountUnread,
+		},
+	})
 }
 
 func (h *handler) sseFetchContent(w http.ResponseWriter, r *http.Request) {
@@ -1021,8 +1039,13 @@ func (h *handler) sseFetchContent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sse := datastar.NewSSE(w, r)
-	sse.PatchElements(buf.String(), datastar.WithSelector("#entry-content"))
+	// Patch #entry-content with inner mode so the container id persists (the
+	// entry_content template emits children only), matching sseEntry.
+	renderSSEResponse(w, r, SSEResponse{
+		Fragments: []SSEFragment{
+			{HTML: buf.String(), Selector: "#entry-content", Mode: datastar.ElementPatchModeInner},
+		},
+	})
 }
 
 func (h *handler) sseToggleShare(w http.ResponseWriter, r *http.Request) {
@@ -1145,8 +1168,8 @@ func (h *handler) buildMenu(user *model.User, activeView string, activeFeedID, a
 	})
 
 	// Categories with their feeds.
-		categories, err := h.store.CategoriesWithFeedCount(user.ID, "title")
-		if err != nil {
+	categories, err := h.store.CategoriesWithFeedCount(user.ID, "title")
+	if err != nil {
 		slog.Warn("dsui: unable to get categories", slog.Any("error", err))
 		return sections
 	}
@@ -1179,10 +1202,10 @@ func (h *handler) buildMenu(user *model.User, activeView string, activeFeedID, a
 			if cat.TotalUnread != nil && *cat.TotalUnread > 0 {
 				catCount = fmt.Sprintf("%d", *cat.TotalUnread)
 			}
-		sections = append(sections, menuSection{
-			Label:       cat.Title,
-			HasChildren: true,
-			Items: []menuItem{{
+			sections = append(sections, menuSection{
+				Label:       cat.Title,
+				HasChildren: true,
+				Items: []menuItem{{
 					Label:       cat.Title,
 					URL:         fmt.Sprintf("/ds/category/%d", cat.ID),
 					SSEURL:      fmt.Sprintf("/ds/sse/entries?categoryId=%d", cat.ID),
@@ -1253,19 +1276,22 @@ func listTitleForView(view string, feedID, categoryID int64, store *storage.Stor
 }
 
 // buildSSEEntriesURL creates the base SSE URL for loading entries
-// with the current view/filter parameters.
+// with the current view/filter parameters. Values are URL-escaped so that a
+// search query containing reserved or control characters cannot corrupt the
+// resulting URL (pagination links and nav depend on it parsing cleanly).
 func buildSSEEntriesURL(view string, feedID, categoryID int64, searchQuery string) string {
-	u := "/ds/sse/entries?view=" + view
+	q := url.Values{}
+	q.Set("view", view)
 	if feedID > 0 {
-		u += fmt.Sprintf("&feedId=%d", feedID)
+		q.Set("feedId", fmt.Sprintf("%d", feedID))
 	}
 	if categoryID > 0 {
-		u += fmt.Sprintf("&categoryId=%d", categoryID)
+		q.Set("categoryId", fmt.Sprintf("%d", categoryID))
 	}
 	if searchQuery != "" {
-		u += "&searchQuery=" + searchQuery
+		q.Set("searchQuery", searchQuery)
 	}
-	return u
+	return "/ds/sse/entries?" + q.Encode()
 }
 
 // ─── Time helpers ────────────────────────────────────────────────────────
@@ -1316,4 +1342,3 @@ func elapsedTime(t time.Time) string {
 		return fmt.Sprintf("%dy", y)
 	}
 }
-
