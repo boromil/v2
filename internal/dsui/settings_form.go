@@ -22,64 +22,66 @@ type selectOption struct {
 // settingsFormData holds the form values for the settings page.
 // JSON tags match Datastar signal names (camelCase from data-bind).
 type settingsFormData struct {
-	Username                  string  `json:"username"`
-	Password                  string  `json:"password"`
-	Confirmation              string  `json:"confirmation"`
-	Theme                     string  `json:"theme"`
-	Language                  string  `json:"language"`
-	Timezone                  string  `json:"timezone"`
-	EntryDirection            string  `json:"entryDirection"`
-	EntryOrder                string  `json:"entryOrder"`
-	EntriesPerPage            int     `json:"entriesPerPage"`
-	DefaultHomePage           string  `json:"defaultHomePage"`
-	CategoriesSortingOrder    string  `json:"categoriesSortingOrder"`
-	DisplayMode               string  `json:"displayMode"`
-	GestureNav                string  `json:"gestureNav"`
-	DefaultReadingSpeed       int     `json:"defaultReadingSpeed"`
-	CJKReadingSpeed           int     `json:"cjkReadingSpeed"`
-	MediaPlaybackRate         float64 `json:"mediaPlaybackRate"`
-	ShowReadingTime           bool    `json:"showReadingTime"`
-	KeyboardShortcuts         bool    `json:"keyboardShortcuts"`
-	EntrySwipe                bool    `json:"entrySwipe"`
-	AlwaysOpenExternalLinks   bool    `json:"alwaysOpenExternalLinks"`
-	OpenExternalLinksInNewTab bool    `json:"openExternalLinksInNewTab"`
-	AutoFetchShortEntries     bool    `json:"autoFetchShortEntries"`
-	BlockFilterEntryRules     string  `json:"blockFilterEntryRules"`
-	KeepFilterEntryRules      string  `json:"keepFilterEntryRules"`
-	Stylesheet                string  `json:"stylesheet"`
-	CustomJS                  string  `json:"customJs"`
-	ExternalFontHosts         string  `json:"externalFontHosts"`
-	MarkReadBehavior          string  `json:"markReadBehavior"`
+	Username                       string  `json:"username"`
+	Password                       string  `json:"password"`
+	Confirmation                   string  `json:"confirmation"`
+	Theme                          string  `json:"theme"`
+	Language                       string  `json:"language"`
+	Timezone                       string  `json:"timezone"`
+	EntryDirection                 string  `json:"entryDirection"`
+	EntryOrder                     string  `json:"entryOrder"`
+	EntriesPerPage                 int     `json:"entriesPerPage"`
+	DefaultHomePage                string  `json:"defaultHomePage"`
+	CategoriesSortingOrder         string  `json:"categoriesSortingOrder"`
+	DisplayMode                    string  `json:"displayMode"`
+	GestureNav                     string  `json:"gestureNav"`
+	DefaultReadingSpeed            int     `json:"defaultReadingSpeed"`
+	CJKReadingSpeed                int     `json:"cjkReadingSpeed"`
+	MediaPlaybackRate              float64 `json:"mediaPlaybackRate"`
+	ShowReadingTime                bool    `json:"showReadingTime"`
+	KeyboardShortcuts              bool    `json:"keyboardShortcuts"`
+	EntrySwipe                     bool    `json:"entrySwipe"`
+	AlwaysOpenExternalLinks        bool    `json:"alwaysOpenExternalLinks"`
+	OpenExternalLinksInNewTab      bool    `json:"openExternalLinksInNewTab"`
+	AutoFetchShortEntries          bool    `json:"autoFetchShortEntries"`
+	StripContentBeforeFirstHeading bool    `json:"stripContentBeforeFirstHeading"`
+	BlockFilterEntryRules          string  `json:"blockFilterEntryRules"`
+	KeepFilterEntryRules           string  `json:"keepFilterEntryRules"`
+	Stylesheet                     string  `json:"stylesheet"`
+	CustomJS                       string  `json:"customJs"`
+	ExternalFontHosts              string  `json:"externalFontHosts"`
+	MarkReadBehavior               string  `json:"markReadBehavior"`
 }
 
 func settingsFormFromUser(user *model.User) *settingsFormData {
 	return &settingsFormData{
-		Username:                  user.Username,
-		Theme:                     user.Theme,
-		Language:                  user.Language,
-		Timezone:                  user.Timezone,
-		EntryDirection:            user.EntryDirection,
-		EntryOrder:                user.EntryOrder,
-		EntriesPerPage:            user.EntriesPerPage,
-		DefaultHomePage:           user.DefaultHomePage,
-		CategoriesSortingOrder:    user.CategoriesSortingOrder,
-		DisplayMode:               user.DisplayMode,
-		GestureNav:                user.GestureNav,
-		DefaultReadingSpeed:       user.DefaultReadingSpeed,
-		CJKReadingSpeed:           user.CJKReadingSpeed,
-		MediaPlaybackRate:         user.MediaPlaybackRate,
-		ShowReadingTime:           user.ShowReadingTime,
-		KeyboardShortcuts:         user.KeyboardShortcuts,
-		EntrySwipe:                user.EntrySwipe,
-		AlwaysOpenExternalLinks:   user.AlwaysOpenExternalLinks,
-		OpenExternalLinksInNewTab: user.OpenExternalLinksInNewTab,
-		AutoFetchShortEntries:     user.AutoFetchShortEntries,
-		BlockFilterEntryRules:     user.BlockFilterEntryRules,
-		KeepFilterEntryRules:      user.KeepFilterEntryRules,
-		Stylesheet:                user.Stylesheet,
-		CustomJS:                  user.CustomJS,
-		ExternalFontHosts:         user.ExternalFontHosts,
-		MarkReadBehavior:          markReadBehavior(user.MarkReadOnView, user.MarkReadOnMediaPlayerCompletion),
+		Username:                       user.Username,
+		Theme:                          user.Theme,
+		Language:                       user.Language,
+		Timezone:                       user.Timezone,
+		EntryDirection:                 user.EntryDirection,
+		EntryOrder:                     user.EntryOrder,
+		EntriesPerPage:                 user.EntriesPerPage,
+		DefaultHomePage:                user.DefaultHomePage,
+		CategoriesSortingOrder:         user.CategoriesSortingOrder,
+		DisplayMode:                    user.DisplayMode,
+		GestureNav:                     user.GestureNav,
+		DefaultReadingSpeed:            user.DefaultReadingSpeed,
+		CJKReadingSpeed:                user.CJKReadingSpeed,
+		MediaPlaybackRate:              user.MediaPlaybackRate,
+		ShowReadingTime:                user.ShowReadingTime,
+		KeyboardShortcuts:              user.KeyboardShortcuts,
+		EntrySwipe:                     user.EntrySwipe,
+		AlwaysOpenExternalLinks:        user.AlwaysOpenExternalLinks,
+		OpenExternalLinksInNewTab:      user.OpenExternalLinksInNewTab,
+		AutoFetchShortEntries:          user.AutoFetchShortEntries,
+		StripContentBeforeFirstHeading: user.StripContentBeforeFirstHeading,
+		BlockFilterEntryRules:          user.BlockFilterEntryRules,
+		KeepFilterEntryRules:           user.KeepFilterEntryRules,
+		Stylesheet:                     user.Stylesheet,
+		CustomJS:                       user.CustomJS,
+		ExternalFontHosts:              user.ExternalFontHosts,
+		MarkReadBehavior:               markReadBehavior(user.MarkReadOnView, user.MarkReadOnMediaPlayerCompletion),
 	}
 }
 
@@ -108,10 +110,11 @@ func parseSettingsForm(r *http.Request) *settingsFormData {
 	f.AlwaysOpenExternalLinks = r.FormValue("always_open_external_links") == "1"
 	f.OpenExternalLinksInNewTab = r.FormValue("open_external_links_in_new_tab") == "1"
 	f.AutoFetchShortEntries = r.FormValue("auto_fetch_short_entries") == "1"
+	f.StripContentBeforeFirstHeading = r.FormValue("strip_content_before_first_heading") == "1"
 	f.BlockFilterEntryRules = r.FormValue("block_filter_entry_rules")
 	f.KeepFilterEntryRules = r.FormValue("keep_filter_entry_rules")
 	f.Stylesheet = r.FormValue("stylesheet")
-	f.CustomJS = r.FormValue("custom_js")    // Match HTML name attribute
+	f.CustomJS = r.FormValue("custom_js") // Match HTML name attribute
 	f.ExternalFontHosts = r.FormValue("external_font_hosts")
 	f.MarkReadBehavior = r.FormValue("mark_read_behavior")
 	return f
@@ -125,18 +128,36 @@ func (f *settingsFormData) applyToUser(user *model.User) {
 	if f.Password != "" {
 		user.Password = f.Password
 	}
-	if f.Theme != "" { user.Theme = f.Theme }
-	if f.Language != "" { user.Language = f.Language }
-	if f.Timezone != "" { user.Timezone = f.Timezone }
-	if f.EntryDirection != "" { user.EntryDirection = f.EntryDirection }
-	if f.EntryOrder != "" { user.EntryOrder = f.EntryOrder }
+	if f.Theme != "" {
+		user.Theme = f.Theme
+	}
+	if f.Language != "" {
+		user.Language = f.Language
+	}
+	if f.Timezone != "" {
+		user.Timezone = f.Timezone
+	}
+	if f.EntryDirection != "" {
+		user.EntryDirection = f.EntryDirection
+	}
+	if f.EntryOrder != "" {
+		user.EntryOrder = f.EntryOrder
+	}
 	if f.EntriesPerPage > 0 {
 		user.EntriesPerPage = f.EntriesPerPage
 	}
-	if f.DefaultHomePage != "" { user.DefaultHomePage = f.DefaultHomePage }
-	if f.CategoriesSortingOrder != "" { user.CategoriesSortingOrder = f.CategoriesSortingOrder }
-	if f.DisplayMode != "" { user.DisplayMode = f.DisplayMode }
-	if f.GestureNav != "" { user.GestureNav = f.GestureNav }
+	if f.DefaultHomePage != "" {
+		user.DefaultHomePage = f.DefaultHomePage
+	}
+	if f.CategoriesSortingOrder != "" {
+		user.CategoriesSortingOrder = f.CategoriesSortingOrder
+	}
+	if f.DisplayMode != "" {
+		user.DisplayMode = f.DisplayMode
+	}
+	if f.GestureNav != "" {
+		user.GestureNav = f.GestureNav
+	}
 	if f.DefaultReadingSpeed > 0 {
 		user.DefaultReadingSpeed = f.DefaultReadingSpeed
 	}
@@ -152,11 +173,22 @@ func (f *settingsFormData) applyToUser(user *model.User) {
 	user.AlwaysOpenExternalLinks = f.AlwaysOpenExternalLinks
 	user.OpenExternalLinksInNewTab = f.OpenExternalLinksInNewTab
 	user.AutoFetchShortEntries = f.AutoFetchShortEntries
-	if f.BlockFilterEntryRules != "" { user.BlockFilterEntryRules = f.BlockFilterEntryRules }
-	if f.KeepFilterEntryRules != "" { user.KeepFilterEntryRules = f.KeepFilterEntryRules }
-	if f.Stylesheet != "" { user.Stylesheet = f.Stylesheet }
-	if f.CustomJS != "" { user.CustomJS = f.CustomJS }
-	if f.ExternalFontHosts != "" { user.ExternalFontHosts = f.ExternalFontHosts }
+	user.StripContentBeforeFirstHeading = f.StripContentBeforeFirstHeading
+	if f.BlockFilterEntryRules != "" {
+		user.BlockFilterEntryRules = f.BlockFilterEntryRules
+	}
+	if f.KeepFilterEntryRules != "" {
+		user.KeepFilterEntryRules = f.KeepFilterEntryRules
+	}
+	if f.Stylesheet != "" {
+		user.Stylesheet = f.Stylesheet
+	}
+	if f.CustomJS != "" {
+		user.CustomJS = f.CustomJS
+	}
+	if f.ExternalFontHosts != "" {
+		user.ExternalFontHosts = f.ExternalFontHosts
+	}
 	user.MarkReadOnView, user.MarkReadOnMediaPlayerCompletion = applyMarkReadBehavior(f.MarkReadBehavior)
 }
 
@@ -217,4 +249,3 @@ func timezoneOptions() []selectOption {
 	sort.Slice(opts, func(i, j int) bool { return opts[i].Label < opts[j].Label })
 	return opts
 }
-
