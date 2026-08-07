@@ -16,6 +16,7 @@
         {{if .ShareCode}}Unshare{{else}}Share{{end}}
     </button>
     <button class="toolbar-btn"
+        data-action="toggle-status"
         data-signals='{"entryIds":[{{.ID}}]}'
         data-on:click="@post('/ds/sse/entry/status')">
         {{if eq .Status "unread"}}Read{{else}}Unread{{end}}
