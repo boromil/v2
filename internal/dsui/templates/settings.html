@@ -194,8 +194,8 @@
                 <h3 class="settings-heading">Password</h3>
                 <form action="/ds/sse/settings" method="post"
                     enctype="multipart/form-data"
-                    data-on:submit="@post('/ds/sse/settings')"
-                    onsubmit="return false">
+                    data-on:submit__prevent="@post('/ds/sse/settings', {contentType: 'form'})">
+                    <input type="hidden" name="csrf" value="{{.CSRFToken}}">
                     <div class="settings-grid">
                         <label class="settings-field">
                             <span class="settings-field-label">New password</span>
