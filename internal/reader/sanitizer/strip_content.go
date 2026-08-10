@@ -35,6 +35,29 @@ var anchorTagNames = map[string]bool{
 // detect the "article-body" keyword.
 var anchorAttributeKeywords = []string{"title", "hero", "headline", "articlebody"}
 
+// bannerHeadingKeywords are substrings that, when found (case-insensitively)
+// in the class/id of an h1/h2 element, mark that heading as site chrome (the
+// "title of the whole page" / blog name) rather than the start of the actual
+// article content.
+//
+// Many blogs render their site name as a top-of-page <h1> (blog-title,
+// site-title, masthead, …). The generic "title" keyword would select that as
+// the first anchor, which strips nothing (it sits at the very top of <body>)
+// and leaves all the header/nav chrome in the entry. These keywords let us
+// recognize such banner headings so the fallback below can skip past them.
+var bannerHeadingKeywords = []string{
+	"site", "blog", "logo", "brand", "masthead", "banner", "navbar", "menu",
+}
+
+// contentHeadingKeywords are substrings that mark an h1/h2 element as the
+// article's real title/start (case-insensitive). Used only by the fallback
+// path: when the primary detector lands on a banner heading, we keep scanning
+// for the first later heading that actually signals content so the strip cuts
+// at the article rather than the site title.
+var contentHeadingKeywords = []string{
+	"post", "article", "entry", "story", "content", "main", "page", "title",
+}
+
 // StripContentBeforeFirstHeading removes everything strictly before the first
 // "anchor" element in the document, keeping the anchor and all content after it.
 //
@@ -47,6 +70,13 @@ var anchorAttributeKeywords = []string{"title", "hero", "headline", "articlebody
 // <h3>-<h6> are NOT anchors: they are sub-section headings that may legitimately
 // follow lead/intro prose. Cutting on the first <h3> would discard real content
 // (e.g. an article intro paragraph above it).
+//
+// When the first anchor is an h1/h2 that only carries the site's banner title
+// (blog-title, site-title, logo, …) rather than starting the article content,
+// the strip would otherwise cut at the very top of <body> and leave all the
+// header/nav chrome in place. In that case we fall back to the first later
+// h1/h2 whose id/name/class signals real article content, so the banner is
+// dropped and the entry starts at the actual article title.
 //
 // When no anchor is found, the input is returned unchanged. The function
 // operates on RAW HTML and never panics or hangs, even on malformed input.
@@ -109,7 +139,34 @@ func stripContentBeforeFirstHeadingSingle(rawHTML string) string {
 
 // findFirstAnchor returns the first anchor element in document (pre-order)
 // order, or nil if none exists.
+//
+// The primary pass locates the first element matching the tag-based or
+// class/id-keyword rules. When that first anchor is an h1/h2 that merely
+// carries the site's banner title (blog-title, site-title, …) — i.e. it does
+// not actually mark the start of article content — the result does not "yield
+// results" (cutting there leaves all header/nav chrome in place), so we fall
+// back to scanning the document for the first later h1/h2 whose id/name/class
+// clearly signals real content and use that as the cut anchor instead.
 func findFirstAnchor(n *html.Node) *html.Node {
+	if n == nil {
+		return nil
+	}
+	first := findFirstAnchorByOrder(n)
+	if first == nil {
+		return nil
+	}
+	if !isBannerHeading(first) {
+		return first
+	}
+	if fallback := findFallbackContentHeading(n, first); fallback != nil {
+		return fallback
+	}
+	return first
+}
+
+// findFirstAnchorByOrder returns the first anchor element in document
+// (pre-order) order, or nil if none exists.
+func findFirstAnchorByOrder(n *html.Node) *html.Node {
 	if n == nil {
 		return nil
 	}
@@ -117,11 +174,92 @@ func findFirstAnchor(n *html.Node) *html.Node {
 		return n
 	}
 	for child := n.FirstChild; child != nil; child = child.NextSibling {
-		if anchor := findFirstAnchor(child); anchor != nil {
+		if anchor := findFirstAnchorByOrder(child); anchor != nil {
 			return anchor
 		}
 	}
 	return nil
+}
+
+// isBannerHeading reports whether an anchor element is an h1/h2 that only
+// carries the site's headline title (blog-title, site-title, logo, …) rather
+// than starting the article content. Dropping such heads lets the fallback skip
+// past the site banner and cut at the real content heading.
+func isBannerHeading(n *html.Node) bool {
+	if n.Type != html.ElementNode {
+		return false
+	}
+	tag := strings.ToLower(n.Data)
+	if tag != "h1" && tag != "h2" {
+		return false
+	}
+	for _, attr := range n.Attr {
+		key := strings.ToLower(attr.Key)
+		if key != "class" && key != "id" {
+			continue
+		}
+		value := normalizeAttributeValue(attr.Val)
+		if value == "" {
+			continue
+		}
+		for _, kw := range bannerHeadingKeywords {
+			if strings.Contains(value, kw) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// findFallbackContentHeading finds the first h1/h2 that appears strictly after
+// the given banner heading and signals real article content via a
+// content keyword in its id/name/class, or nil if there is none. Restricted to
+// h1/h2 on purpose: like the primary rules, h3-h6 are internal sub-section
+// headings that may legitimately follow intro prose, so they must never become
+// the cut anchor.
+func findFallbackContentHeading(n, after *html.Node) *html.Node {
+	var found *html.Node
+	var walk func(*html.Node)
+	walk = func(m *html.Node) {
+		if found != nil {
+			return
+		}
+		if m != nil && m.Type == html.ElementNode {
+			tag := strings.ToLower(m.Data)
+			if tag == "h1" || tag == "h2" {
+				if m != after && hasContentHeadingSignal(m) {
+					found = m
+					return
+				}
+			}
+		}
+		for child := m.FirstChild; child != nil; child = child.NextSibling {
+			walk(child)
+		}
+	}
+	walk(n)
+	return found
+}
+
+// hasContentHeadingSignal reports whether an h1/h2 carries an id, name or class
+// attribute whose normalized value indicates article content.
+func hasContentHeadingSignal(n *html.Node) bool {
+	for _, attr := range n.Attr {
+		key := strings.ToLower(attr.Key)
+		if key != "class" && key != "id" && key != "name" {
+			continue
+		}
+		value := normalizeAttributeValue(attr.Val)
+		if value == "" {
+			continue
+		}
+		for _, kw := range contentHeadingKeywords {
+			if strings.Contains(value, kw) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // isAnchorElement reports whether a node is an anchor element.
