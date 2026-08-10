@@ -113,6 +113,35 @@ func TestStripContentBeforeFirstHeading(t *testing.T) {
 			want:     []string{"<article>", "Post title", "intro"},
 			dontWant: []string{"Home", "global-nav"},
 		},
+		{
+			name: "site banner h1 (page title) is skipped for the article title",
+			input: `<h1 class="blog-title">ENOSUCHBLOG</h1>` +
+				`<h2 class="blog-subtitle"><em>Programming.</em></h2>` +
+				`<ul class="navbar"><li>Home</li></ul><hr>` +
+				`<h1 class="post-title">GitHub Actions needs OIDC audience constraints</h1>` +
+				`<h2 class="post-subtitle">Aug 10, 2026</h2><hr>` +
+				`<p>TL;DR</p><h2 id="cicd-and-oidc">CI/CD and OIDC</h2>`,
+			want:     []string{"post-title", "GitHub Actions needs OIDC", "TL;DR", "cicd-and-oidc"},
+			dontWant: []string{"ENOSUCHBLOG", "blog-subtitle", "navbar", "Home"},
+		},
+		{
+			name:     "site banner skipped even when banner h1 has no content id",
+			input:    `<h1 class="site-title">The Blarg</h1><p>tagline</p><h1 id="post-123">A Real Post</h1><p>body</p>`,
+			want:     []string{"A Real Post", "<p>body</p>"},
+			dontWant: []string{"The Blarg", "tagline"},
+		},
+		{
+			name:     "banner heading without any later content heading falls back to itself",
+			input:    `<h1 class="blog-title">Only a title</h1><p>just prose below</p>`,
+			want:     []string{"blog-title", "just prose below"},
+			dontWant: []string{},
+		},
+		{
+			name:     "content heading via name attribute selected as fallback",
+			input:    `<h1 class="logo">Big Site</h1><nav>menu</nav><h2 name="article-start">Section</h2><p>body</p>`,
+			want:     []string{`name="article-start"`, "<p>body</p>"},
+			dontWant: []string{"Big Site", "menu"},
+		},
 	}
 
 	for _, test := range tests {

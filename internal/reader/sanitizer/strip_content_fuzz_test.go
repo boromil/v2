@@ -70,6 +70,10 @@ func FuzzStripContentBeforeFirstHeading(f *testing.F) {
 		`<p>junk</p><article><p>story</p></article>`,
 		`<div>x</div><header><h2>Title</h2></header>`,
 		`<div class="site-header">Logo</div><main><h2>Title</h2><p>body</p></main>`,
+		// Banner (site-title) heading followed by the real article heading.
+		`<h1 class="blog-title">Site</h1><p>tag</p><nav>menu</nav><h1 class="post-title">Real post</h1><p>body</p>`,
+		`<h1 class="site-title">Blog</h1><h2 id="post-1">Post</h2><p>body</p>`,
+		`<h1 class="logo">Only a title</h1><p>just prose below</p>`,
 		// h3-h6 are NOT anchors: preceding prose must be preserved.
 		`<p>intro prose</p><h3>The big picture</h3><p>body</p>`,
 		`<p>lead text</p><h4>Notes</h4><p>details</p>`,
