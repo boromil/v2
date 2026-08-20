@@ -694,12 +694,14 @@ func (h *handler) sseEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.tplFor(user.Language).ExecuteTemplate(&rowBuf, "entry_row", map[string]any{
-		"ID":      entry.ID,
-		"Title":   entry.Title,
-		"Status":  entry.Status,
-		"Starred": entry.Starred,
-		"Date":    entry.Date,
-		"Feed":    detail.Feed,
+		"ID":              entry.ID,
+		"Title":           entry.Title,
+		"Status":          entry.Status,
+		"Starred":         entry.Starred,
+		"Date":            entry.Date,
+		"Feed":            detail.Feed,
+		"ReadingTime":     entry.ReadingTime,
+		"ShowReadingTime": user.ShowReadingTime,
 	}); err != nil {
 		response.HTMLServerError(w, r, fmt.Errorf("entry_row template: %w", err))
 		return
@@ -831,11 +833,13 @@ func (h *handler) sseToggleEntryStatus(w http.ResponseWriter, r *http.Request) {
 		}
 		var rowBuf bytes.Buffer
 		rowView := map[string]any{
-			"ID":      entry.ID,
-			"Title":   entry.Title,
-			"Status":  newStatus,
-			"Starred": entry.Starred,
-			"Date":    entry.Date,
+			"ID":              entry.ID,
+			"Title":           entry.Title,
+			"Status":          newStatus,
+			"Starred":         entry.Starred,
+			"Date":            entry.Date,
+			"ReadingTime":     entry.ReadingTime,
+			"ShowReadingTime": user.ShowReadingTime,
 		}
 		if entry.Feed != nil {
 			rowView["Feed"] = &feedRef{Title: entry.Feed.Title, ID: entry.Feed.ID}

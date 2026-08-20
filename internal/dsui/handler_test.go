@@ -1645,3 +1645,62 @@ func TestSSEFetchContentKeepsParityFields(t *testing.T) {
 		t.Error("scraped content must replace the original body")
 	}
 }
+
+// TestRowRerenderKeepsReadingTime verifies the SSE paths that re-render a
+// single entry row (sseEntry, toggle-status) include ReadingTime/
+// ShowReadingTime so the row's reading-time chip survives row patches when
+// the user preference is enabled.
+func TestRowRerenderKeepsReadingTime(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	user.ShowReadingTime = true
+	if err := store.UpdateUser(user); err != nil {
+		t.Fatalf("failed to update user: %v", err)
+	}
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	entry := &model.Entry{
+		UserID:      user.ID,
+		FeedID:      feed.ID,
+		Hash:        "hash_row_reading_time_" + t.Name(),
+		Title:       "Row Reading Time",
+		Content:     "some body text",
+		URL:         "https://example.com/row-reading-time",
+		Date:        time.Now(),
+		ReadingTime: 7,
+	}
+	if _, err := store.InsertEntryForFeed(user.ID, feed.ID, entry); err != nil {
+		t.Fatalf("failed to insert entry: %v", err)
+	}
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	// sseEntry path
+	req := httptest.NewRequest(http.MethodGet, "/ds/sse/entry/"+itoa(entry.ID), nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("sseEntry: expected 200, got %d", w.Code)
+	}
+	printer := locale.NewPrinter(user.Language)
+	want := printer.Plural("entry.estimated_reading_time", 7, 7)
+	if !strings.Contains(w.Body.String(), want) {
+		t.Errorf("sseEntry row patch must keep reading time %q\nbody: %s", want, w.Body.String())
+	}
+
+	// toggle-status path
+	req = httptest.NewRequest(http.MethodPost, "/ds/sse/entry/status", strings.NewReader(`{"entryIds":[`+itoa(entry.ID)+`]}`))
+	req.Header.Set("Content-Type", "application/json")
+	req, csrf := authenticateTestSession(t, store, req, user)
+	req.Header.Set("X-Csrf-Token", csrf)
+	w = httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("toggle-status: expected 200, got %d", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), want) {
+		t.Errorf("toggle-status row patch must keep reading time %q\nbody: %s", want, w.Body.String())
+	}
+}
