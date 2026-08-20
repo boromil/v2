@@ -182,6 +182,7 @@ type appViewModel struct {
 	KeyboardChecksum   string
 	ComponentsChecksum string
 	ListTitle          string
+	EmptyMessage       string
 	CanMarkAllRead     bool
 	Entries            []entryView
 	SelectedEntry      *entryDetailView
@@ -296,6 +297,7 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 	// Build subscription menu.
 	vm.MenuSections = h.buildMenu(user, viewName, feedID, categoryID)
 	vm.ListTitle = listTitleForView(viewName, feedID, categoryID, h.store, user.ID, user.Language)
+	vm.EmptyMessage = emptyMessageForView(printerFor(user.Language), viewName)
 	vm.Title = vm.ListTitle + " — Miniflux"
 	nav, _ := h.store.GetNavMetadata(user.ID)
 	vm.CountUnread = nav.CountUnread
@@ -597,7 +599,7 @@ func (h *handler) sseEntries(w http.ResponseWriter, r *http.Request) {
 	// Build fragments: entry list + optional pagination.
 	fragments := []SSEFragment{}
 	var listBuf bytes.Buffer
-	if err := h.tplFor(user.Language).ExecuteTemplate(&listBuf, "entry_list", map[string]any{"Entries": evs}); err != nil {
+	if err := h.tplFor(user.Language).ExecuteTemplate(&listBuf, "entry_list", map[string]any{"Entries": evs, "EmptyMessage": emptyMessageForView(printerFor(user.Language), req.View)}); err != nil {
 		response.HTMLServerError(w, r, fmt.Errorf("entry_list template: %w", err))
 		return
 	}
@@ -926,7 +928,7 @@ func (h *handler) sseMarkAllRead(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var listBuf, subBuf bytes.Buffer
-	if err := h.tplFor(user.Language).ExecuteTemplate(&listBuf, "entry_list", map[string]any{"Entries": evs}); err != nil {
+	if err := h.tplFor(user.Language).ExecuteTemplate(&listBuf, "entry_list", map[string]any{"Entries": evs, "EmptyMessage": emptyMessageForView(printerFor(user.Language), req.View)}); err != nil {
 		response.HTMLServerError(w, r, fmt.Errorf("entry_list template: %w", err))
 		return
 	}
@@ -1034,7 +1036,7 @@ func (h *handler) sseMarkPageRead(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var listBuf bytes.Buffer
-	if err := h.tplFor(user.Language).ExecuteTemplate(&listBuf, "entry_list", map[string]any{"Entries": evs}); err != nil {
+	if err := h.tplFor(user.Language).ExecuteTemplate(&listBuf, "entry_list", map[string]any{"Entries": evs, "EmptyMessage": emptyMessageForView(printerFor(user.Language), req.View)}); err != nil {
 		response.HTMLServerError(w, r, fmt.Errorf("entry_list template: %w", err))
 		return
 	}
@@ -1363,6 +1365,25 @@ func listTitleForView(view string, feedID, categoryID int64, store *storage.Stor
 		return printer.Print("menu.categories")
 	default:
 		return printer.Print("page.unread.title")
+	}
+}
+
+// emptyMessageForView returns the localized empty-state message for the view,
+// mirroring the classic UI's per-view alert strings.
+func emptyMessageForView(printer *locale.Printer, view string) string {
+	switch view {
+	case "starred":
+		return printer.Print("alert.no_starred")
+	case "history":
+		return printer.Print("alert.no_history")
+	case "search":
+		return printer.Print("alert.no_search_result")
+	case "feed":
+		return printer.Print("alert.no_feed_entry")
+	case "category":
+		return printer.Print("alert.no_category_entry")
+	default:
+		return printer.Print("alert.no_unread_entry")
 	}
 }
 

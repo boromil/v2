@@ -45,6 +45,25 @@
     el.click();
   }
 
+  // Loads the entry for the given row (triggers the row's SSE fetch).
+  function loadEntry(row) {
+    if (row) clickElement(row);
+  }
+
+  // Classic-UI style prev/next entry navigation within the reading pane:
+  // moves the list selection and loads the entry.
+  function navigateEntry(delta) {
+    var rows = getVisibleEntryRows();
+    if (rows.length === 0) return;
+    if (selectedIdx === -1) {
+      selectedIdx = 0;
+    } else {
+      selectedIdx = Math.max(0, Math.min(selectedIdx + delta, rows.length - 1));
+    }
+    selectRow(rows[selectedIdx]);
+    loadEntry(rows[selectedIdx]);
+  }
+
   function getSelectedRow() {
     var rows = getVisibleEntryRows();
     if (selectedIdx >= 0 && selectedIdx < rows.length) {
@@ -77,6 +96,16 @@
         } else {
           selectIndex(selectedIdx - 1);
         }
+        break;
+
+      case "n":
+        e.preventDefault();
+        navigateEntry(1);
+        break;
+
+      case "p":
+        e.preventDefault();
+        navigateEntry(-1);
         break;
 
       case "Enter":

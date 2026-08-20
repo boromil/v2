@@ -460,7 +460,7 @@ func TestShowAppEmptyEntries(t *testing.T) {
 		t.Errorf("expected status 200, got %d: %s", w.Code, w.Body.String())
 	}
 	body := w.Body.String()
-	if !strings.Contains(body, "No entries to display") {
+	if !strings.Contains(body, "There are no unread entries") {
 		t.Error("expected empty state message when no entries exist")
 	}
 	if strings.Contains(body, "entry-row") {
@@ -887,7 +887,7 @@ func TestSearchNoMatchShowsEmptyState(t *testing.T) {
 	if strings.Contains(body, "Go Programming") {
 		t.Error("no-match search must not return existing entries")
 	}
-	if !strings.Contains(body, "No entries to display") {
+	if !strings.Contains(body, "There are no results for this search") {
 		t.Error("no-match search should render the empty state")
 	}
 	if !strings.Contains(body, "selector #entry-list") || !strings.Contains(body, "mode inner") {
