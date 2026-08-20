@@ -76,6 +76,11 @@
     return sel || (rows.length > 0 ? rows[0] : null);
   }
 
+  function toggleShortcutsOverlay() {
+    var overlay = document.getElementById("shortcuts-overlay");
+    if (overlay) overlay.hidden = !overlay.hidden;
+  }
+
   document.addEventListener("keydown", function (e) {
     if (inputFocused()) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -181,6 +186,24 @@
       case "r":
         e.preventDefault();
         window.location.reload();
+        break;
+
+      case "/":
+        e.preventDefault();
+        var search = document.querySelector('.top-nav input[type="search"]');
+        if (search) search.focus();
+        break;
+
+      case "?":
+        e.preventDefault();
+        toggleShortcutsOverlay();
+        break;
+
+      case "Escape":
+        var overlay = document.getElementById("shortcuts-overlay");
+        if (overlay && !overlay.hidden) {
+          overlay.hidden = true;
+        }
         break;
     }
   });
