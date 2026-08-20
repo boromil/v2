@@ -1222,3 +1222,58 @@ func TestSSEEntriesCategoryClickOverridesStaleSearchSignals(t *testing.T) {
 		t.Error("expected view signal to be reset to category")
 	}
 }
+
+// TestSSEEntriesHonorsSortingPreferences verifies that entry lists are sorted
+// by the user's entry order/direction preferences like the classic UI
+// (regression test for hardcoded published_at DESC).
+func TestSSEEntriesHonorsSortingPreferences(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+
+	now := time.Now()
+	oldEntry := &model.Entry{
+		UserID: user.ID, FeedID: feed.ID,
+		Hash: "hash_sort_old_" + t.Name(), Title: "Oldest Entry", Content: "c",
+		URL: "https://example.com/sort_old", Date: now.Add(-48 * time.Hour),
+	}
+	newEntry := &model.Entry{
+		UserID: user.ID, FeedID: feed.ID,
+		Hash: "hash_sort_new_" + t.Name(), Title: "Newest Entry", Content: "c",
+		URL: "https://example.com/sort_new", Date: now.Add(-1 * time.Hour),
+	}
+	for _, e := range []*model.Entry{newEntry, oldEntry} { // insert newest first
+		if _, err := store.InsertEntryForFeed(user.ID, feed.ID, e); err != nil {
+			t.Fatalf("failed to insert entry: %v", err)
+		}
+	}
+
+	user.EntryOrder = model.DefaultSortingOrder
+	user.EntryDirection = "asc"
+	if err := store.UpdateUser(user); err != nil {
+		t.Fatalf("failed to update user prefs: %v", err)
+	}
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	req := httptest.NewRequest(http.MethodGet, "/ds/sse/entries?view=unread", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	oldPos := strings.Index(body, "Oldest Entry")
+	newPos := strings.Index(body, "Newest Entry")
+	if oldPos == -1 || newPos == -1 {
+		t.Fatal("expected both entries in response")
+	}
+	if oldPos > newPos {
+		t.Error("expected oldest entry first with asc direction preference")
+	}
+}
