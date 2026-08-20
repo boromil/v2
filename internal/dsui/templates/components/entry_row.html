@@ -12,6 +12,9 @@
         <span class="feed-name truncate">{{.Feed.Title}}</span>
         {{end}}
         <span class="entry-date">{{elapsed .Date}}</span>
+        {{if and .ShowReadingTime (gt .ReadingTime 0)}}
+        <span class="entry-reading-time">{{plural "entry.estimated_reading_time" .ReadingTime .ReadingTime}}</span>
+        {{end}}
     </div>
 </entry-row>
 {{end}}

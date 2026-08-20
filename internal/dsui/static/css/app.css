@@ -815,6 +815,11 @@ html[data-theme="dark"] .resize-handle {
   margin-left: auto;
 }
 
+.entry-meta .entry-reading-time {
+  flex-shrink: 0;
+  color: var(--color-gray-400);
+}
+
 /* Star button */
 .star-btn {
   color: var(--color-gray-400);
