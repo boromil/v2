@@ -14,7 +14,7 @@
     <script src="/ds/js/{{.ComponentsChecksum}}/components" defer></script>
 </head>
 <body class="m-0 p-0 overflow-hidden h-screen font-sans antialiased"
-    data-signals='{"selectedIdx": -1, "selectedEntryId": 0, "countUnread": {{.CountUnread}}, "countErrorFeeds": {{.CountErrorFeeds}}, "csrfToken": "{{.CSRFToken}}", "searchQuery": "", "view": "{{.ViewName}}", "feedId": {{.FeedID}}, "categoryId": {{.CategoryID}}, "offset": {{.Offset}}}'
+    data-signals='{"selectedIdx": -1, "selectedEntryId": 0, "countUnread": {{.CountUnread}}, "countErrorFeeds": {{.CountErrorFeeds}}, "csrfToken": "{{.CSRFToken}}", "searchQuery": "", "searchUnreadOnly": false, "view": "{{.ViewName}}", "feedId": {{.FeedID}}, "categoryId": {{.CategoryID}}, "offset": {{.Offset}}}'
     data-csrf-token="{{.CSRFToken}}">
     <div id="toast-error" class="toast toast-error" data-show="$importError" style="display:none" data-on:click="$importError = ''">
         <span data-text="$importError"></span>

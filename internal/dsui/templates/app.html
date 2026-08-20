@@ -36,6 +36,12 @@
                     style="width:120px;font-size:0.75rem;padding:0.125rem 0.375rem;border:1px solid var(--color-gray-400);border-radius:0.25rem;color:var(--color-gray-800);background:var(--color-white);"
                     data-on:input__debounce.500ms="$view = 'search'; $searchQuery = evt.target.value; @get('/ds/sse/entries?view=search')"
                     value="{{.SearchQuery}}">
+                <label class="search-unread-toggle" title="{{t "menu.unread"}}" style="font-size:0.7rem;color:var(--color-gray-600);display:flex;align-items:center;gap:0.2rem;margin:0;cursor:pointer;">
+                    <input type="checkbox" data-bind:searchUnreadOnly
+                        data-on:change="$view = 'search'; @get('/ds/sse/entries?view=search')"
+                        style="margin:0;">
+                    {{t "menu.unread"}}
+                </label>
             </form>
             {{if .CanMarkAllRead}}
             <button class="mark-read-btn" data-on:click="@post('/ds/sse/mark-page-read')">{{t "menu.mark_page_as_read"}}</button>
