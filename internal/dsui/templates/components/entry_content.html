@@ -35,17 +35,29 @@
     {{range .SelectedEntry.Enclosures}}
     <div class="entry-enclosure-item">
         {{if .IsAudio}}
-        <div class="flex items-center gap-2 mb-1 text-sm">
-            <audio controls preload="metadata" style="width:100%; max-width:400px;" data-mime="{{.MimeType}}">
-                <source src="{{.URL}}" type="{{.Html5Mime}}">
-            </audio>
-            <a href="{{.URL}}" class="text-xs no-underline" download style="color:var(--color-blue-600);">{{t "action.download"}}</a>
+        <div class="enclosure-media mb-1">
+            <div class="flex items-center gap-2 text-sm">
+                <audio controls preload="metadata" style="width:100%; max-width:400px;"
+                    data-mime="{{.MimeType}}"
+                    data-enclosure-id="{{.ID}}"
+                    data-last-position="{{.MediaProgression}}"
+                    data-save-url="/entry/enclosure/{{.ID}}/save-progression">
+                    <source src="{{.URL}}" type="{{.Html5Mime}}">
+                </audio>
+                <a href="{{.URL}}" class="text-xs no-underline" download style="color:var(--color-blue-600);">{{t "action.download"}}</a>
+            </div>
+            {{template "enclosure_media_controls" .}}
         </div>
         {{else if .IsVideo}}
-        <div class="mb-2">
-            <video controls preload="metadata" style="width:100%; max-width:640px;" data-mime="{{.MimeType}}">
+        <div class="enclosure-media mb-2">
+            <video controls preload="metadata" style="width:100%; max-width:640px;"
+                data-mime="{{.MimeType}}"
+                data-enclosure-id="{{.ID}}"
+                data-last-position="{{.MediaProgression}}"
+                data-save-url="/entry/enclosure/{{.ID}}/save-progression">
                 <source src="{{.URL}}" type="{{.Html5Mime}}">
             </video>
+            {{template "enclosure_media_controls" .}}
         </div>
         {{else if .IsImage}}
         <div class="mb-2">
@@ -66,4 +78,18 @@
     <p>{{t "alert.no_unread_entry"}}</p>
 </div>
 {{end}}
+{{end}}
+
+{{define "enclosure_media_controls"}}
+<div class="media-controls" data-media-controls-for="{{.ID}}">
+    <button type="button" class="media-ctrl-btn" data-seek="-30" title="{{t "enclosure_media_controls.seek.title" "-30"}}">-30s</button>
+    <button type="button" class="media-ctrl-btn" data-seek="-10" title="{{t "enclosure_media_controls.seek.title" "-10"}}">-10s</button>
+    <button type="button" class="media-ctrl-btn" data-seek="10" title="{{t "enclosure_media_controls.seek.title" "+10"}}">+10s</button>
+    <button type="button" class="media-ctrl-btn" data-seek="30" title="{{t "enclosure_media_controls.seek.title" "+30"}}">+30s</button>
+    <span class="media-speed">
+        <button type="button" class="media-ctrl-btn" data-speed="-0.25" title="{{t "enclosure_media_controls.speed.slower.title" "0.25"}}">{{t "enclosure_media_controls.speed.slower"}}</button>
+        <span class="speed-indicator" data-speed-indicator-for="{{.ID}}">1.00x</span>
+        <button type="button" class="media-ctrl-btn" data-speed="0.25" title="{{t "enclosure_media_controls.speed.faster.title" "0.25"}}">{{t "enclosure_media_controls.speed.faster"}}</button>
+    </span>
+</div>
 {{end}}
