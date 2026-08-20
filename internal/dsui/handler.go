@@ -231,13 +231,15 @@ type entryDetailView struct {
 }
 
 type enclosureView struct {
-	URL       string
-	MimeType  string
-	Html5Mime string
-	Size      int64
-	IsAudio   bool
-	IsVideo   bool
-	IsImage   bool
+	ID               int64
+	URL              string
+	MimeType         string
+	Html5Mime        string
+	Size             int64
+	MediaProgression int64
+	IsAudio          bool
+	IsVideo          bool
+	IsImage          bool
 }
 
 type paginationView struct {
@@ -1194,13 +1196,15 @@ func entryToDetailView(entry *model.Entry, user *model.User) *entryDetailView {
 	}
 	for _, enc := range entry.Enclosures {
 		d.Enclosures = append(d.Enclosures, enclosureView{
-			URL:       enc.URL,
-			MimeType:  enc.MimeType,
-			Html5Mime: enc.Html5MimeType(),
-			Size:      enc.Size,
-			IsAudio:   enc.IsAudio(),
-			IsVideo:   enc.IsVideo(),
-			IsImage:   enc.IsImage(),
+			ID:               enc.ID,
+			URL:              enc.URL,
+			MimeType:         enc.MimeType,
+			Html5Mime:        enc.Html5MimeType(),
+			Size:             enc.Size,
+			MediaProgression: enc.MediaProgression,
+			IsAudio:          enc.IsAudio(),
+			IsVideo:          enc.IsVideo(),
+			IsImage:          enc.IsImage(),
 		})
 	}
 	return d

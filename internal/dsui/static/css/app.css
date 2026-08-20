@@ -2015,3 +2015,57 @@ html:not([data-theme="light"]) .shortcuts-list dd,
 html[data-theme="dark"] .shortcuts-list dd {
   color: #a0a0c0;
 }
+
+/* Enclosure media controls */
+.media-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
+.media-ctrl-btn {
+  font-size: 0.6875rem;
+  padding: 0.1rem 0.4rem;
+  border: 1px solid var(--color-gray-300);
+  border-radius: 0.25rem;
+  background-color: var(--color-white);
+  color: var(--color-gray-700);
+  cursor: pointer;
+}
+
+.media-ctrl-btn:hover {
+  background-color: var(--color-gray-100);
+}
+
+.media-speed {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.speed-indicator {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--color-gray-500);
+  min-width: 3rem;
+  text-align: center;
+}
+
+html:not([data-theme="light"]) .media-ctrl-btn,
+html[data-theme="dark"] .media-ctrl-btn {
+  background-color: #20203a;
+  border-color: #2a2a4a;
+  color: #b8b8d0;
+}
+
+html:not([data-theme="light"]) .media-ctrl-btn:hover,
+html[data-theme="dark"] .media-ctrl-btn:hover {
+  background-color: #2a2a4a;
+}
+
+html:not([data-theme="light"]) .speed-indicator,
+html[data-theme="dark"] .speed-indicator {
+  color: #8888aa;
+}
