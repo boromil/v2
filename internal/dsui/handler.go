@@ -304,7 +304,7 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 	vm.CountErrorFeeds = nav.CountErrorFeeds
 
 	// Load entries.
-	entries, total, err := h.queryEntriesSorted(user.ID, viewName, feedID, categoryID, searchQuery, offset, user.EntriesPerPage, user.EntryOrder, user.EntryDirection)
+	entries, total, err := h.queryEntriesSorted(user.ID, viewName, feedID, categoryID, searchQuery, false, offset, user.EntriesPerPage, user.EntryOrder, user.EntryDirection)
 	if err != nil {
 		response.HTMLServerError(w, r, err)
 		return
@@ -564,7 +564,7 @@ func (h *handler) sseEntries(w http.ResponseWriter, r *http.Request) {
 		req.Offset = 0
 	}
 
-	entries, total, err := h.queryEntriesSorted(user.ID, req.View, req.FeedID, req.CategoryID, req.SearchQuery, req.Offset, user.EntriesPerPage, user.EntryOrder, user.EntryDirection)
+	entries, total, err := h.queryEntriesSorted(user.ID, req.View, req.FeedID, req.CategoryID, req.SearchQuery, req.SearchUnreadOnly, req.Offset, user.EntriesPerPage, user.EntryOrder, user.EntryDirection)
 	if err != nil {
 		response.HTMLServerError(w, r, err)
 		return
@@ -575,7 +575,7 @@ func (h *handler) sseEntries(w http.ResponseWriter, r *http.Request) {
 	// instead of rendering an empty list.
 	if req.Offset >= total && total > 0 {
 		req.Offset = 0
-		entries, total, err = h.queryEntriesSorted(user.ID, req.View, req.FeedID, req.CategoryID, req.SearchQuery, req.Offset, user.EntriesPerPage, user.EntryOrder, user.EntryDirection)
+		entries, total, err = h.queryEntriesSorted(user.ID, req.View, req.FeedID, req.CategoryID, req.SearchQuery, req.SearchUnreadOnly, req.Offset, user.EntriesPerPage, user.EntryOrder, user.EntryDirection)
 		if err != nil {
 			response.HTMLServerError(w, r, err)
 			return
@@ -907,7 +907,7 @@ func (h *handler) sseMarkAllRead(w http.ResponseWriter, r *http.Request) {
 
 	// Rebuild entry list and subscription tree for SSE patches.
 	sections := h.buildMenu(user, req.View, req.FeedID, req.CategoryID)
-	entries, _, err := h.queryEntriesSorted(user.ID, req.View, req.FeedID, req.CategoryID, req.SearchQuery, 0, user.EntriesPerPage, user.EntryOrder, user.EntryDirection)
+	entries, _, err := h.queryEntriesSorted(user.ID, req.View, req.FeedID, req.CategoryID, req.SearchQuery, req.SearchUnreadOnly, 0, user.EntriesPerPage, user.EntryOrder, user.EntryDirection)
 	if err != nil {
 		response.HTMLServerError(w, r, err)
 		return
@@ -1003,7 +1003,7 @@ func (h *handler) sseMarkPageRead(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load current page entries and mark them as read.
-	entries, _, err := h.queryEntriesSorted(user.ID, req.View, req.FeedID, req.CategoryID, req.SearchQuery, req.Offset, user.EntriesPerPage, user.EntryOrder, user.EntryDirection)
+	entries, _, err := h.queryEntriesSorted(user.ID, req.View, req.FeedID, req.CategoryID, req.SearchQuery, req.SearchUnreadOnly, req.Offset, user.EntriesPerPage, user.EntryOrder, user.EntryDirection)
 	if err != nil {
 		response.HTMLServerError(w, r, err)
 		return
@@ -1020,7 +1020,7 @@ func (h *handler) sseMarkPageRead(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Reload page for updated statuses and patch.
-	entries, _, _ = h.queryEntriesSorted(user.ID, req.View, req.FeedID, req.CategoryID, req.SearchQuery, req.Offset, user.EntriesPerPage, user.EntryOrder, user.EntryDirection)
+	entries, _, _ = h.queryEntriesSorted(user.ID, req.View, req.FeedID, req.CategoryID, req.SearchQuery, req.SearchUnreadOnly, req.Offset, user.EntriesPerPage, user.EntryOrder, user.EntryDirection)
 	evs := make([]entryView, len(entries))
 	for i, e := range entries {
 		evs[i] = entryView{
@@ -1196,14 +1196,14 @@ func entryToDetailView(entry *model.Entry, user *model.User) *entryDetailView {
 }
 
 func (h *handler) queryEntries(userID int64, view string, feedID, categoryID int64, searchQuery string, offset, limit int) (model.Entries, int, error) {
-	return h.queryEntriesSorted(userID, view, feedID, categoryID, searchQuery, offset, limit, model.DefaultSortingOrder, "desc")
+	return h.queryEntriesSorted(userID, view, feedID, categoryID, searchQuery, false, offset, limit, model.DefaultSortingOrder, "desc")
 }
 
 // queryEntriesSorted runs the entry query with explicit sorting. The classic
 // UI passes user.EntryOrder/user.EntryDirection from every list handler; the
 // helpers without them keep the historical dsui default (newest first) for
 // callers without a user context.
-func (h *handler) queryEntriesSorted(userID int64, view string, feedID, categoryID int64, searchQuery string, offset, limit int, order, direction string) (model.Entries, int, error) {
+func (h *handler) queryEntriesSorted(userID int64, view string, feedID, categoryID int64, searchQuery string, searchUnreadOnly bool, offset, limit int, order, direction string) (model.Entries, int, error) {
 	builder := h.store.NewEntryQueryBuilder(userID).WithGloballyVisible()
 
 	switch view {
@@ -1216,6 +1216,9 @@ func (h *handler) queryEntriesSorted(userID int64, view string, feedID, category
 	case "search":
 		if searchQuery != "" {
 			builder.WithSearchQuery(searchQuery)
+		}
+		if searchUnreadOnly {
+			builder.WithStatuses(model.EntryStatusUnread)
 		}
 	case "feed":
 		builder.WithFeedID(feedID)
