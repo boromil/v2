@@ -545,6 +545,18 @@ func (h *handler) sseEntries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Like the classic UI, an offset beyond the last page (e.g. after entries
+	// were marked read and the list shrank) falls back to the first page
+	// instead of rendering an empty list.
+	if req.Offset >= total && total > 0 {
+		req.Offset = 0
+		entries, total, err = h.queryEntriesSorted(user.ID, req.View, req.FeedID, req.CategoryID, req.SearchQuery, req.Offset, user.EntriesPerPage, user.EntryOrder, user.EntryDirection)
+		if err != nil {
+			response.HTMLServerError(w, r, err)
+			return
+		}
+	}
+
 	evs := make([]entryView, len(entries))
 	for i, e := range entries {
 		evs[i] = entryView{

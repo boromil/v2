@@ -1277,3 +1277,38 @@ func TestSSEEntriesHonorsSortingPreferences(t *testing.T) {
 		t.Error("expected oldest entry first with asc direction preference")
 	}
 }
+
+// TestSSEEntriesOffsetOverflowResetsToFirstPage verifies that requesting an
+// offset beyond the last page falls back to page one instead of an empty list
+// (parity with the classic UI pagination behavior).
+func TestSSEEntriesOffsetOverflowResetsToFirstPage(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	user.EntriesPerPage = 2
+	if err := store.UpdateUser(user); err != nil {
+		t.Fatalf("failed to update user prefs: %v", err)
+	}
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	_ = mtest.CreateTestEntries(t, store, user.ID, feed.ID, 3)
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	req := httptest.NewRequest(http.MethodGet, "/ds/sse/entries?view=unread&offset=1000", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "entry-row") {
+		t.Error("expected entry rows on offset overflow, got empty list")
+	}
+	if !strings.Contains(body, `"offset":0`) {
+		t.Error("expected offset signal to be reset to 0")
+	}
+}
