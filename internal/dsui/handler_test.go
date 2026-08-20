@@ -1573,3 +1573,75 @@ func TestEntryDetailDateLocalized(t *testing.T) {
 		})
 	}
 }
+
+// TestSSEFetchContentKeepsParityFields verifies the detail re-render after a
+// scrape keeps entry parity fields (tags, comments URL, reading time,
+// enclosures) instead of dropping them, matching the pre-scrape header.
+func TestSSEFetchContentKeepsParityFields(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+
+	t.Setenv("FETCHER_ALLOW_PRIVATE_NETWORKS", "1")
+	configParser := config.NewConfigParser()
+	parsedOptions, err := configParser.ParseEnvironmentVariables()
+	if err != nil {
+		t.Fatalf("unable to configure test options: %v", err)
+	}
+	prevOpts := config.Opts
+	config.Opts = parsedOptions
+	t.Cleanup(func() { config.Opts = prevOpts })
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(`<html><body><h1>Scraped</h1><p>Scraped body</p></body></html>`))
+	}))
+	t.Cleanup(srv.Close)
+
+	entry := &model.Entry{
+		UserID:      user.ID,
+		FeedID:      feed.ID,
+		Hash:        "hash_fetch_parity_" + t.Name(),
+		Title:       "Fetch Parity",
+		Content:     "original body",
+		URL:         srv.URL + "/article",
+		Date:        time.Now(),
+		CommentsURL: "https://comments.example.com/item?id=1",
+		ReadingTime: 4,
+		Tags:        []string{"golang"},
+		Enclosures: []*model.Enclosure{
+			{URL: "https://example.com/audio.mp3", MimeType: "audio/mpeg"},
+		},
+	}
+	if _, err := store.InsertEntryForFeed(user.ID, feed.ID, entry); err != nil {
+		t.Fatalf("failed to insert test entry: %v", err)
+	}
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	req := httptest.NewRequest(http.MethodPost, "/ds/sse/fetch-content/"+itoa(entry.ID), strings.NewReader(`{}`))
+	req.Header.Set("Content-Type", "application/json")
+	req, csrf := authenticateTestSession(t, store, req, user)
+	req.Header.Set("X-Csrf-Token", csrf)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"golang",                              // tag chip
+		"https://comments.example.com/item?id=1", // comments link
+		"audio.mp3",                           // enclosure
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("scraped re-render must keep %q\nbody excerpt: %s", want, body)
+		}
+	}
+	if !strings.Contains(body, "Scraped body") {
+		t.Error("scraped content must replace the original body")
+	}
+}

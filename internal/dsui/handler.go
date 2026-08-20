@@ -1101,20 +1101,20 @@ func (h *handler) sseFetchContent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	content := mediaproxy.RewriteDocumentWithRelativeProxyURL(entry.Content)
-	detail := &entryDetailView{
-		ID:      entry.ID,
-		Title:   entry.Title,
-		Author:  entry.Author,
-		Date:    entry.Date,
-		Content: template.HTML(content),
-		Starred: entry.Starred,
-		URL:     entry.URL,
-		Status:  entry.Status,
+	// Re-fetch the entry with enclosures so the re-rendered detail keeps all
+	// parity fields (tags, comments URL, reading time, enclosures, share
+	// code) instead of dropping them after a scrape. entryToDetailView also
+	// applies the media proxy to the fresh content.
+	fullEntry, err := h.store.NewEntryQueryBuilder(user.ID).
+		WithEntryIDs(entry.ID).
+		WithEnclosures().
+		GetEntry()
+	if err != nil || fullEntry == nil {
+		response.HTMLServerError(w, r, err)
+		return
 	}
-	if entry.Feed != nil {
-		detail.Feed = &feedRef{Title: entry.Feed.Title, ID: entry.Feed.ID}
-	}
+	fullEntry.Status = entry.Status
+	detail := entryToDetailView(fullEntry, user)
 
 	var buf bytes.Buffer
 	if err := h.tplFor(user.Language).ExecuteTemplate(&buf, "entry_content", map[string]any{"SelectedEntry": detail}); err != nil {
