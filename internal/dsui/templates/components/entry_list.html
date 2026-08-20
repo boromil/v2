@@ -5,7 +5,7 @@
 {{end}}
 {{else}}
 <div class="empty-state">
-    <p>No entries to display.</p>
+    <p>{{if .EmptyMessage}}{{.EmptyMessage}}{{else}}{{t "alert.no_unread_entry"}}{{end}}</p>
 </div>
 {{end}}
 {{end}}
