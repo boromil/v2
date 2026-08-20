@@ -659,14 +659,18 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  .resize-handle {
+html:not([data-theme="light"]) .resize-handle {
     background: #2a2a4a;
-  }
-  .resize-handle:hover,
-  .resize-handle.active {
+  }html:not([data-theme="light"]) .resize-handle:hover, html:not([data-theme="light"]) .resize-handle.active {
     background: #4a9eff;
   }
 }
+
+html[data-theme="dark"] .resize-handle {
+    background: #2a2a4a;
+  }html[data-theme="dark"] .resize-handle:hover, html[data-theme="dark"] .resize-handle.active {
+    background: #4a9eff;
+  }
 
 /* Entry content panel */
 #entry-content-panel {
@@ -1109,188 +1113,207 @@
 
 /* Dark mode mobile nav */
 @media (prefers-color-scheme: dark) {
-  .mobile-nav {
+html:not([data-theme="light"]) .mobile-nav {
     background-color: #16213e;
     border-bottom-color: #2a2a4a;
-  }
-
-  .mobile-nav button {
+  }html:not([data-theme="light"]) .mobile-nav button {
     color: #8888aa;
-  }
-
-  .mobile-nav button.active {
+  }html:not([data-theme="light"]) .mobile-nav button.active {
     color: #6ab0ff;
     border-bottom-color: #6ab0ff;
   }
 }
 
+html[data-theme="dark"] .mobile-nav {
+    background-color: #16213e;
+    border-bottom-color: #2a2a4a;
+  }html[data-theme="dark"] .mobile-nav button {
+    color: #8888aa;
+  }html[data-theme="dark"] .mobile-nav button.active {
+    color: #6ab0ff;
+    border-bottom-color: #6ab0ff;
+  }
+
 /* Dark mode */
 @media (prefers-color-scheme: dark) {
-  :root {
+html:not([data-theme="light"]):root {
     color-scheme: dark;
-  }
-
-  body {
+  }html:not([data-theme="light"]) body {
     background-color: #1a1a2e;
     color: #e0e0e0;
-  }
-
-  #subscription-panel {
+  }html:not([data-theme="light"]) #subscription-panel {
     background-color: #16213e;
     border-right-color: #2a2a4a;
-  }
-
-  #entry-list-panel {
+  }html:not([data-theme="light"]) #entry-list-panel {
     background-color: #1a1a2e;
     border-right-color: #2a2a4a;
-  }
-
-  #entry-content-panel {
+  }html:not([data-theme="light"]) #entry-content-panel {
     background-color: #1a1a2e;
-  }
-
-  .top-nav {
+  }html:not([data-theme="light"]) .top-nav {
     background-color: #16213e;
     border-bottom-color: #2a2a4a;
-  }
-
-  .top-nav .nav-title {
+  }html:not([data-theme="light"]) .top-nav .nav-title {
     color: #e0e0e0;
-  }
-
-  .feed-tree-item {
+  }html:not([data-theme="light"]) .feed-tree-item {
     color: #c0c0d0;
-  }
-
-  .feed-tree-item:hover {
+  }html:not([data-theme="light"]) .feed-tree-item:hover {
     background-color: #2a2a4a;
-  }
-
-  .feed-tree-item.selected {
+  }html:not([data-theme="light"]) .feed-tree-item.selected {
     background-color: #1a3a6a;
     border-right-color: #4a9eff;
-  }
-
-  .feed-tree-item .unread-count {
+  }html:not([data-theme="light"]) .feed-tree-item .unread-count {
     color: #8888aa;
-  }
-
-  .feed-tree-item.selected .unread-count {
+  }html:not([data-theme="light"]) .feed-tree-item.selected .unread-count {
     color: #4a9eff;
-  }
-
-  .feed-tree-section {
+  }html:not([data-theme="light"]) .feed-tree-section {
     color: #666688;
-  }
-
-  .entry-row {
+  }html:not([data-theme="light"]) .entry-row {
     border-bottom-color: #2a2a4a;
-  }
-
-  .entry-row:hover {
+  }html:not([data-theme="light"]) .entry-row:hover {
     background-color: #1e1e3a;
-  }
-
-  .entry-row.selected {
+  }html:not([data-theme="light"]) .entry-row.selected {
     background-color: #1a2a4a;
-  }
-
-  .entry-row.read .entry-title {
+  }html:not([data-theme="light"]) .entry-row.read .entry-title {
     color: #7777aa;
-  }
-
-  .entry-row.unread .entry-title {
+  }html:not([data-theme="light"]) .entry-row.unread .entry-title {
     color: #e0e0e0;
-  }
-
-  .entry-meta {
+  }html:not([data-theme="light"]) .entry-meta {
     color: #666688;
-  }
-
-  .entry-meta .feed-name {
+  }html:not([data-theme="light"]) .entry-meta .feed-name {
     color: #4a9e6a;
-  }
-
-  .article-header {
+  }html:not([data-theme="light"]) .article-header {
     border-bottom-color: #2a2a4a;
-  }
-
-  .article-title {
+  }html:not([data-theme="light"]) .article-title {
     color: #e0e0e0;
-  }
-
-  .article-meta {
+  }html:not([data-theme="light"]) .article-meta {
     color: #8888aa;
-  }
-
-  .article-meta .author {
+  }html:not([data-theme="light"]) .article-meta .author {
     color: #c0c0d0;
-  }
-
-  .article-body {
+  }html:not([data-theme="light"]) .article-body {
     color: #d0d0d0;
-  }
-
-  .article-body a {
+  }html:not([data-theme="light"]) .article-body a {
     color: #6ab0ff;
-  }
-
-  .article-body pre {
+  }html:not([data-theme="light"]) .article-body pre {
     background-color: #16213e;
-  }
-
-  .article-toolbar {
+  }html:not([data-theme="light"]) .article-toolbar {
     background-color: #16213e;
     border-bottom-color: #2a2a4a;
-  }
-
-  .toolbar-btn {
+  }html:not([data-theme="light"]) .toolbar-btn {
     background-color: #1a1a2e;
     border-color: #3a3a5a;
     color: #c0c0d0;
-  }
-
-  .toolbar-btn:hover {
+  }html:not([data-theme="light"]) .toolbar-btn:hover {
     background-color: #2a2a4a;
     border-color: #4a4a6a;
-  }
-
-  .mark-read-btn {
+  }html:not([data-theme="light"]) .mark-read-btn {
     color: #6ab0ff;
-  }
-
-  .mark-read-btn:hover {
+  }html:not([data-theme="light"]) .mark-read-btn:hover {
     background-color: #1a2a4a;
-  }
-
-  .star-btn {
+  }html:not([data-theme="light"]) .star-btn {
     color: #5555aa;
-  }
-
-  .star-btn:hover {
+  }html:not([data-theme="light"]) .star-btn:hover {
     color: #ffb300;
-  }
-
-  .star-btn.starred {
+  }html:not([data-theme="light"]) .star-btn.starred {
     color: #ffb300;
-  }
-
-  .pagination {
+  }html:not([data-theme="light"]) .pagination {
     color: #8888aa;
-  }
-
-  .pagination a:hover {
+  }html:not([data-theme="light"]) .pagination a:hover {
     background-color: #2a2a4a;
-  }
-
-  .loading-indicator {
+  }html:not([data-theme="light"]) .loading-indicator {
     color: #8888aa;
-  }
-
-  .empty-state {
+  }html:not([data-theme="light"]) .empty-state {
     color: #8888aa;
   }
 }
+
+html[data-theme="dark"]:root {
+    color-scheme: dark;
+  }html[data-theme="dark"] body {
+    background-color: #1a1a2e;
+    color: #e0e0e0;
+  }html[data-theme="dark"] #subscription-panel {
+    background-color: #16213e;
+    border-right-color: #2a2a4a;
+  }html[data-theme="dark"] #entry-list-panel {
+    background-color: #1a1a2e;
+    border-right-color: #2a2a4a;
+  }html[data-theme="dark"] #entry-content-panel {
+    background-color: #1a1a2e;
+  }html[data-theme="dark"] .top-nav {
+    background-color: #16213e;
+    border-bottom-color: #2a2a4a;
+  }html[data-theme="dark"] .top-nav .nav-title {
+    color: #e0e0e0;
+  }html[data-theme="dark"] .feed-tree-item {
+    color: #c0c0d0;
+  }html[data-theme="dark"] .feed-tree-item:hover {
+    background-color: #2a2a4a;
+  }html[data-theme="dark"] .feed-tree-item.selected {
+    background-color: #1a3a6a;
+    border-right-color: #4a9eff;
+  }html[data-theme="dark"] .feed-tree-item .unread-count {
+    color: #8888aa;
+  }html[data-theme="dark"] .feed-tree-item.selected .unread-count {
+    color: #4a9eff;
+  }html[data-theme="dark"] .feed-tree-section {
+    color: #666688;
+  }html[data-theme="dark"] .entry-row {
+    border-bottom-color: #2a2a4a;
+  }html[data-theme="dark"] .entry-row:hover {
+    background-color: #1e1e3a;
+  }html[data-theme="dark"] .entry-row.selected {
+    background-color: #1a2a4a;
+  }html[data-theme="dark"] .entry-row.read .entry-title {
+    color: #7777aa;
+  }html[data-theme="dark"] .entry-row.unread .entry-title {
+    color: #e0e0e0;
+  }html[data-theme="dark"] .entry-meta {
+    color: #666688;
+  }html[data-theme="dark"] .entry-meta .feed-name {
+    color: #4a9e6a;
+  }html[data-theme="dark"] .article-header {
+    border-bottom-color: #2a2a4a;
+  }html[data-theme="dark"] .article-title {
+    color: #e0e0e0;
+  }html[data-theme="dark"] .article-meta {
+    color: #8888aa;
+  }html[data-theme="dark"] .article-meta .author {
+    color: #c0c0d0;
+  }html[data-theme="dark"] .article-body {
+    color: #d0d0d0;
+  }html[data-theme="dark"] .article-body a {
+    color: #6ab0ff;
+  }html[data-theme="dark"] .article-body pre {
+    background-color: #16213e;
+  }html[data-theme="dark"] .article-toolbar {
+    background-color: #16213e;
+    border-bottom-color: #2a2a4a;
+  }html[data-theme="dark"] .toolbar-btn {
+    background-color: #1a1a2e;
+    border-color: #3a3a5a;
+    color: #c0c0d0;
+  }html[data-theme="dark"] .toolbar-btn:hover {
+    background-color: #2a2a4a;
+    border-color: #4a4a6a;
+  }html[data-theme="dark"] .mark-read-btn {
+    color: #6ab0ff;
+  }html[data-theme="dark"] .mark-read-btn:hover {
+    background-color: #1a2a4a;
+  }html[data-theme="dark"] .star-btn {
+    color: #5555aa;
+  }html[data-theme="dark"] .star-btn:hover {
+    color: #ffb300;
+  }html[data-theme="dark"] .star-btn.starred {
+    color: #ffb300;
+  }html[data-theme="dark"] .pagination {
+    color: #8888aa;
+  }html[data-theme="dark"] .pagination a:hover {
+    background-color: #2a2a4a;
+  }html[data-theme="dark"] .loading-indicator {
+    color: #8888aa;
+  }html[data-theme="dark"] .empty-state {
+    color: #8888aa;
+  }
 
 /* File input styling */
 input[type="file"] {
@@ -1306,15 +1329,22 @@ input[type="file"]::file-selector-button {
 }
 
 @media (prefers-color-scheme: dark) {
-  input[type="file"] {
+html:not([data-theme="light"]) input[type="file"] {
     color: #c0c0d0;
-  }
-  input[type="file"]::file-selector-button {
+  }html:not([data-theme="light"]) input[type="file"]::file-selector-button {
     background-color: #2a2a4a;
     color: #c0c0d0;
     border-color: #3a3a5a;
   }
 }
+
+html[data-theme="dark"] input[type="file"] {
+    color: #c0c0d0;
+  }html[data-theme="dark"] input[type="file"]::file-selector-button {
+    background-color: #2a2a4a;
+    color: #c0c0d0;
+    border-color: #3a3a5a;
+  }
 
 /* Settings page */
 .settings-panel {
@@ -1391,37 +1421,50 @@ input[type="file"]::file-selector-button {
 }
 
 @media (prefers-color-scheme: dark) {
-  .settings-panel {
+html:not([data-theme="light"]) .settings-panel {
     color: #c0c0d0;
-  }
-  .settings-group {
+  }html:not([data-theme="light"]) .settings-group {
     border-color: #2a2a4a;
-  }
-  .settings-legend {
+  }html:not([data-theme="light"]) .settings-legend {
     color: #c0c0d0;
-  }
-  .settings-help {
+  }html:not([data-theme="light"]) .settings-help {
     color: #8888aa;
-  }
-  .settings-label {
+  }html:not([data-theme="light"]) .settings-label {
     color: #c0c0d0;
-  }
-  .settings-input,
-  .settings-select,
-  .settings-url-input {
+  }html:not([data-theme="light"]) .settings-input, html:not([data-theme="light"]) .settings-select, html:not([data-theme="light"]) .settings-url-input {
     background: #16213e;
     border-color: #3a3a5a;
     color: #c0c0d0;
-  }
-  .settings-file-input {
+  }html:not([data-theme="light"]) .settings-file-input {
     color: #c0c0d0;
-  }
-  .settings-file-input::file-selector-button {
+  }html:not([data-theme="light"]) .settings-file-input::file-selector-button {
     background-color: #2a2a4a;
     color: #c0c0d0;
     border-color: #3a3a5a;
   }
 }
+
+html[data-theme="dark"] .settings-panel {
+    color: #c0c0d0;
+  }html[data-theme="dark"] .settings-group {
+    border-color: #2a2a4a;
+  }html[data-theme="dark"] .settings-legend {
+    color: #c0c0d0;
+  }html[data-theme="dark"] .settings-help {
+    color: #8888aa;
+  }html[data-theme="dark"] .settings-label {
+    color: #c0c0d0;
+  }html[data-theme="dark"] .settings-input, html[data-theme="dark"] .settings-select, html[data-theme="dark"] .settings-url-input {
+    background: #16213e;
+    border-color: #3a3a5a;
+    color: #c0c0d0;
+  }html[data-theme="dark"] .settings-file-input {
+    color: #c0c0d0;
+  }html[data-theme="dark"] .settings-file-input::file-selector-button {
+    background-color: #2a2a4a;
+    color: #c0c0d0;
+    border-color: #3a3a5a;
+  }
 
 .settings-textarea {
   display: block;
@@ -1438,12 +1481,18 @@ input[type="file"]::file-selector-button {
 }
 
 @media (prefers-color-scheme: dark) {
-  .settings-textarea {
+html:not([data-theme="light"]) .settings-textarea {
     background: #16213e;
     border-color: #3a3a5a;
     color: #c0c0d0;
   }
 }
+
+html[data-theme="dark"] .settings-textarea {
+    background: #16213e;
+    border-color: #3a3a5a;
+    color: #c0c0d0;
+  }
 
 /* Settings page layout — matches app shell styling */
 .settings-page {
@@ -1462,24 +1511,35 @@ input[type="file"]::file-selector-button {
 }
 
 @media (prefers-color-scheme: dark) {
-  .settings-page {
+html:not([data-theme="light"]) .settings-page {
     background-color: #1a1a2e;
     color: #c0c0d0;
   }
 }
 
+html[data-theme="dark"] .settings-page {
+    background-color: #1a1a2e;
+    color: #c0c0d0;
+  }
+
 
 @media (prefers-color-scheme: dark) {
-  .settings-saved {
+html:not([data-theme="light"]) .settings-saved {
     color: #4ade80;
-  }
-  .settings-error {
+  }html:not([data-theme="light"]) .settings-error {
     color: #f87171;
-  }
-  .settings-saving {
+  }html:not([data-theme="light"]) .settings-saving {
     color: #8888aa;
   }
 }
+
+html[data-theme="dark"] .settings-saved {
+    color: #4ade80;
+  }html[data-theme="dark"] .settings-error {
+    color: #f87171;
+  }html[data-theme="dark"] .settings-saving {
+    color: #8888aa;
+  }
 
 /* Modern settings layout — sidebar nav + content */
 .settings-layout {
@@ -1602,42 +1662,91 @@ input[type="file"]::file-selector-button {
 }
 
 @media (prefers-color-scheme: dark) {
-  .settings-nav {
+html:not([data-theme="light"]) .settings-nav {
     border-right-color: #2a2a4a;
     background: #16213e;
-  }
-  .settings-nav-item {
+  }html:not([data-theme="light"]) .settings-nav-item {
     color: #8888aa;
-  }
-  .settings-nav-item:hover {
+  }html:not([data-theme="light"]) .settings-nav-item:hover {
     background: #1e1e3a;
     color: #c0c0d0;
-  }
-  .settings-nav-item.active {
+  }html:not([data-theme="light"]) .settings-nav-item.active {
     background: #1a1a2e;
     color: #6ab0ff;
     border-left-color: #6ab0ff;
-  }
-  .settings-section {
+  }html:not([data-theme="light"]) .settings-section {
     border-bottom-color: #2a2a4a;
-  }
-  .settings-heading {
+  }html:not([data-theme="light"]) .settings-heading {
     color: #e0e0e0;
-  }
-  .settings-field-label {
+  }html:not([data-theme="light"]) .settings-field-label {
     color: #8888aa;
-  }
-  .settings-help {
+  }html:not([data-theme="light"]) .settings-help {
     color: #666688;
   }
-  @media (max-width: 640px) {
-    .settings-nav {
+  @media (max-width: 640px) {html:not([data-theme="light"]) .settings-nav {
       border-right-color: transparent;
       border-bottom-color: #2a2a4a;
     }
   }
 }
 
+html[data-theme="dark"] .settings-nav {
+    border-right-color: #2a2a4a;
+    background: #16213e;
+  }html[data-theme="dark"] .settings-nav-item {
+    color: #8888aa;
+  }html[data-theme="dark"] .settings-nav-item:hover {
+    background: #1e1e3a;
+    color: #c0c0d0;
+  }html[data-theme="dark"] .settings-nav-item.active {
+    background: #1a1a2e;
+    color: #6ab0ff;
+    border-left-color: #6ab0ff;
+  }html[data-theme="dark"] .settings-section {
+    border-bottom-color: #2a2a4a;
+  }html[data-theme="dark"] .settings-heading {
+    color: #e0e0e0;
+  }html[data-theme="dark"] .settings-field-label {
+    color: #8888aa;
+  }html[data-theme="dark"] .settings-help {
+    color: #666688;
+  }
+  @media (max-width: 640px) {html[data-theme="dark"] .settings-nav {
+      border-right-color: transparent;
+      border-bottom-color: #2a2a4a;
+    }
+  }
+
 .toast-info {
   background-color: var(--color-blue-600, #2563eb);
+}
+
+/* ─── Theme support ───────────────────────────────────────────────────
+   data-theme: "light" | "dark" | "" (system). The dark-mode rules above
+   are scoped to html:not([data-theme="light"]) under the media query and
+   duplicated under html[data-theme="dark"], so an explicit choice always
+   wins over the system preference.
+   data-font: "serif" switches article typography to a serif stack like
+   the classic UI's serif themes. */
+
+html {
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+body {
+  background-color: #ffffff;
+  color: #1a1a2e;
+}
+
+html[data-font="serif"] .article-body,
+html[data-font="serif"] .article-title {
+  font-family: Georgia, 'Times New Roman', Times, serif;
+}
+
+html[data-font="serif"] .article-body {
+  font-weight: 300;
 }
