@@ -26,9 +26,9 @@ Not defects (verified non-gaps): `dir="ltr"` hardcode matches classic (classic h
 | P1 | ~~Reading time not shown~~ **DONE** (e008b3c9): entry header behind `ShowReadingTime` (list meta + entry header); `user.ShowReadingTime` pref saved but unused | `entry.ReadingTime`, `item_meta.html` |
 | P2 | ~~Entry tags never queried~~ **DONE** (e008b3c9): chip list in header (`WithTags`) nor rendered | `entry.html:167+` (with 5-tag limit + overflow) |
 | P3 | ~~`CommentsURL` not exposed/rendered~~ **DONE** (e008b3c9): toolbar link when present | `entry.html:128-130` |
-| P4 | ~~Enclosures: audio-only~~ **DONE** (e008b3c9): typed audio/video/image rendering with Html5MimeType + download links. Media controls (seek/speed persistence) remain open. | `entry.html:25-45,246-280`, `app.js` enclosure handlers |
+| P4 | ~~Enclosures: audio-only~~ **DONE** (e008b3c9, f80e1e8a): typed audio/video/image rendering with Html5MimeType, download links, seek/speed media controls, and progression persistence via the classic save-progression endpoint. | `entry.html:25-45,246-280`, `app.js` enclosure handlers |
 | P5 | ~~No prev/next entry navigation~~ **DONE** (f401b373): `n`/`p` move selection + load entry (`NewEntryPaginationBuilder`, keyboard `h`/`l` + toolbar buttons) | `entry_feed.go:56`, `entry_category.go:56`, `entry_unread.go` |
-| P6 | Keyboard shortcuts: dsui has j/k/Enter/o/v/s/m/A/r only. Classic adds `g u|b|h|f|c|s`, `g g`/`G`, `/`, `p`/`n`, `h`/`l`, `c`/`C`, `d`, `f`, `F`, `R`, `+`, `#`, `?` help dialog, `z t`, `a` (toggle enclosures) | `app.js:1180-1226` |
+| P6 | Keyboard shortcuts: **DONE** core set (f401b373, e4b86093, 98d64d10, 674d93ae): j/k, Enter/o, v, s, m, A, r, n/p, ArrowLeft/Right, '/', '?'+Esc overlay, g u|b|h|s, g g/G. Still open (low value in 3-pane layout): g f|c, h/l, c/C, d, f, F, R, '+', '#', z t, a. | `app.js:1180-1226` |
 | P7 | ~~No keyboard-shortcuts help overlay~~ **DONE** (98d64d10): '?' toggle + Escape close, localized | `keyboard_shortcuts` dialog |
 | P8 | ~~Search: no unread-only toggle~~ **DONE** (3c90e0ec, 6a797fa1): checkbox beside search box, `searchUnreadOnly` signal → status-filtered query | `search.go` `unread` param |
 | P9 | ~~No pagination keyboard nav~~ **DONE** (e4b86093): ArrowLeft/Right click the marked pagination links; `z t` remains low-priority | | `app.js:1191-1196,1199` |
@@ -51,7 +51,7 @@ Each stage lands as separate Conventional Commits, one logical change each, with
 7. **Timezone:** convert dates with `timezone.Convert(user.Timezone, t)` in view models; `elapsedTime` takes tz.
 8. **i18n groundwork:** wire `locale.NewPrinter(user.Language)` into dsui template funcs (`t`, `plural`, localized `elapsed`); migrate hardcoded strings (real translations only — all 23 locale files exist upstream; never English placeholders).
 
-### Stage 3 — Feature parity (P1–P10, priority order) — P1–P5, P8 ✅ DONE (e008b3c9, f401b373, 3c90e0ec, 60690fcc); P7 overlay + '/' done (98d64d10), P9 arrows done (e4b86093); remaining: P6 g-sequences, P4 media controls
+### Stage 3 — Feature parity (P1–P10, priority order) — P1–P5, P8 ✅ DONE (e008b3c9, f401b373, 3c90e0ec, 60690fcc); P7 (98d64d10), P9 (e4b86093), P10 (0f9e4164), P4 media controls (f80e1e8a), P6 core shortcuts + g-sequences (674d93ae) done; P6 residual low-value keys documented as open
 9. Reading time (P1, P10): `WithTags`-style fetch; show in row meta + entry header behind `ShowReadingTime`.
 10. Tags + CommentsURL (P2, P3).
 11. Enclosure upgrades (P4): video/image branches, download name, media controls with speed persistence.
