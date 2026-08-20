@@ -5,6 +5,7 @@ package dsui // import "miniflux.app/v2/internal/dsui"
 
 import (
 	"context"
+	"fmt"
 	"html/template"
 	"net/http"
 	"net/http/httptest"
@@ -1702,5 +1703,58 @@ func TestRowRerenderKeepsReadingTime(t *testing.T) {
 	}
 	if !strings.Contains(w.Body.String(), want) {
 		t.Errorf("toggle-status row patch must keep reading time %q\nbody: %s", want, w.Body.String())
+	}
+}
+
+// TestNonSearchViewIgnoresQParam verifies a stale ?q= on unread/starred/etc.
+// never leaks a dead searchQuery into the page's pagination URLs; only the
+// /ds/search view consumes the q parameter.
+func TestNonSearchViewIgnoresQParam(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	user.EntriesPerPage = 5
+	if err := store.UpdateUser(user); err != nil {
+		t.Fatalf("failed to update user: %v", err)
+	}
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	for i := 0; i < 7; i++ {
+		if _, err := store.InsertEntryForFeed(user.ID, feed.ID, &model.Entry{
+			UserID:  user.ID,
+			FeedID:  feed.ID,
+			Hash:    fmt.Sprintf("hash_qparam_%s_%d", t.Name(), i),
+			Title:   fmt.Sprintf("QParam Entry %d", i),
+			Content: "body",
+			URL:     fmt.Sprintf("https://example.com/qparam-%d", i),
+			Date:    time.Now(),
+		}); err != nil {
+			t.Fatalf("failed to insert entry: %v", err)
+		}
+	}
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	req := httptest.NewRequest(http.MethodGet, "/ds/unread?q=stale", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	if strings.Contains(w.Body.String(), "searchQuery=stale") {
+		t.Error("unread view must not embed ?q= into pagination URLs")
+	}
+
+	// The search view still consumes q.
+	req = httptest.NewRequest(http.MethodGet, "/ds/search?q=QParam", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+	w = httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("search expected 200, got %d", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "searchQuery=QParam") {
+		t.Error("search view must pass the q param through to pagination")
 	}
 }
