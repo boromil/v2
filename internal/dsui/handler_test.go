@@ -1446,3 +1446,63 @@ func TestThemeAttributeRendered(t *testing.T) {
 		t.Error("expected data-font=\"serif\" on html element")
 	}
 }
+
+// TestEnclosureURLsProxified verifies enclosure media URLs are rewritten
+// through the media proxy when the proxy mode and resource types cover the
+// enclosure's MIME type, matching the classic UI's enclosure rendering.
+func TestEnclosureURLsProxified(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+
+	entry := &model.Entry{
+		UserID:  user.ID,
+		FeedID:  feed.ID,
+		Hash:    "hash_enclosure_proxy_" + t.Name(),
+		Title:   "Enclosure Proxy",
+		Content: "<p>body</p>",
+		URL:     "https://example.com/article",
+		Date:    time.Now(),
+		Enclosures: model.EnclosureList{
+			&model.Enclosure{
+				URL:      "https://example.com/pic.jpg",
+				MimeType: "image/jpeg",
+				Size:     10,
+			},
+		},
+	}
+	if _, err := store.InsertEntryForFeed(user.ID, feed.ID, entry); err != nil {
+		t.Fatalf("failed to insert test entry: %v", err)
+	}
+
+	t.Setenv("MEDIA_PROXY_MODE", "all")
+	configParser := config.NewConfigParser()
+	parsedOptions, err := configParser.ParseEnvironmentVariables()
+	if err != nil {
+		t.Fatalf("unable to configure test options: %v", err)
+	}
+	prevOpts := config.Opts
+	config.Opts = parsedOptions
+	t.Cleanup(func() { config.Opts = prevOpts })
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	req := httptest.NewRequest(http.MethodGet, "/ds/sse/entry/"+itoa(entry.ID), nil)
+	req, csrf := authenticateTestSession(t, store, req, user)
+	req.Header.Set("X-Csrf-Token", csrf)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, `src="/proxy/`) {
+		t.Errorf("image enclosure must be proxied under MEDIA_PROXY_MODE=all, got: %s", body)
+	}
+	if strings.Contains(body, `src="https://example.com/pic.jpg"`) {
+		t.Error("raw enclosure URL must not appear as a media src when proxying")
+	}
+}
