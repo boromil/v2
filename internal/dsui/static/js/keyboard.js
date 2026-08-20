@@ -103,6 +103,16 @@
         navigateEntry(1);
         break;
 
+      case "ArrowLeft":
+        e.preventDefault();
+        clickElement(document.querySelector('.pagination a[data-action="prev-page"]'));
+        break;
+
+      case "ArrowRight":
+        e.preventDefault();
+        clickElement(document.querySelector('.pagination a[data-action="next-page"]'));
+        break;
+
       case "p":
         e.preventDefault();
         navigateEntry(-1);

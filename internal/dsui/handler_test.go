@@ -494,6 +494,7 @@ func TestShowAppNoFeeds(t *testing.T) {
 	}
 }
 
+// TestPaginationBoundary
 func TestPaginationBoundary(t *testing.T) {
 	store := mtest.SetupTestDB(t, dialect.SQLite)
 	user := mtest.CreateTestUser(t, store)
@@ -516,6 +517,37 @@ func TestPaginationBoundary(t *testing.T) {
 	body := w.Body.String()
 	if !strings.Contains(body, "entry-row") {
 		t.Error("expected entry rows in response")
+	}
+}
+
+// TestPaginationKeyboardMarkers verifies the prev/next pagination links
+// carry stable data-action markers that the ArrowLeft/ArrowRight keyboard
+// shortcuts depend on.
+func TestPaginationKeyboardMarkers(t *testing.T) {
+	tpl := parseTemplates()
+
+	pv := paginationView{
+		CurrentPage:   2,
+		TotalPages:    3,
+		HasPrev:       true,
+		HasNext:       true,
+		PrevOffset:    0,
+		NextOffset:    40,
+		SSEEntriesURL: "/ds/sse/entries",
+	}
+	var buf strings.Builder
+	if err := tpl.ExecuteTemplate(&buf, "pagination", pv); err != nil {
+		t.Fatalf("executing pagination: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, `data-action="prev-page"`) {
+		t.Error("prev link must carry data-action=prev-page")
+	}
+	if !strings.Contains(out, `data-action="next-page"`) {
+		t.Error("next link must carry data-action=next-page")
+	}
+	if !strings.Contains(out, "&offset=0") || !strings.Contains(out, "&offset=40") {
+		t.Error("links must carry prev/next offsets")
 	}
 }
 
