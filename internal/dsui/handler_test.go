@@ -1079,6 +1079,41 @@ func TestSSEMarkPageReadUsesInnerMode(t *testing.T) {
 	}
 }
 
+// TestSSEEntryProxifiesMedia verifies that entry content passed through the
+// media proxy rewriter: with the default http-only mode, plain-HTTP image
+// sources must be rewritten to the proxy URL (parity with the classic UI's
+// proxyFilter).
+func TestSSEEntryProxifiesMedia(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+
+	entry := mtest.CreateTestEntryWithContent(t, store, user.ID, feed.ID,
+		"Proxified Media Entry",
+		`<p><img src="http://example.com/pic.jpg"></p>`)
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	req := httptest.NewRequest(http.MethodGet, "/ds/sse/entry/"+itoa(entry.ID), nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if strings.Contains(body, `src="http://example.com/pic.jpg"`) {
+		t.Error("expected plain-HTTP image source to be rewritten by the media proxy")
+	}
+	if !strings.Contains(body, "/proxy/") {
+		t.Error("expected proxified image URL in entry content")
+	}
+}
+
 // TestSSESubscriptionsUsesFeedTreeInner verifies that sseSubscriptions patches
 // the #subscription-panel .feed-tree element with ElementPatchModeInner, keeping
 // the #subscription-panel aside, its .top-nav and <nav> shell intact.

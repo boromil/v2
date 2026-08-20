@@ -1124,11 +1124,14 @@ func (h *handler) sseToggleShare(w http.ResponseWriter, r *http.Request) {
 
 func entryToDetailView(entry *model.Entry) *entryDetailView {
 	d := &entryDetailView{
-		ID:        entry.ID,
-		Title:     entry.Title,
-		Author:    entry.Author,
-		Date:      entry.Date,
-		Content:   template.HTML(entry.Content),
+		ID:     entry.ID,
+		Title:  entry.Title,
+		Author: entry.Author,
+		Date:   entry.Date,
+		// Apply the media proxy like the classic UI's proxyFilter so remote
+		// images/videos are fetched through the proxy when configured. The
+		// rewriter is a no-op when MEDIA_PROXY_MODE=none.
+		Content:   template.HTML(mediaproxy.RewriteDocumentWithRelativeProxyURL(entry.Content)),
 		Starred:   entry.Starred,
 		URL:       entry.URL,
 		Status:    entry.Status,
