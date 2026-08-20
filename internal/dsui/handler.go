@@ -127,6 +127,7 @@ func parseTemplates() *template.Template {
 		"templates/components/article_toolbar.html",
 		"templates/components/feed_node.html",
 		"templates/components/pagination.html",
+		"templates/components/shortcuts_overlay.html",
 	))
 }
 

@@ -1,0 +1,33 @@
+{{define "shortcuts_overlay"}}
+<div id="shortcuts-overlay" class="shortcuts-overlay" hidden>
+    <div class="shortcuts-dialog" role="dialog" aria-modal="true" aria-label="{{t "page.keyboard_shortcuts.title"}}">
+        <h2>{{t "page.keyboard_shortcuts.title"}}</h2>
+
+        <h3>{{t "page.keyboard_shortcuts.subtitle.items"}}</h3>
+        <dl class="shortcuts-list">
+            <div><dt>j</dt><dd>{{t "page.keyboard_shortcuts.go_to_next_item"}}</dd></div>
+            <div><dt>k</dt><dd>{{t "page.keyboard_shortcuts.go_to_previous_item"}}</dd></div>
+            <div><dt>n / p</dt><dd>{{t "page.keyboard_shortcuts.go_to_next_item"}} / {{t "page.keyboard_shortcuts.go_to_previous_item"}}</dd></div>
+            <div><dt>Enter / o</dt><dd>{{t "page.keyboard_shortcuts.open_item"}}</dd></div>
+            <div><dt>v</dt><dd>{{t "page.keyboard_shortcuts.open_original"}}</dd></div>
+            <div><dt>s</dt><dd>{{t "page.keyboard_shortcuts.toggle_star_status"}}</dd></div>
+            <div><dt>m</dt><dd>{{t "entry.status.title"}}</dd></div>
+        </dl>
+
+        <h3>{{t "page.keyboard_shortcuts.subtitle.pages"}}</h3>
+        <dl class="shortcuts-list">
+            <div><dt>&#8592;</dt><dd>{{t "page.keyboard_shortcuts.go_to_previous_page"}}</dd></div>
+            <div><dt>&#8594;</dt><dd>{{t "page.keyboard_shortcuts.go_to_next_page"}}</dd></div>
+        </dl>
+
+        <h3>{{t "page.keyboard_shortcuts.subtitle.actions"}}</h3>
+        <dl class="shortcuts-list">
+            <div><dt>A</dt><dd>{{t "page.keyboard_shortcuts.mark_page_as_read"}}</dd></div>
+            <div><dt>r</dt><dd>{{t "page.keyboard_shortcuts.refresh_all_feeds"}}</dd></div>
+            <div><dt>/</dt><dd>{{t "page.keyboard_shortcuts.go_to_search"}}</dd></div>
+            <div><dt>?</dt><dd>{{t "page.keyboard_shortcuts.show_keyboard_shortcuts"}}</dd></div>
+            <div><dt>Esc</dt><dd>{{t "page.keyboard_shortcuts.close_modal"}}</dd></div>
+        </dl>
+    </div>
+</div>
+{{end}}
