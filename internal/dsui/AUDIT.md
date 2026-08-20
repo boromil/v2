@@ -29,10 +29,10 @@ Not defects (verified non-gaps): `dir="ltr"` hardcode matches classic (classic h
 | P4 | ~~Enclosures: audio-only~~ **DONE** (e008b3c9): typed audio/video/image rendering with Html5MimeType + download links. Media controls (seek/speed persistence) remain open. | `entry.html:25-45,246-280`, `app.js` enclosure handlers |
 | P5 | ~~No prev/next entry navigation~~ **DONE** (f401b373): `n`/`p` move selection + load entry (`NewEntryPaginationBuilder`, keyboard `h`/`l` + toolbar buttons) | `entry_feed.go:56`, `entry_category.go:56`, `entry_unread.go` |
 | P6 | Keyboard shortcuts: dsui has j/k/Enter/o/v/s/m/A/r only. Classic adds `g u|b|h|f|c|s`, `g g`/`G`, `/`, `p`/`n`, `h`/`l`, `c`/`C`, `d`, `f`, `F`, `R`, `+`, `#`, `?` help dialog, `z t`, `a` (toggle enclosures) | `app.js:1180-1226` |
-| P7 | No keyboard-shortcuts help overlay | `keyboard_shortcuts` dialog |
+| P7 | ~~No keyboard-shortcuts help overlay~~ **DONE** (98d64d10): '?' toggle + Escape close, localized | `keyboard_shortcuts` dialog |
 | P8 | ~~Search: no unread-only toggle~~ **DONE** (3c90e0ec, 6a797fa1): checkbox beside search box, `searchUnreadOnly` signal → status-filtered query | `search.go` `unread` param |
-| P9 | Partially open: ArrowLeft/Right pagination and `z t` remain; entry prev/next covered by P5 | | `app.js:1191-1196,1199` |
-| P10 | Entry list rows don't show reading time / feed source in meta line (only date) | `item_meta.html` |
+| P9 | ~~No pagination keyboard nav~~ **DONE** (e4b86093): ArrowLeft/Right click the marked pagination links; `z t` remains low-priority | | `app.js:1191-1196,1199` |
+| P10 | ~~Rows don't show reading time / feed source~~ **DONE** (0f9e4164): reading time added behind `ShowReadingTime`; feed name was already present | `item_meta.html` |
 
 ## C. Staged implementation plan
 
@@ -51,7 +51,7 @@ Each stage lands as separate Conventional Commits, one logical change each, with
 7. **Timezone:** convert dates with `timezone.Convert(user.Timezone, t)` in view models; `elapsedTime` takes tz.
 8. **i18n groundwork:** wire `locale.NewPrinter(user.Language)` into dsui template funcs (`t`, `plural`, localized `elapsed`); migrate hardcoded strings (real translations only — all 23 locale files exist upstream; never English placeholders).
 
-### Stage 3 — Feature parity (P1–P10, priority order) — P1–P5, P8 ✅ DONE (e008b3c9, f401b373, 3c90e0ec, 60690fcc); P6/P7 (g-sequences, help overlay), P4 media controls, P9 arrows remain
+### Stage 3 — Feature parity (P1–P10, priority order) — P1–P5, P8 ✅ DONE (e008b3c9, f401b373, 3c90e0ec, 60690fcc); P7 overlay + '/' done (98d64d10), P9 arrows done (e4b86093); remaining: P6 g-sequences, P4 media controls
 9. Reading time (P1, P10): `WithTags`-style fetch; show in row meta + entry header behind `ShowReadingTime`.
 10. Tags + CommentsURL (P2, P3).
 11. Enclosure upgrades (P4): video/image branches, download name, media controls with speed persistence.
