@@ -18,20 +18,20 @@
 </div>
 {{if .SelectedEntry.Enclosures}}
 <div class="article-body" style="padding-top:0.5rem; border-top:1px solid var(--color-gray-200);">
-    <h3 class="text-sm font-semibold mb-2" style="color:inherit;">Attachments</h3>
+    <h3 class="text-sm font-semibold mb-2" style="color:inherit;">{{t "page.entry.attachments"}}</h3>
     {{range .SelectedEntry.Enclosures}}
     <div class="flex items-center gap-2 mb-1 text-sm">
         <audio controls preload="none" style="width:100%; max-width:400px;" data-mime="{{.MimeType}}">
             <source src="{{.URL}}" type="{{.MimeType}}">
         </audio>
-        <a href="{{.URL}}" class="text-xs no-underline" download style="color:var(--color-blue-600);">Download</a>
+        <a href="{{.URL}}" class="text-xs no-underline" download style="color:var(--color-blue-600);">{{t "action.download"}}</a>
     </div>
     {{end}}
 </div>
 {{end}}
 {{else}}
 <div class="empty-state" data-show="!$selectedEntryId">
-    <p>Select an entry to read.</p>
+    <p>{{t "alert.no_unread_entry"}}</p>
 </div>
 {{end}}
 {{end}}

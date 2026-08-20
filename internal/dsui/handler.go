@@ -14,12 +14,14 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"miniflux.app/v2/internal/config"
 	dsstatic "miniflux.app/v2/internal/dsui/static"
 	"miniflux.app/v2/internal/http/request"
 	"miniflux.app/v2/internal/http/response"
+	"miniflux.app/v2/internal/locale"
 	"miniflux.app/v2/internal/mediaproxy"
 	"miniflux.app/v2/internal/model"
 	"miniflux.app/v2/internal/proxyrotator"
@@ -109,6 +111,10 @@ func parseTemplates() *template.Template {
 		"replace": func(str, old, new string) string {
 			return strings.Replace(str, old, new, 1)
 		},
+		// Locale functions are parse-time stubs; tplFor binds the
+		// language-specific implementations on a per-language clone.
+		"t":      func(key any, args ...any) string { return fmt.Sprintf("%v", key) },
+		"plural": func(key string, n int, args ...any) string { return key },
 	}
 	return template.Must(template.New("").Funcs(funcMap).ParseFS(templateFiles,
 		"templates/layout.html",
@@ -281,7 +287,7 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 
 	// Build subscription menu.
 	vm.MenuSections = h.buildMenu(user, viewName, feedID, categoryID)
-	vm.ListTitle = listTitleForView(viewName, feedID, categoryID, h.store, user.ID)
+	vm.ListTitle = listTitleForView(viewName, feedID, categoryID, h.store, user.ID, user.Language)
 	vm.Title = vm.ListTitle + " — Miniflux"
 	nav, _ := h.store.GetNavMetadata(user.ID)
 	vm.CountUnread = nav.CountUnread
@@ -339,7 +345,7 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var buf bytes.Buffer
-	if err := h.tpl.ExecuteTemplate(&buf, "layout", vm); err != nil {
+	if err := h.tplFor(user.Language).ExecuteTemplate(&buf, "layout", vm); err != nil {
 		response.HTMLServerError(w, r, fmt.Errorf("template render error: %w", err))
 		return
 	}
@@ -374,7 +380,7 @@ func (h *handler) showSettings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var buf bytes.Buffer
-	if err := h.tpl.ExecuteTemplate(&buf, "layout", vm); err != nil {
+	if err := h.tplFor(user.Language).ExecuteTemplate(&buf, "layout", vm); err != nil {
 		response.HTMLServerError(w, r, fmt.Errorf("template render error: %w", err))
 		return
 	}
@@ -583,7 +589,7 @@ func (h *handler) sseEntries(w http.ResponseWriter, r *http.Request) {
 	// Build fragments: entry list + optional pagination.
 	fragments := []SSEFragment{}
 	var listBuf bytes.Buffer
-	if err := h.tpl.ExecuteTemplate(&listBuf, "entry_list", map[string]any{"Entries": evs}); err != nil {
+	if err := h.tplFor(user.Language).ExecuteTemplate(&listBuf, "entry_list", map[string]any{"Entries": evs}); err != nil {
 		response.HTMLServerError(w, r, fmt.Errorf("entry_list template: %w", err))
 		return
 	}
@@ -605,7 +611,7 @@ func (h *handler) sseEntries(w http.ResponseWriter, r *http.Request) {
 			pv.PrevOffset = 0
 		}
 		var pagBuf bytes.Buffer
-		if err := h.tpl.ExecuteTemplate(&pagBuf, "pagination", pv); err != nil {
+		if err := h.tplFor(user.Language).ExecuteTemplate(&pagBuf, "pagination", pv); err != nil {
 			response.HTMLServerError(w, r, fmt.Errorf("pagination template: %w", err))
 			return
 		}
@@ -664,11 +670,11 @@ func (h *handler) sseEntry(w http.ResponseWriter, r *http.Request) {
 
 	// Render entry content panel and update the entry row styling.
 	var contentBuf, rowBuf bytes.Buffer
-	if err := h.tpl.ExecuteTemplate(&contentBuf, "entry_content", map[string]any{"SelectedEntry": detail}); err != nil {
+	if err := h.tplFor(user.Language).ExecuteTemplate(&contentBuf, "entry_content", map[string]any{"SelectedEntry": detail}); err != nil {
 		response.HTMLServerError(w, r, fmt.Errorf("entry_content template: %w", err))
 		return
 	}
-	if err := h.tpl.ExecuteTemplate(&rowBuf, "entry_row", map[string]any{
+	if err := h.tplFor(user.Language).ExecuteTemplate(&rowBuf, "entry_row", map[string]any{
 		"ID":      entry.ID,
 		"Title":   entry.Title,
 		"Status":  entry.Status,
@@ -701,7 +707,7 @@ func (h *handler) sseSubscriptions(w http.ResponseWriter, r *http.Request) {
 	sections := h.buildMenu(user, "", 0, 0)
 	data := map[string]any{"MenuSections": sections}
 	var buf bytes.Buffer
-	if err := h.tpl.ExecuteTemplate(&buf, "subscription_list", data); err != nil {
+	if err := h.tplFor(user.Language).ExecuteTemplate(&buf, "subscription_list", data); err != nil {
 		response.HTMLServerError(w, r, fmt.Errorf("subscription_list template: %w", err))
 		return
 	}
@@ -741,7 +747,7 @@ func (h *handler) sseToggleStar(w http.ResponseWriter, r *http.Request) {
 		"ID":      entry.ID,
 		"Starred": newStarred,
 	}
-	if err := h.tpl.ExecuteTemplate(&starBuf, "star_button", starData); err != nil {
+	if err := h.tplFor(user.Language).ExecuteTemplate(&starBuf, "star_button", starData); err != nil {
 		response.HTMLServerError(w, r, fmt.Errorf("star_button template: %w", err))
 		return
 	}
@@ -815,7 +821,7 @@ func (h *handler) sseToggleEntryStatus(w http.ResponseWriter, r *http.Request) {
 		if entry.Feed != nil {
 			rowView["Feed"] = &feedRef{Title: entry.Feed.Title, ID: entry.Feed.ID}
 		}
-		if err := h.tpl.ExecuteTemplate(&rowBuf, "entry_row", rowView); err != nil {
+		if err := h.tplFor(user.Language).ExecuteTemplate(&rowBuf, "entry_row", rowView); err != nil {
 			slog.Warn("dsui: unable to render entry_row template", slog.Int64("entry_id", id), slog.Any("error", err))
 			continue
 		}
@@ -839,7 +845,7 @@ func (h *handler) sseToggleEntryStatus(w http.ResponseWriter, r *http.Request) {
 				"URL":     entry.URL,
 				"Status":  entry.Status,
 			}
-			if err := h.tpl.ExecuteTemplate(&toolbarBuf, "article_toolbar", toolbarData); err == nil {
+			if err := h.tplFor(user.Language).ExecuteTemplate(&toolbarBuf, "article_toolbar", toolbarData); err == nil {
 				fragments = append(fragments, SSEFragment{
 					HTML:     toolbarBuf.String(),
 					Selector: "#article-toolbar",
@@ -912,11 +918,11 @@ func (h *handler) sseMarkAllRead(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var listBuf, subBuf bytes.Buffer
-	if err := h.tpl.ExecuteTemplate(&listBuf, "entry_list", map[string]any{"Entries": evs}); err != nil {
+	if err := h.tplFor(user.Language).ExecuteTemplate(&listBuf, "entry_list", map[string]any{"Entries": evs}); err != nil {
 		response.HTMLServerError(w, r, fmt.Errorf("entry_list template: %w", err))
 		return
 	}
-	if err := h.tpl.ExecuteTemplate(&subBuf, "subscription_list", map[string]any{"MenuSections": sections}); err != nil {
+	if err := h.tplFor(user.Language).ExecuteTemplate(&subBuf, "subscription_list", map[string]any{"MenuSections": sections}); err != nil {
 		response.HTMLServerError(w, r, fmt.Errorf("subscription_list template: %w", err))
 		return
 	}
@@ -1020,7 +1026,7 @@ func (h *handler) sseMarkPageRead(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var listBuf bytes.Buffer
-	if err := h.tpl.ExecuteTemplate(&listBuf, "entry_list", map[string]any{"Entries": evs}); err != nil {
+	if err := h.tplFor(user.Language).ExecuteTemplate(&listBuf, "entry_list", map[string]any{"Entries": evs}); err != nil {
 		response.HTMLServerError(w, r, fmt.Errorf("entry_list template: %w", err))
 		return
 	}
@@ -1088,7 +1094,7 @@ func (h *handler) sseFetchContent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var buf bytes.Buffer
-	if err := h.tpl.ExecuteTemplate(&buf, "entry_content", map[string]any{"SelectedEntry": detail}); err != nil {
+	if err := h.tplFor(user.Language).ExecuteTemplate(&buf, "entry_content", map[string]any{"SelectedEntry": detail}); err != nil {
 		response.HTMLServerError(w, r, fmt.Errorf("entry_content template: %w", err))
 		return
 	}
@@ -1225,12 +1231,13 @@ func (h *handler) buildMenu(user *model.User, activeView string, activeFeedID, a
 	}
 
 	// Standard views.
+	printer := printerFor(user.Language)
 	sections = append(sections, menuSection{
 		Label: "",
 		Items: []menuItem{
-			{Label: "All", URL: "/ds/unread", SSEURL: "/ds/sse/entries", UnreadCount: fmt.Sprintf("%d", nav.CountUnread), Selected: activeView == "unread"},
-			{Label: "Starred", URL: "/ds/starred", SSEURL: "/ds/sse/entries?view=starred", Selected: activeView == "starred"},
-			{Label: "History", URL: "/ds/history", SSEURL: "/ds/sse/entries?view=history", Selected: activeView == "history"},
+			{Label: printer.Print("page.unread.title"), URL: "/ds/unread", SSEURL: "/ds/sse/entries", UnreadCount: fmt.Sprintf("%d", nav.CountUnread), Selected: activeView == "unread"},
+			{Label: printer.Print("page.starred.title"), URL: "/ds/starred", SSEURL: "/ds/sse/entries?view=starred", Selected: activeView == "starred"},
+			{Label: printer.Print("page.history.title"), URL: "/ds/history", SSEURL: "/ds/sse/entries?view=history", Selected: activeView == "history"},
 		},
 	})
 
@@ -1317,28 +1324,29 @@ func parseAppRoute(r *http.Request) (view string, feedID, categoryID int64) {
 	}
 }
 
-func listTitleForView(view string, feedID, categoryID int64, store *storage.Storage, userID int64) string {
+func listTitleForView(view string, feedID, categoryID int64, store *storage.Storage, userID int64, language string) string {
+	printer := printerFor(language)
 	switch view {
 	case "starred":
-		return "Starred"
+		return printer.Print("page.starred.title")
 	case "history":
-		return "History"
+		return printer.Print("page.history.title")
 	case "search":
-		return "Search"
+		return printer.Print("page.search.title")
 	case "feed":
 		f, err := store.FeedByID(userID, feedID)
 		if err == nil && f != nil {
 			return f.Title
 		}
-		return "Feed"
+		return printer.Print("menu.feed_entries")
 	case "category":
 		c, err := store.Category(userID, categoryID)
 		if err == nil && c != nil {
 			return c.Title
 		}
-		return "Category"
+		return printer.Print("menu.categories")
 	default:
-		return "Unread"
+		return printer.Print("page.unread.title")
 	}
 }
 
@@ -1430,5 +1438,70 @@ func themeFont(theme string) string {
 		return "serif"
 	default:
 		return ""
+	}
+}
+
+// ─── Localization ────────────────────────────────────────────────────────
+
+var (
+	printerCache sync.Map // language -> *locale.Printer
+	tplLangCache sync.Map // language -> *template.Template
+)
+
+// printerFor returns a cached locale printer for the language.
+func printerFor(language string) *locale.Printer {
+	if p, ok := printerCache.Load(language); ok {
+		return p.(*locale.Printer)
+	}
+	p := locale.NewPrinter(language)
+	printerCache.Store(language, p)
+	return p
+}
+
+// tplFor returns a template instance with locale functions bound to the
+// language. Instances are cloned once per language and cached.
+func (h *handler) tplFor(language string) *template.Template {
+	if t, ok := tplLangCache.Load(language); ok {
+		return t.(*template.Template)
+	}
+	printer := printerFor(language)
+	clone, err := h.tpl.Clone()
+	if err != nil {
+		// Fall back to the shared instance; translations degrade to keys.
+		return h.tpl
+	}
+	clone.Funcs(template.FuncMap{
+		"t":      printer.Printf,
+		"plural": printer.Plural,
+		"elapsed": func(t time.Time) string {
+			return elapsedLocalized(printer, t)
+		},
+	})
+	tplLangCache.Store(language, clone)
+	return clone
+}
+
+// elapsedLocalized renders a relative timestamp using the locale catalog,
+// matching the classic UI's time_elapsed.* strings ("3 minutes ago").
+func elapsedLocalized(printer *locale.Printer, t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
+	d := time.Since(t)
+	switch {
+	case d < time.Minute:
+		return printer.Print("time_elapsed.now")
+	case d < time.Hour:
+		return printer.Plural("time_elapsed.minutes", int(d.Minutes()), int(d.Minutes()))
+	case d < 24*time.Hour:
+		return printer.Plural("time_elapsed.hours", int(d.Hours()), int(d.Hours()))
+	case d < 7*24*time.Hour:
+		return printer.Plural("time_elapsed.days", int(d.Hours()/24), int(d.Hours()/24))
+	case d < 30*24*time.Hour:
+		return printer.Plural("time_elapsed.weeks", int(d.Hours()/(24*7)), int(d.Hours()/(24*7)))
+	case d < 365*24*time.Hour:
+		return printer.Plural("time_elapsed.months", int(d.Hours()/(24*30)), int(d.Hours()/(24*30)))
+	default:
+		return printer.Plural("time_elapsed.years", int(d.Hours()/(24*365)), int(d.Hours()/(24*365)))
 	}
 }
