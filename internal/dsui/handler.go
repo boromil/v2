@@ -1195,9 +1195,15 @@ func entryToDetailView(entry *model.Entry, user *model.User) *entryDetailView {
 		d.Feed = &feedRef{Title: entry.Feed.Title, ID: entry.Feed.ID}
 	}
 	for _, enc := range entry.Enclosures {
+		encURL := enc.URL
+		// Proxy media enclosure URLs like the classic UI when the proxy mode
+		// and resource types cover the enclosure's MIME type.
+		if mediaproxy.ShouldProxifyURLWithMimeType(enc.URL, enc.MimeType, config.Opts.MediaProxyMode(), config.Opts.MediaProxyResourceTypes()) {
+			encURL = mediaproxy.ProxifyRelativeURL(enc.URL)
+		}
 		d.Enclosures = append(d.Enclosures, enclosureView{
 			ID:               enc.ID,
-			URL:              enc.URL,
+			URL:              encURL,
 			MimeType:         enc.MimeType,
 			Html5Mime:        enc.Html5MimeType(),
 			Size:             enc.Size,
