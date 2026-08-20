@@ -2,24 +2,29 @@
 <div id="article-toolbar" class="article-toolbar" data-show="$selectedEntryId">
     <button class="toolbar-btn"
         data-on:click="@post('/ds/sse/entry/star/{{.ID}}')">
-        {{if .Starred}}★ Unstar{{else}}☆ Star{{end}}
+        {{if .Starred}}{{t "entry.starred.toggle.off"}}{{else}}{{t "entry.starred.toggle.on"}}{{end}}
     </button>
     <a href="{{.URL}}" target="_blank" rel="noopener" class="toolbar-btn no-underline">
-        Open
+        {{t "entry.external_link.label"}}
     </a>
     <button class="toolbar-btn"
         data-on:click="@post('/ds/sse/fetch-content/{{.ID}}')">
-        Fetch
+        {{t "entry.scraper.label"}}
     </button>
+    {{if .CommentsURL}}
+    <a href="{{.CommentsURL}}" target="_blank" rel="noopener" class="toolbar-btn no-underline">
+        {{t "entry.comments.label"}}
+    </a>
+    {{end}}
     <button class="toolbar-btn"
         data-on:click="@post('/ds/sse/share/{{.ID}}')">
-        {{if .ShareCode}}Unshare{{else}}Share{{end}}
+        {{if .ShareCode}}{{t "entry.unshare.label"}}{{else}}{{t "entry.share.label"}}{{end}}
     </button>
     <button class="toolbar-btn"
         data-action="toggle-status"
         data-signals='{"entryIds":[{{.ID}}]}'
         data-on:click="@post('/ds/sse/entry/status')">
-        {{if eq .Status "unread"}}Read{{else}}Unread{{end}}
+        {{if eq .Status "unread"}}{{t "entry.status.mark_as_read"}}{{else}}{{t "entry.status.mark_as_unread"}}{{end}}
     </button>
 </div>
 {{end}}

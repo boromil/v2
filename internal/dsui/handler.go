@@ -209,23 +209,31 @@ type feedRef struct {
 }
 
 type entryDetailView struct {
-	ID         int64
-	Title      string
-	Author     string
-	Date       time.Time
-	Content    template.HTML
-	Starred    bool
-	URL        string
-	Feed       *feedRef
-	Status     string
-	ShareCode  string
-	Enclosures []enclosureView
+	ID              int64
+	Title           string
+	Author          string
+	Date            time.Time
+	Content         template.HTML
+	Starred         bool
+	URL             string
+	Feed            *feedRef
+	Status          string
+	ShareCode       string
+	Enclosures      []enclosureView
+	Tags            []string
+	CommentsURL     string
+	ReadingTime     int
+	ShowReadingTime bool
 }
 
 type enclosureView struct {
-	URL      string
-	MimeType string
-	Size     int64
+	URL       string
+	MimeType  string
+	Html5Mime string
+	Size      int64
+	IsAudio   bool
+	IsVideo   bool
+	IsImage   bool
 }
 
 type paginationView struct {
@@ -339,7 +347,7 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 			WithEnclosures().
 			GetEntry()
 		if err == nil && firstEntry != nil {
-			detail := entryToDetailView(firstEntry)
+			detail := entryToDetailView(firstEntry, user)
 			vm.SelectedEntry = detail
 		}
 	}
@@ -666,7 +674,7 @@ func (h *handler) sseEntry(w http.ResponseWriter, r *http.Request) {
 		entry.Status = model.EntryStatusRead
 	}
 
-	detail := entryToDetailView(entry)
+	detail := entryToDetailView(entry, user)
 
 	// Render entry content panel and update the entry row styling.
 	var contentBuf, rowBuf bytes.Buffer
@@ -1149,7 +1157,7 @@ func (h *handler) sseToggleShare(w http.ResponseWriter, r *http.Request) {
 
 // ─── Query helpers ───────────────────────────────────────────────────────
 
-func entryToDetailView(entry *model.Entry) *entryDetailView {
+func entryToDetailView(entry *model.Entry, user *model.User) *entryDetailView {
 	d := &entryDetailView{
 		ID:     entry.ID,
 		Title:  entry.Title,
@@ -1158,20 +1166,28 @@ func entryToDetailView(entry *model.Entry) *entryDetailView {
 		// Apply the media proxy like the classic UI's proxyFilter so remote
 		// images/videos are fetched through the proxy when configured. The
 		// rewriter is a no-op when MEDIA_PROXY_MODE=none.
-		Content:   template.HTML(mediaproxy.RewriteDocumentWithRelativeProxyURL(entry.Content)),
-		Starred:   entry.Starred,
-		URL:       entry.URL,
-		Status:    entry.Status,
-		ShareCode: entry.ShareCode,
+		Content:         template.HTML(mediaproxy.RewriteDocumentWithRelativeProxyURL(entry.Content)),
+		Starred:         entry.Starred,
+		URL:             entry.URL,
+		Status:          entry.Status,
+		ShareCode:       entry.ShareCode,
+		Tags:            entry.Tags,
+		CommentsURL:     entry.CommentsURL,
+		ReadingTime:     entry.ReadingTime,
+		ShowReadingTime: user.ShowReadingTime,
 	}
 	if entry.Feed != nil {
 		d.Feed = &feedRef{Title: entry.Feed.Title, ID: entry.Feed.ID}
 	}
 	for _, enc := range entry.Enclosures {
 		d.Enclosures = append(d.Enclosures, enclosureView{
-			URL:      enc.URL,
-			MimeType: enc.MimeType,
-			Size:     enc.Size,
+			URL:       enc.URL,
+			MimeType:  enc.MimeType,
+			Html5Mime: enc.Html5MimeType(),
+			Size:      enc.Size,
+			IsAudio:   enc.IsAudio(),
+			IsVideo:   enc.IsVideo(),
+			IsImage:   enc.IsImage(),
 		})
 	}
 	return d
