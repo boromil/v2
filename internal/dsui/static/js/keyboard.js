@@ -6,6 +6,7 @@
   "use strict";
 
   var selectedIdx = -1;
+  var pendingGo = false; // 'g' pressed, awaiting second key
 
   function inputFocused() {
     var tag = document.activeElement?.tagName;
@@ -76,6 +77,39 @@
     return sel || (rows.length > 0 ? rows[0] : null);
   }
 
+  // Google Reader-style g-sequences: g then u/b/h/s navigates views.
+  function handleGoSequence(key) {
+    switch (key) {
+      case "u":
+        window.location.href = "/ds/unread";
+        break;
+      case "b":
+        window.location.href = "/ds/starred";
+        break;
+      case "h":
+        window.location.href = "/ds/history";
+        break;
+      case "s":
+        window.location.href = "/ds/settings";
+        break;
+    }
+  }
+
+  function scrollListTo(edge) {
+    var list = document.getElementById("entry-list");
+    if (!list) return;
+    var rows = getVisibleEntryRows();
+    if (edge === "top") {
+      selectedIdx = 0;
+      if (rows.length > 0) selectRow(rows[0]);
+      list.scrollTop = 0;
+    } else {
+      selectedIdx = rows.length - 1;
+      if (rows.length > 0) selectRow(rows[rows.length - 1]);
+      list.scrollTop = list.scrollHeight;
+    }
+  }
+
   function toggleShortcutsOverlay() {
     var overlay = document.getElementById("shortcuts-overlay");
     if (overlay) overlay.hidden = !overlay.hidden;
@@ -88,7 +122,29 @@
     var key = e.key;
     var row;
 
+    // g-sequence: first 'g' arms, next key completes or cancels.
+    if (pendingGo) {
+      pendingGo = false;
+      e.preventDefault();
+      if (key === "g") {
+        scrollListTo("top");
+      } else {
+        handleGoSequence(key);
+      }
+      return;
+    }
+
     switch (key) {
+      case "g":
+        e.preventDefault();
+        pendingGo = true;
+        break;
+
+      case "G":
+        e.preventDefault();
+        scrollListTo("bottom");
+        break;
+
       case "j":
         e.preventDefault();
         selectIndex(selectedIdx + 1);
