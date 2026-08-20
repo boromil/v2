@@ -1312,3 +1312,57 @@ func TestSSEEntriesOffsetOverflowResetsToFirstPage(t *testing.T) {
 		t.Error("expected offset signal to be reset to 0")
 	}
 }
+
+// TestThemeAttributeRendered verifies the data-theme/data-font attributes are
+// derived from the user's theme preference so explicit light/dark/serif
+// choices apply to the Datastar UI.
+func TestThemeAttributeRendered(t *testing.T) {
+	cases := []struct {
+		theme, themeClass, themeFont string
+	}{
+		{"system_sans_serif", "", ""},
+		{"light_sans_serif", "light", ""},
+		{"dark_sans_serif", "dark", ""},
+		{"system_serif", "", "serif"},
+		{"light_serif", "light", "serif"},
+		{"dark_serif", "dark", "serif"},
+	}
+	for _, tc := range cases {
+		if got := themeClass(tc.theme); got != tc.themeClass {
+			t.Errorf("themeClass(%q) = %q, want %q", tc.theme, got, tc.themeClass)
+		}
+		if got := themeFont(tc.theme); got != tc.themeFont {
+			t.Errorf("themeFont(%q) = %q, want %q", tc.theme, got, tc.themeFont)
+		}
+	}
+
+	// End-to-end: preference flows into the rendered attribute.
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	user.Theme = "dark_serif"
+	if err := store.UpdateUser(user); err != nil {
+		t.Fatalf("failed to update user theme: %v", err)
+	}
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	_ = mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	req := httptest.NewRequest(http.MethodGet, "/ds/unread", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, `data-theme="dark"`) {
+		t.Error("expected data-theme=\"dark\" on html element")
+	}
+	if !strings.Contains(body, `data-font="serif"`) {
+		t.Error("expected data-font=\"serif\" on html element")
+	}
+}

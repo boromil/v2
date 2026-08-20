@@ -106,6 +106,9 @@ func parseTemplates() *template.Template {
 			b, _ := json.Marshal(v)
 			return string(b)
 		},
+		"replace": func(str, old, new string) string {
+			return strings.Replace(str, old, new, 1)
+		},
 	}
 	return template.Must(template.New("").Funcs(funcMap).ParseFS(templateFiles,
 		"templates/layout.html",
@@ -158,6 +161,8 @@ type appViewModel struct {
 	Title              string
 	Language           string
 	Direction          string
+	ThemeClass         string
+	ThemeFont          string
 	CSRFToken          string
 	SearchQuery        string
 	ViewName           string
@@ -259,6 +264,8 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 	vm := appViewModel{
 		Language:           user.Language,
 		Direction:          "ltr",
+		ThemeClass:         themeClass(user.Theme),
+		ThemeFont:          themeFont(user.Theme),
 		CSRFToken:          request.WebSession(r).CSRF(),
 		SearchQuery:        searchQuery,
 		ViewName:           viewName,
@@ -351,6 +358,8 @@ func (h *handler) showSettings(w http.ResponseWriter, r *http.Request) {
 	vm := appViewModel{
 		Language:           user.Language,
 		Direction:          "ltr",
+		ThemeClass:         themeClass(user.Theme),
+		ThemeFont:          themeFont(user.Theme),
 		CSRFToken:          request.WebSession(r).CSRF(),
 		StyleChecksum:      dsstatic.StylesheetBundles["app"].Checksum,
 		JSChecksum:         dsstatic.JavascriptBundles["datastar"].Checksum,
@@ -1398,5 +1407,28 @@ func elapsedTime(t time.Time) string {
 			return "1y"
 		}
 		return fmt.Sprintf("%dy", y)
+	}
+}
+
+// themeClass maps a user theme preference to the data-theme attribute value.
+// An empty class means "follow the system preference".
+func themeClass(theme string) string {
+	switch theme {
+	case "light_sans_serif", "light_serif":
+		return "light"
+	case "dark_sans_serif", "dark_serif":
+		return "dark"
+	default:
+		return ""
+	}
+}
+
+// themeFont reports whether the user theme selects serif typography.
+func themeFont(theme string) string {
+	switch theme {
+	case "light_serif", "dark_serif", "system_serif":
+		return "serif"
+	default:
+		return ""
 	}
 }

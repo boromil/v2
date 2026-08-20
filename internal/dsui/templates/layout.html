@@ -1,6 +1,6 @@
 {{define "layout"}}
 <!DOCTYPE html>
-<html lang="{{.Language}}" dir="{{.Direction}}" style="color-scheme: dark light;">
+<html lang="{{replace .Language "_" "-"}}" dir="{{.Direction}}" data-theme="{{.ThemeClass}}" data-font="{{.ThemeFont}}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,7 +14,6 @@
     <script src="/ds/js/{{.ComponentsChecksum}}/components" defer></script>
 </head>
 <body class="m-0 p-0 overflow-hidden h-screen font-sans antialiased"
-    style="background-color: #ffffff; color: #1a1a2e;"
     data-signals='{"selectedIdx": -1, "selectedEntryId": 0, "countUnread": {{.CountUnread}}, "countErrorFeeds": {{.CountErrorFeeds}}, "csrfToken": "{{.CSRFToken}}", "searchQuery": "", "view": "{{.ViewName}}", "feedId": {{.FeedID}}, "categoryId": {{.CategoryID}}, "offset": {{.Offset}}}'
     data-csrf-token="{{.CSRFToken}}">
     <div id="toast-error" class="toast toast-error" data-show="$importError" style="display:none" data-on:click="$importError = ''">
