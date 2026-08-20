@@ -1,11 +1,11 @@
 {{define "pagination"}}
 <div class="pagination">
     {{if .HasPrev}}
-    <a href="#" data-on:click="@get('{{.SSEEntriesURL}}&offset={{.PrevOffset}}')">&laquo; Previous</a>
+    <a href="#" data-on:click="@get('{{.SSEEntriesURL}}&offset={{.PrevOffset}}')">&laquo; {{t "pagination.previous"}}</a>
     {{end}}
-    <span>Page {{.CurrentPage}} of {{.TotalPages}}</span>
+    <span>{{.CurrentPage}} / {{.TotalPages}}</span>
     {{if .HasNext}}
-    <a href="#" data-on:click="@get('{{.SSEEntriesURL}}&offset={{.NextOffset}}')">Next &raquo;</a>
+    <a href="#" data-on:click="@get('{{.SSEEntriesURL}}&offset={{.NextOffset}}')">{{t "pagination.next"}} &raquo;</a>
     {{end}}
 </div>
 {{end}}
