@@ -1,18 +1,18 @@
 {{define "settings"}}
 <div class="settings-page">
     <div class="top-nav">
-        <a href="/ds/unread" class="nav-title no-underline">&larr; Back to feeds</a>
+        <a href="/ds/unread" class="nav-title no-underline">&larr; {{t "page.feeds.title"}}</a>
     </div>
     <div class="settings-layout">
         <!-- Sidebar navigation -->
         <nav class="settings-nav">
-            <a href="#reading" class="settings-nav-item active">Reading</a>
-            <a href="#appearance" class="settings-nav-item">Appearance</a>
-            <a href="#interaction" class="settings-nav-item">Interaction</a>
-            <a href="#feeds" class="settings-nav-item">Feeds</a>
-            <a href="#import" class="settings-nav-item">Import &amp; Export</a>
-            <a href="#account" class="settings-nav-item">Account</a>
-            <a href="#password" class="settings-nav-item">Password</a>
+            <a href="#reading" class="settings-nav-item active">{{t "form.prefs.fieldset.reader_settings"}}</a>
+            <a href="#appearance" class="settings-nav-item">{{t "form.prefs.fieldset.application_settings"}}</a>
+            <a href="#interaction" class="settings-nav-item">{{t "page.keyboard_shortcuts.title"}}</a>
+            <a href="#feeds" class="settings-nav-item">{{t "page.feeds.title"}}</a>
+            <a href="#import" class="settings-nav-item">{{t "menu.import"}} &amp; {{t "menu.export"}}</a>
+            <a href="#account" class="settings-nav-item">{{t "page.settings.title"}}</a>
+            <a href="#password" class="settings-nav-item">{{t "form.user.label.password"}}</a>
         </nav>
 
         <!-- Content area -->
@@ -22,43 +22,43 @@
 
             <!-- Reading -->
             <section id="reading" class="settings-section">
-                <h3 class="settings-heading">Reading</h3>
+                <h3 class="settings-heading">{{t "form.prefs.fieldset.reader_settings"}}</h3>
                 <div class="settings-grid">
                     <label class="settings-field">
-                        <span class="settings-field-label">Default home page</span>
+                        <span class="settings-field-label">{{t "form.prefs.label.default_home_page"}}</span>
                         <select name="default_home_page" class="settings-select" data-bind:defaultHomePage>
-                            <option value="unread" {{if eq .Form.DefaultHomePage "unread"}}selected{{end}}>Unread</option>
-                            <option value="starred" {{if eq .Form.DefaultHomePage "starred"}}selected{{end}}>Starred</option>
-                            <option value="history" {{if eq .Form.DefaultHomePage "history"}}selected{{end}}>History</option>
-                            <option value="feeds" {{if eq .Form.DefaultHomePage "feeds"}}selected{{end}}>All feeds</option>
-                            <option value="categories" {{if eq .Form.DefaultHomePage "categories"}}selected{{end}}>Categories</option>
+                            <option value="unread" {{if eq .Form.DefaultHomePage "unread"}}selected{{end}}>{{t "page.unread.title"}}</option>
+                            <option value="starred" {{if eq .Form.DefaultHomePage "starred"}}selected{{end}}>{{t "page.starred.title"}}</option>
+                            <option value="history" {{if eq .Form.DefaultHomePage "history"}}selected{{end}}>{{t "page.history.title"}}</option>
+                            <option value="feeds" {{if eq .Form.DefaultHomePage "feeds"}}selected{{end}}>{{t "page.feeds.title"}}</option>
+                            <option value="categories" {{if eq .Form.DefaultHomePage "categories"}}selected{{end}}>{{t "menu.categories"}}</option>
                         </select>
                     </label>
                     <label class="settings-field">
-                        <span class="settings-field-label">Entry order</span>
+                        <span class="settings-field-label">{{t "form.prefs.label.entry_order"}}</span>
                         <select name="entry_order" class="settings-select" data-bind:entryOrder>
-                            <option value="published_at" {{if eq .Form.EntryOrder "published_at"}}selected{{end}}>Published date</option>
-                            <option value="created_at" {{if eq .Form.EntryOrder "created_at"}}selected{{end}}>Created date</option>
+                            <option value="published_at" {{if eq .Form.EntryOrder "published_at"}}selected{{end}}>{{t "form.prefs.select.publish_time"}}</option>
+                            <option value="created_at" {{if eq .Form.EntryOrder "created_at"}}selected{{end}}>{{t "form.prefs.select.created_time"}}</option>
                         </select>
                     </label>
                     <label class="settings-field">
-                        <span class="settings-field-label">Entry direction</span>
+                        <span class="settings-field-label">{{t "form.prefs.label.entry_sorting"}}</span>
                         <select name="entry_direction" class="settings-select" data-bind:entryDirection>
-                            <option value="desc" {{if eq .Form.EntryDirection "desc"}}selected{{end}}>Newest first</option>
-                            <option value="asc" {{if eq .Form.EntryDirection "asc"}}selected{{end}}>Oldest first</option>
+                            <option value="desc" {{if eq .Form.EntryDirection "desc"}}selected{{end}}>{{t "form.prefs.select.recent_first"}}</option>
+                            <option value="asc" {{if eq .Form.EntryDirection "asc"}}selected{{end}}>{{t "form.prefs.select.older_first"}}</option>
                         </select>
                     </label>
                     <label class="settings-field">
-                        <span class="settings-field-label">Per page</span>
+                        <span class="settings-field-label">{{t "form.prefs.label.entries_per_page"}}</span>
                         <input type="number" name="entries_per_page" class="settings-input" min="1" max="1000" value="{{.Form.EntriesPerPage}}" data-bind:entriesPerPage>
                     </label>
                     <label class="settings-field">
-                        <span class="settings-field-label">Mark read</span>
+                        <span class="settings-field-label">{{t "form.prefs.label.mark_read_on_view"}}</span>
                         <select name="mark_read_behavior" class="settings-select" data-bind:markReadBehavior>
-                            <option value="no-auto" {{if eq .Form.MarkReadBehavior "no-auto"}}selected{{end}}>Manual only</option>
-                            <option value="on-view" {{if eq .Form.MarkReadBehavior "on-view"}}selected{{end}}>On view</option>
-                            <option value="on-view-but-wait-for-player-completion" {{if eq .Form.MarkReadBehavior "on-view-but-wait-for-player-completion"}}selected{{end}}>On view, wait for media</option>
-                            <option value="on-player-completion" {{if eq .Form.MarkReadBehavior "on-player-completion"}}selected{{end}}>On media completion</option>
+                            <option value="no-auto" {{if eq .Form.MarkReadBehavior "no-auto"}}selected{{end}}>{{t "form.prefs.label.mark_read_manually"}}</option>
+                            <option value="on-view" {{if eq .Form.MarkReadBehavior "on-view"}}selected{{end}}>{{t "form.prefs.label.mark_read_on_view"}}</option>
+                            <option value="on-view-but-wait-for-player-completion" {{if eq .Form.MarkReadBehavior "on-view-but-wait-for-player-completion"}}selected{{end}}>{{t "form.prefs.label.mark_read_on_view_or_media_completion"}}</option>
+                            <option value="on-player-completion" {{if eq .Form.MarkReadBehavior "on-player-completion"}}selected{{end}}>{{t "form.prefs.label.mark_read_on_media_completion"}}</option>
                         </select>
                     </label>
                 </div>
@@ -66,33 +66,33 @@
 
             <!-- Appearance -->
             <section id="appearance" class="settings-section">
-                <h3 class="settings-heading">Appearance</h3>
+                <h3 class="settings-heading">{{t "form.prefs.fieldset.application_settings"}}</h3>
                 <div class="settings-grid">
                     <label class="settings-field">
-                        <span class="settings-field-label">Theme</span>
+                        <span class="settings-field-label">{{t "form.prefs.label.theme"}}</span>
                         <select name="theme" class="settings-select" data-bind:theme>
                             {{range .Themes}}<option value="{{.Value}}" {{if eq $.Form.Theme .Value}}selected{{end}}>{{.Label}}</option>{{end}}
                         </select>
                     </label>
                     <label class="settings-field">
-                        <span class="settings-field-label">Language</span>
+                        <span class="settings-field-label">{{t "form.prefs.label.language"}}</span>
                         <select name="language" class="settings-select" data-bind:language>
                             {{range .Languages}}<option value="{{.Value}}" {{if eq $.Form.Language .Value}}selected{{end}}>{{.Label}}</option>{{end}}
                         </select>
                     </label>
                     <label class="settings-field">
-                        <span class="settings-field-label">Timezone</span>
+                        <span class="settings-field-label">{{t "form.prefs.label.timezone"}}</span>
                         <select name="timezone" class="settings-select" data-bind:timezone>
                             {{range .Timezones}}<option value="{{.Value}}" {{if eq $.Form.Timezone .Value}}selected{{end}}>{{.Label}}</option>{{end}}
                         </select>
                     </label>
                     <label class="settings-field">
-                        <span class="settings-field-label">Display mode</span>
+                        <span class="settings-field-label">{{t "form.prefs.label.display_mode"}}</span>
                         <select name="display_mode" class="settings-select" data-bind:displayMode>
-                            <option value="fullscreen" {{if eq .Form.DisplayMode "fullscreen"}}selected{{end}}>Fullscreen</option>
-                            <option value="standalone" {{if eq .Form.DisplayMode "standalone"}}selected{{end}}>Standalone</option>
-                            <option value="minimal-ui" {{if eq .Form.DisplayMode "minimal-ui"}}selected{{end}}>Minimal UI</option>
-                            <option value="browser" {{if eq .Form.DisplayMode "browser"}}selected{{end}}>Browser</option>
+                            <option value="fullscreen" {{if eq .Form.DisplayMode "fullscreen"}}selected{{end}}>{{t "form.prefs.select.fullscreen"}}</option>
+                            <option value="standalone" {{if eq .Form.DisplayMode "standalone"}}selected{{end}}>{{t "form.prefs.select.standalone"}}</option>
+                            <option value="minimal-ui" {{if eq .Form.DisplayMode "minimal-ui"}}selected{{end}}>{{t "form.prefs.select.minimal_ui"}}</option>
+                            <option value="browser" {{if eq .Form.DisplayMode "browser"}}selected{{end}}>{{t "form.prefs.select.browser"}}</option>
                         </select>
                     </label>
                 </div>
@@ -100,48 +100,48 @@
 
             <!-- Interaction -->
             <section id="interaction" class="settings-section">
-                <h3 class="settings-heading">Interaction</h3>
+                <h3 class="settings-heading">{{t "page.keyboard_shortcuts.title"}}</h3>
                 <div class="settings-grid">
                     <label class="settings-field settings-field-checkbox">
                         <input type="checkbox" name="keyboard_shortcuts" value="1" {{if .Form.KeyboardShortcuts}}checked{{end}} data-bind:keyboardShortcuts>
-                        <span class="settings-field-label">Keyboard shortcuts</span>
+                        <span class="settings-field-label">{{t "form.prefs.label.keyboard_shortcuts"}}</span>
                     </label>
                     <label class="settings-field settings-field-checkbox">
                         <input type="checkbox" name="open_external_links_in_new_tab" value="1" {{if .Form.OpenExternalLinksInNewTab}}checked{{end}} data-bind:openExternalLinksInNewTab>
-                        <span class="settings-field-label">Open links in new tab</span>
+                        <span class="settings-field-label">{{t "form.prefs.label.always_open_external_links"}}</span>
                     </label>
                     <label class="settings-field settings-field-checkbox">
                         <input type="checkbox" name="show_reading_time" value="1" {{if .Form.ShowReadingTime}}checked{{end}} data-bind:showReadingTime>
-                        <span class="settings-field-label">Show reading time</span>
+                        <span class="settings-field-label">{{t "form.prefs.label.show_reading_time"}}</span>
                     </label>
                     <label class="settings-field settings-field-checkbox">
                         <input type="checkbox" name="strip_content_before_first_heading" value="1" {{if .Form.StripContentBeforeFirstHeading}}checked{{end}} data-bind:stripContentBeforeFirstHeading>
-                        <span class="settings-field-label">Remove page content above the first heading</span>
+                        <span class="settings-field-label">{{t "form.prefs.label.strip_content_before_first_heading"}}</span>
                     </label>
                 </div>
             </section>
 
             <!-- Feeds -->
             <section id="feeds" class="settings-section">
-                <h3 class="settings-heading">Feeds</h3>
+                <h3 class="settings-heading">{{t "page.feeds.title"}}</h3>
                 <div class="settings-grid">
                     <label class="settings-field">
-                        <span class="settings-field-label">Category sorting</span>
+                        <span class="settings-field-label">{{t "form.prefs.label.categories_sorting_order"}}</span>
                         <select name="categories_sorting_order" class="settings-select" data-bind:categoriesSortingOrder>
-                            <option value="unread_count" {{if eq .Form.CategoriesSortingOrder "unread_count"}}selected{{end}}>By unread count</option>
-                            <option value="alphabetical" {{if eq .Form.CategoriesSortingOrder "alphabetical"}}selected{{end}}>Alphabetically</option>
+                            <option value="unread_count" {{if eq .Form.CategoriesSortingOrder "unread_count"}}selected{{end}}>{{t "form.prefs.select.unread_count"}}</option>
+                            <option value="alphabetical" {{if eq .Form.CategoriesSortingOrder "alphabetical"}}selected{{end}}>{{t "form.prefs.select.alphabetical"}}</option>
                         </select>
                     </label>
                     <label class="settings-field">
-                        <span class="settings-field-label">Reading speed</span>
+                        <span class="settings-field-label">{{t "form.prefs.label.default_reading_speed"}}</span>
                         <input type="number" name="default_reading_speed" class="settings-input" min="1" value="{{.Form.DefaultReadingSpeed}}" data-bind:defaultReadingSpeed>
                     </label>
                     <label class="settings-field">
-                        <span class="settings-field-label">CJK reading speed</span>
+                        <span class="settings-field-label">{{t "form.prefs.label.cjk_reading_speed"}}</span>
                         <input type="number" name="cjk_reading_speed" class="settings-input" min="1" value="{{.Form.CJKReadingSpeed}}" data-bind:cjkReadingSpeed>
                     </label>
                     <label class="settings-field">
-                        <span class="settings-field-label">Media playback rate</span>
+                        <span class="settings-field-label">{{t "form.prefs.label.media_playback_rate"}}</span>
                         <input type="number" name="media_playback_rate" class="settings-input" min="0.25" max="4.0" step="0.25" value="{{printf "%.2f" .Form.MediaPlaybackRate}}" data-bind:mediaPlaybackRate>
                     </label>
                 </div>
@@ -150,44 +150,44 @@
             <div class="py-2">
                 <button type="button" class="toolbar-btn" style="background:var(--color-blue-600);color:#fff;border-color:var(--color-blue-600);"
                     data-on:click="@post('/ds/sse/settings', {contentType: 'form'})">
-                    Save Settings
+                    {{t "action.save"}}
                 </button>
             </div>
             </form><!-- end #settings-form -->
 
             <!-- Import & Export -->
             <section id="import" class="settings-section">
-                <h3 class="settings-heading">Import &amp; Export</h3>
+                <h3 class="settings-heading">{{t "menu.import"}} &amp; {{t "menu.export"}}</h3>
                 <form action="/ds/import-opml" method="post" enctype="multipart/form-data">
                     <input type="hidden" name="csrf" value="{{.CSRFToken}}">
-                    <p class="settings-help">Upload an OPML file from another feed reader.</p>
+                    <p class="settings-help">{{t "form.import.label.file"}}</p>
                     <div style="display:flex; gap:0.5rem; align-items:center;">
                         <input type="file" name="file" accept=".opml,.xml" required class="settings-file-input" style="flex:1;">
-                        <button type="submit" class="toolbar-btn">Import file</button>
+                        <button type="submit" class="toolbar-btn">{{t "action.import"}}</button>
                     </div>
                 </form>
                 <form action="/ds/fetch-opml" method="post" enctype="multipart/form-data" class="mt-2">
                     <input type="hidden" name="csrf" value="{{.CSRFToken}}">
                     <div style="display:flex; gap:0.5rem; align-items:center;">
                         <input type="url" name="url" placeholder="https://example.com/feeds.opml" required class="settings-input" style="flex:1;">
-                        <button type="submit" class="toolbar-btn">Fetch URL</button>
+                        <button type="submit" class="toolbar-btn">{{t "menu.import"}}</button>
                     </div>
                 </form>
                 <div class="mt-2">
-                    <a href="/export" class="toolbar-btn no-underline" target="_blank">Download OPML</a>
+                    <a href="/export" class="toolbar-btn no-underline" target="_blank">{{t "action.download"}} OPML</a>
                 </div>
             </section>
 
             <!-- Account -->
             <section id="account" class="settings-section">
-                <h3 class="settings-heading">Account</h3>
+                <h3 class="settings-heading">{{t "page.settings.title"}}</h3>
                 <div class="settings-grid">
                     <label class="settings-field">
-                        <span class="settings-field-label">Username</span>
+                        <span class="settings-field-label">{{t "form.user.label.username"}}</span>
                         <input type="text" name="username" class="settings-input" value="{{.Form.Username}}" data-bind:username required>
                     </label>
                     <label class="settings-field">
-                        <span class="settings-field-label">Custom CSS</span>
+                        <span class="settings-field-label">{{t "form.prefs.label.custom_css"}}</span>
                         <textarea name="stylesheet" class="settings-textarea" rows="3" data-bind:stylesheet>{{.Form.Stylesheet}}</textarea>
                     </label>
                 </div>
@@ -195,24 +195,24 @@
 
             <!-- Password -->
             <section id="password" class="settings-section">
-                <h3 class="settings-heading">Password</h3>
+                <h3 class="settings-heading">{{t "form.user.label.password"}}</h3>
                 <form action="/ds/sse/settings" method="post"
                     enctype="multipart/form-data"
                     data-on:submit__prevent="@post('/ds/sse/settings', {contentType: 'form'})">
                     <input type="hidden" name="csrf" value="{{.CSRFToken}}">
                     <div class="settings-grid">
                         <label class="settings-field">
-                            <span class="settings-field-label">New password</span>
-                            <input type="password" name="password" class="settings-input" placeholder="Minimum 6 characters">
+                            <span class="settings-field-label">{{t "form.user.label.password"}}</span>
+                            <input type="password" name="password" class="settings-input" placeholder="{{t "error.password_min_length"}}">
                         </label>
                         <label class="settings-field">
-                            <span class="settings-field-label">Confirm new password</span>
-                            <input type="password" name="confirmation" class="settings-input" placeholder="Re-enter password">
+                            <span class="settings-field-label">{{t "form.user.label.confirmation"}}</span>
+                            <input type="password" name="confirmation" class="settings-input" placeholder="{{t "form.user.label.confirmation"}}">
                         </label>
                     </div>
                     <div class="mt-2">
                         <button type="submit" class="toolbar-btn">
-                            Update password
+                            {{t "action.update"}}
                         </button>
                     </div>
                 </form>
