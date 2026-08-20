@@ -67,3 +67,11 @@ Each stage lands as separate Conventional Commits, one logical change each, with
 - Fuzz changed pure helpers where fuzz harness pattern applies
 - Live server regression: login → unread → entry open (mark-on-view, media proxy URLs, title) → star → status toggle → search → feed click (D1 check: correct list) → offset overflow (D5 check) → sorting pref flip (D4 check)
 - Commit after each verified logical change
+
+## Post-completion validation sweep (2026-08-20)
+- Fresh `go vet ./...`, `go build ./...`, `go test ./...` (55 packages, no cache): green.
+- Static i18n audit: 109 `t`/`plural`/printer keys used across dsui templates and Go code exist in all 23 locale files.
+- Found and fixed (57e47caa): entry header date used a hardcoded English `"January 2, 2006"` layout; now renders localized relative time via `elapsed` (classic parity), with iso `datetime` + absolute `title` tooltip.
+- Enclosure proxying re-derived against classic `entry.html`: dsui's `ShouldProxifyURLWithMimeType` is exactly equivalent to classic's `mustBeProxyfied(type)` + `proxyURL` combination for all mode/scheme/type combinations (default `http-only` + types=image leaves https audio raw in both).
+- Live checks: all six theme enum values map to correct `data-theme`/`data-font`; timezone conversion exact (2025-10-29 00:00 UTC → Oct 28 19:00 America/Chicago); French menu/titles/empty states/reading time; tags, comments link, typed enclosures, gated reading time on entry detail; unread-only search excludes read entries (12 → 9 rows, read entry absent); pagination markers on multi-page lists; shortcuts overlay + g-sequences in served JS; media progression round-trip (77s saved → `data-last-position="77"`).
+- Note: neither dsui nor classic validates theme enum membership server-side beyond non-empty; both UIs only offer valid values in the select. Test-DB residue (theme="light") was sweep curl fallout, not a code path reachable from the UI.
