@@ -39,7 +39,7 @@ Not defects (verified non-gaps): `dir="ltr"` hardcode matches classic (classic h
 Each stage lands as separate Conventional Commits, one logical change each, with tests and
 (fuzzing where harness exists — `helpers_fuzz_test.go` pattern).
 
-### Stage 1 — Correctness fixes (D1–D5)
+### Stage 1 — Correctness fixes (D1–D5) ✅ DONE (commits 782bf8b5, 67ee0b45, b5538009, a143d28e, a0c28e01; all live-verified)
 1. **D1 stale view:** nav `data-on:click` expressions set `$view`/`$feedId`/`$categoryId`/`$searchQuery=''` before `@get`. Belt-and-braces: `sseEntries` treats explicit `feedId`/`categoryId` URL params as view selectors (`feed`/`category`) when `view` param absent.
 2. **D2 title:** set `appViewModel.Title = ListTitle + " — Miniflux"`.
 3. **D3 media proxy:** apply `mediaproxy.RewriteDocumentWithRelativeProxyURL(entry.Content)` in `sseEntry` (and fetch-content path), matching classic `proxyFilter`.
