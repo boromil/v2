@@ -5,6 +5,7 @@ package dsui // import "miniflux.app/v2/internal/dsui"
 
 import (
 	"context"
+	"html/template"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -15,6 +16,7 @@ import (
 	"miniflux.app/v2/internal/config"
 	"miniflux.app/v2/internal/database/dialect"
 	"miniflux.app/v2/internal/http/request"
+	"miniflux.app/v2/internal/locale"
 	"miniflux.app/v2/internal/model"
 	"miniflux.app/v2/internal/storage"
 	mtest "miniflux.app/v2/internal/storage/testing"
@@ -900,6 +902,16 @@ func TestSearchNoMatchShowsEmptyState(t *testing.T) {
 func TestArticleToolbarStatusToggleMarker(t *testing.T) {
 	tpl := parseTemplates()
 
+	printer := locale.NewPrinter("en_US")
+	tpl, err := tpl.Clone()
+	if err != nil {
+		t.Fatalf("cloning template: %v", err)
+	}
+	tpl.Funcs(template.FuncMap{
+		"t":      printer.Printf,
+		"plural": printer.Plural,
+	})
+
 	for _, status := range []string{model.EntryStatusUnread, model.EntryStatusRead} {
 		var buf strings.Builder
 		data := map[string]any{
@@ -919,11 +931,12 @@ func TestArticleToolbarStatusToggleMarker(t *testing.T) {
 		if !strings.Contains(out, `data-on:click="@post('/ds/sse/entry/status')"`) {
 			t.Errorf("status button for %q must post to entry/status\noutput:\n%s", status, out)
 		}
-		// The button must still render its human-facing label (Read for unread
-		// entries, Unread for read ones).
-		want := "Read"
+		// The button must still render its human-facing label (mark as read
+		// for unread entries, mark as unread for read ones). The template
+		// localizes labels, so compare against the default English catalog.
+		want := printer.Print("entry.status.mark_as_read")
 		if status == model.EntryStatusRead {
-			want = "Unread"
+			want = printer.Print("entry.status.mark_as_unread")
 		}
 		if !strings.Contains(out, want) {
 			t.Errorf("status button for %q must show label %q\noutput:\n%s", status, want, out)

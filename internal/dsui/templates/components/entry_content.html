@@ -11,7 +11,20 @@
         <span class="author">{{.SelectedEntry.Author}}</span>
         {{end}}
         <span>{{.SelectedEntry.Date.Format "January 2, 2006 15:04"}}</span>
+        {{if and .SelectedEntry.ShowReadingTime (gt .SelectedEntry.ReadingTime 0)}}
+        <span>&middot; {{plural "entry.estimated_reading_time" .SelectedEntry.ReadingTime .SelectedEntry.ReadingTime}}</span>
+        {{end}}
     </div>
+    {{if .SelectedEntry.Tags}}
+    <div class="article-tags">
+        <span class="article-tags-label">{{t "entry.tags.label"}}</span>
+        <ul class="article-tags-list">
+            {{range .SelectedEntry.Tags}}
+            <li><strong>{{.}}</strong></li>
+            {{end}}
+        </ul>
+    </div>
+    {{end}}
 </div>
 <div class="article-body">
     {{.SelectedEntry.Content}}
@@ -20,11 +33,30 @@
 <div class="article-body" style="padding-top:0.5rem; border-top:1px solid var(--color-gray-200);">
     <h3 class="text-sm font-semibold mb-2" style="color:inherit;">{{t "page.entry.attachments"}}</h3>
     {{range .SelectedEntry.Enclosures}}
-    <div class="flex items-center gap-2 mb-1 text-sm">
-        <audio controls preload="none" style="width:100%; max-width:400px;" data-mime="{{.MimeType}}">
-            <source src="{{.URL}}" type="{{.MimeType}}">
-        </audio>
-        <a href="{{.URL}}" class="text-xs no-underline" download style="color:var(--color-blue-600);">{{t "action.download"}}</a>
+    <div class="entry-enclosure-item">
+        {{if .IsAudio}}
+        <div class="flex items-center gap-2 mb-1 text-sm">
+            <audio controls preload="metadata" style="width:100%; max-width:400px;" data-mime="{{.MimeType}}">
+                <source src="{{.URL}}" type="{{.Html5Mime}}">
+            </audio>
+            <a href="{{.URL}}" class="text-xs no-underline" download style="color:var(--color-blue-600);">{{t "action.download"}}</a>
+        </div>
+        {{else if .IsVideo}}
+        <div class="mb-2">
+            <video controls preload="metadata" style="width:100%; max-width:640px;" data-mime="{{.MimeType}}">
+                <source src="{{.URL}}" type="{{.Html5Mime}}">
+            </video>
+        </div>
+        {{else if .IsImage}}
+        <div class="mb-2">
+            <img src="{{.URL}}" loading="lazy" alt="{{.URL}}" style="max-width:100%; height:auto;">
+        </div>
+        {{end}}
+        {{if not .IsAudio}}
+        <div class="text-xs mb-1">
+            <a href="{{.URL}}" download class="no-underline" style="color:var(--color-blue-600);">{{.URL}}</a>
+        </div>
+        {{end}}
     </div>
     {{end}}
 </div>
