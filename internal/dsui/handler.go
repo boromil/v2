@@ -275,6 +275,7 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 	// Build subscription menu.
 	vm.MenuSections = h.buildMenu(user, viewName, feedID, categoryID)
 	vm.ListTitle = listTitleForView(viewName, feedID, categoryID, h.store, user.ID)
+	vm.Title = vm.ListTitle + " — Miniflux"
 	nav, _ := h.store.GetNavMetadata(user.ID)
 	vm.CountUnread = nav.CountUnread
 	vm.CountErrorFeeds = nav.CountErrorFeeds
