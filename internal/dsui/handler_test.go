@@ -96,6 +96,9 @@ func TestShowAppUnread(t *testing.T) {
 	if !strings.Contains(body, "Unread") {
 		t.Error("expected 'Unread' in response body")
 	}
+	if !strings.Contains(body, "<title>Unread — Miniflux</title>") {
+		t.Error("expected page title 'Unread — Miniflux' in response body")
+	}
 	if !strings.Contains(body, "app-container") {
 		t.Error("expected three-panel layout in response body")
 	}
