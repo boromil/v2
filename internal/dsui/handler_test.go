@@ -895,6 +895,41 @@ func TestSearchNoMatchShowsEmptyState(t *testing.T) {
 	}
 }
 
+// TestSearchUnreadOnlyFilter verifies that the searchUnreadOnly signal
+// restricts search results to unread entries, like the classic UI filter.
+func TestSearchUnreadOnlyFilter(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	mtest.CreateTestEntryWithContent(t, store, user.ID, feed.ID, "Go Programming Unread", "Go is great")
+	readEntry := mtest.CreateTestEntryWithContent(t, store, user.ID, feed.ID, "Go Programming Read", "Go is great")
+	if err := store.SetEntriesStatus(user.ID, []int64{readEntry.ID}, model.EntryStatusRead); err != nil {
+		t.Fatalf("marking entry read: %v", err)
+	}
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	signals := `{"searchQuery":"Go","searchUnreadOnly":true,"view":"unread"}`
+	u := "/ds/sse/entries?view=search&datastar=" + url.QueryEscape(signals)
+	req := httptest.NewRequest(http.MethodGet, u, nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "Go Programming Unread") {
+		t.Error("unread-only search must return the unread entry")
+	}
+	if strings.Contains(body, "Go Programming Read") {
+		t.Error("unread-only search must not return the read entry")
+	}
+}
+
 // TestArticleToolbarStatusToggleMarker verifies that the read-status (Read/Unread)
 // toggle button in article_toolbar carries a stable data-action marker. The
 // keyboard 'm' shortcut keys off this marker rather than the button's label,
