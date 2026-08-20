@@ -10,7 +10,7 @@
         {{if .SelectedEntry.Author}}
         <span class="author">{{.SelectedEntry.Author}}</span>
         {{end}}
-        <span>{{.SelectedEntry.Date.Format "January 2, 2006 15:04"}}</span>
+        <span><time datetime="{{.SelectedEntry.Date.Format "2006-01-02T15:04:05"}}" title="{{.SelectedEntry.Date.Format "2006-01-02 15:04"}}">{{elapsed .SelectedEntry.Date}}</time></span>
         {{if and .SelectedEntry.ShowReadingTime (gt .SelectedEntry.ReadingTime 0)}}
         <span>&middot; {{plural "entry.estimated_reading_time" .SelectedEntry.ReadingTime .SelectedEntry.ReadingTime}}</span>
         {{end}}

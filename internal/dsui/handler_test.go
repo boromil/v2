@@ -1506,3 +1506,70 @@ func TestEnclosureURLsProxified(t *testing.T) {
 		t.Error("raw enclosure URL must not appear as a media src when proxying")
 	}
 }
+
+// TestEntryDetailDateLocalized verifies the article header renders a
+// localized relative timestamp via the elapsed template function instead of
+// a hardcoded English absolute date ("January 2, 2006" format), matching the
+// classic UI's entry header.
+func TestEntryDetailDateLocalized(t *testing.T) {
+	for _, tc := range []struct {
+		language string
+		wants    []string
+	}{
+		{"en_US", []string{"ago"}},
+		{"fr_FR", []string{"il y a"}},
+		{"de_DE", []string{"vor"}},
+	} {
+		t.Run(tc.language, func(t *testing.T) {
+			printer := locale.NewPrinter(tc.language)
+			tpl, err := parseTemplates().Clone()
+			if err != nil {
+				t.Fatalf("cloning template: %v", err)
+			}
+			tpl.Funcs(template.FuncMap{
+				"t":      printer.Printf,
+				"plural": printer.Plural,
+				"elapsed": func(t time.Time) string {
+					return elapsedLocalized(printer, t)
+				},
+			})
+
+			data := map[string]any{
+				"SelectedEntry": map[string]any{
+					"ID":              int64(7),
+					"Title":           "Localized date",
+					"Author":          "",
+					"Date":            time.Now().UTC().Add(-3 * time.Hour),
+					"Content":         template.HTML("<p>body</p>"),
+					"Starred":         false,
+					"URL":             "https://example.com/7",
+					"Status":          model.EntryStatusUnread,
+					"ReadingTime":     0,
+					"ShowReadingTime": false,
+				},
+			}
+
+			var buf strings.Builder
+			if err := tpl.ExecuteTemplate(&buf, "entry_content", data); err != nil {
+				t.Fatalf("executing entry_content: %v", err)
+			}
+			out := buf.String()
+
+			if !strings.Contains(out, "<time") {
+				t.Errorf("expected a <time> element in header, got:\n%s", out)
+			}
+			matched := false
+			for _, want := range tc.wants {
+				if strings.Contains(out, want) {
+					matched = true
+				}
+			}
+			if !matched {
+				t.Errorf("expected localized elapsed text (one of %v) for %s, got:\n%s", tc.wants, tc.language, out)
+			}
+			if strings.Contains(out, "January") {
+				t.Errorf("hardcoded English month name must not appear for %s:\n%s", tc.language, out)
+			}
+		})
+	}
+}
