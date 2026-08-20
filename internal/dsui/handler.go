@@ -196,12 +196,14 @@ type appViewModel struct {
 }
 
 type entryView struct {
-	ID      int64
-	Title   string
-	Status  string
-	Starred bool
-	Date    time.Time
-	Feed    *feedRef
+	ID              int64
+	Title           string
+	Status          string
+	Starred         bool
+	Date            time.Time
+	Feed            *feedRef
+	ReadingTime     int
+	ShowReadingTime bool
 }
 
 type feedRef struct {
@@ -313,11 +315,13 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 	vm.Entries = make([]entryView, len(entries))
 	for i, e := range entries {
 		vm.Entries[i] = entryView{
-			ID:      e.ID,
-			Title:   e.Title,
-			Status:  e.Status,
-			Starred: e.Starred,
-			Date:    e.Date,
+			ID:              e.ID,
+			Title:           e.Title,
+			Status:          e.Status,
+			Starred:         e.Starred,
+			Date:            e.Date,
+			ReadingTime:     e.ReadingTime,
+			ShowReadingTime: user.ShowReadingTime,
 		}
 		if e.Feed != nil {
 			vm.Entries[i].Feed = &feedRef{Title: e.Feed.Title, ID: e.Feed.ID}
@@ -585,11 +589,13 @@ func (h *handler) sseEntries(w http.ResponseWriter, r *http.Request) {
 	evs := make([]entryView, len(entries))
 	for i, e := range entries {
 		evs[i] = entryView{
-			ID:      e.ID,
-			Title:   e.Title,
-			Status:  e.Status,
-			Starred: e.Starred,
-			Date:    e.Date,
+			ID:              e.ID,
+			Title:           e.Title,
+			Status:          e.Status,
+			Starred:         e.Starred,
+			Date:            e.Date,
+			ReadingTime:     e.ReadingTime,
+			ShowReadingTime: user.ShowReadingTime,
 		}
 		if e.Feed != nil {
 			evs[i].Feed = &feedRef{Title: e.Feed.Title, ID: e.Feed.ID}
@@ -916,11 +922,13 @@ func (h *handler) sseMarkAllRead(w http.ResponseWriter, r *http.Request) {
 	evs := make([]entryView, len(entries))
 	for i, e := range entries {
 		evs[i] = entryView{
-			ID:      e.ID,
-			Title:   e.Title,
-			Status:  e.Status,
-			Starred: e.Starred,
-			Date:    e.Date,
+			ID:              e.ID,
+			Title:           e.Title,
+			Status:          e.Status,
+			Starred:         e.Starred,
+			Date:            e.Date,
+			ReadingTime:     e.ReadingTime,
+			ShowReadingTime: user.ShowReadingTime,
 		}
 		if e.Feed != nil {
 			evs[i].Feed = &feedRef{Title: e.Feed.Title, ID: e.Feed.ID}
@@ -1024,11 +1032,13 @@ func (h *handler) sseMarkPageRead(w http.ResponseWriter, r *http.Request) {
 	evs := make([]entryView, len(entries))
 	for i, e := range entries {
 		evs[i] = entryView{
-			ID:      e.ID,
-			Title:   e.Title,
-			Status:  e.Status,
-			Starred: e.Starred,
-			Date:    e.Date,
+			ID:              e.ID,
+			Title:           e.Title,
+			Status:          e.Status,
+			Starred:         e.Starred,
+			Date:            e.Date,
+			ReadingTime:     e.ReadingTime,
+			ShowReadingTime: user.ShowReadingTime,
 		}
 		if e.Feed != nil {
 			evs[i].Feed = &feedRef{Title: e.Feed.Title, ID: e.Feed.ID}
