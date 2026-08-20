@@ -278,8 +278,14 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	offset := request.QueryIntParam(r, "offset", 0)
-	searchQuery := request.QueryStringParam(r, "q", "")
 	viewName, feedID, categoryID := parseAppRoute(r)
+
+	// The search box is the only source of the q param; other views ignore
+	// it so a stale ?q= never embeds a dead searchQuery into pagination URLs.
+	searchQuery := ""
+	if viewName == "search" {
+		searchQuery = request.QueryStringParam(r, "q", "")
+	}
 
 	vm := appViewModel{
 		Language:           user.Language,
