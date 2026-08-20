@@ -1103,3 +1103,84 @@ func TestSSESubscriptionsUsesFeedTreeInner(t *testing.T) {
 		t.Errorf("subscription patch must target the feed tree with mode inner, got: %s", body)
 	}
 }
+
+// TestSSEEntriesFeedClickOverridesStaleSearchSignals verifies that a nav click
+// carrying an explicit feedId URL param is treated as a feed view even when the
+// page signals still hold a previous search view/query (regression test for the
+// stale-view defect).
+func TestSSEEntriesFeedClickOverridesStaleSearchSignals(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	entry := mtest.CreateTestEntryWithContent(t, store, user.ID, feed.ID, "Unique Feed Entry", "content")
+	// Entry in another feed that would match a stale search query.
+	otherCat := mtest.CreateTestCategoryWithTitle(t, store, user.ID, "Other Category")
+	otherFeed := mtest.CreateTestFeedWithURL(t, store, user.ID, otherCat.ID, "https://example.com/other_feed.xml")
+	_ = mtest.CreateTestEntryWithContent(t, store, user.ID, otherFeed.ID, "Unrelated Entry", "content")
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	// Nav click: URL has feedId, signals carry view=search + searchQuery from
+	// an earlier search interaction.
+	q := url.Values{}
+	q.Set("feedId", itoa(feed.ID))
+	q.Set("datastar", `{"view":"search","searchQuery":"`+entry.Title+`"}`)
+	req := httptest.NewRequest(http.MethodGet, "/ds/sse/entries?"+q.Encode(), nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, entry.Title) {
+		t.Error("expected feed entries in response, got search-style filtering")
+	}
+	if strings.Contains(body, "Unrelated Entry") {
+		t.Error("feed view must not include entries from other feeds")
+	}
+	// The response must resync the client signals to the authoritative view.
+	if !strings.Contains(body, "datastar-patch-signals") {
+		t.Error("expected signal patch in SSE response")
+	}
+	if !strings.Contains(body, `"view":"feed"`) {
+		t.Error("expected view signal to be reset to feed")
+	}
+}
+
+// TestSSEEntriesCategoryClickOverridesStaleSearchSignals is the category-link
+// counterpart of the feed-click regression test.
+func TestSSEEntriesCategoryClickOverridesStaleSearchSignals(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	entry := mtest.CreateTestEntryWithContent(t, store, user.ID, feed.ID, "Category Entry", "content")
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	q := url.Values{}
+	q.Set("categoryId", itoa(cat.ID))
+	q.Set("datastar", `{"view":"search","searchQuery":"nomatch"}`)
+	req := httptest.NewRequest(http.MethodGet, "/ds/sse/entries?"+q.Encode(), nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, entry.Title) {
+		t.Error("expected category entries in response, got search-style filtering")
+	}
+	if !strings.Contains(body, `"view":"category"`) {
+		t.Error("expected view signal to be reset to category")
+	}
+}
