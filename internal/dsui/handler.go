@@ -500,6 +500,21 @@ func (h *handler) sseEntries(w http.ResponseWriter, r *http.Request) {
 	if v := r.URL.Query().Has("view"); v {
 		req.View = request.QueryStringParam(r, "view", req.View)
 	}
+
+	// An explicit feedId or categoryId URL param signals a nav click: those
+	// links never carry a view param, and the page signals may still hold a
+	// stale view (e.g. "search") from the previous interaction. Treat the
+	// scope params as authoritative in that case.
+	if !r.URL.Query().Has("view") {
+		if r.URL.Query().Has("feedId") {
+			req.View = "feed"
+			req.CategoryID = 0
+		} else if r.URL.Query().Has("categoryId") {
+			req.View = "category"
+			req.FeedID = 0
+		}
+	}
+
 	if req.View == "" {
 		req.View = "unread"
 	}
@@ -508,12 +523,19 @@ func (h *handler) sseEntries(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.URL.Query().Has("feedId") {
 		req.FeedID = request.QueryInt64Param(r, "feedId", 0)
+	} else if req.View != "feed" {
+		req.FeedID = 0
 	}
 	if r.URL.Query().Has("categoryId") {
 		req.CategoryID = request.QueryInt64Param(r, "categoryId", 0)
+	} else if req.View != "category" {
+		req.CategoryID = 0
 	}
 	if r.URL.Query().Has("offset") {
 		req.Offset = request.QueryIntParam(r, "offset", 0)
+	} else {
+		// A fresh view (nav click) always starts at the first page.
+		req.Offset = 0
 	}
 
 	entries, total, err := h.queryEntries(user.ID, req.View, req.FeedID, req.CategoryID, req.SearchQuery, req.Offset, user.EntriesPerPage)
@@ -573,6 +595,16 @@ func (h *handler) sseEntries(w http.ResponseWriter, r *http.Request) {
 
 	renderSSEResponse(w, r, SSEResponse{
 		Fragments: fragments,
+		Signals: map[string]any{
+			// Keep the page signals in sync with the authoritative request so
+			// subsequent signal-driven requests (e.g. pagination) reuse the
+			// same view instead of a stale one.
+			"view":        req.View,
+			"feedId":      req.FeedID,
+			"categoryId":  req.CategoryID,
+			"searchQuery": req.SearchQuery,
+			"offset":      req.Offset,
+		},
 	})
 }
 
