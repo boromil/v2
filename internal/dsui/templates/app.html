@@ -31,7 +31,7 @@
     <main id="entry-list-panel" class="flex flex-col h-full">
         <div class="top-nav">
             <span class="nav-title">{{.ListTitle}}</span>
-            <form class="flex items-center gap-1" style="flex-shrink:0;"
+            <form class="flex items-center gap-2" style="flex-shrink:0;"
                 data-on:submit__prevent="$view = 'search'; @get('/ds/sse/entries?view=search')">
                 <input type="search" name="q" placeholder="{{t "menu.search"}}" 
                     style="width:10rem;min-width:6rem;flex:1 1 10rem;max-width:18rem;font-size:0.75rem;padding:0.125rem 0.375rem;border:1px solid var(--color-gray-400);border-radius:0.25rem;color:var(--color-gray-800);background:var(--color-white);"
