@@ -1898,6 +1898,11 @@ func TestKeyboardJSParityShortcuts(t *testing.T) {
 	if !strings.Contains(js, "pendingZ") {
 		t.Error("keyboard.js must track the z-sequence (z t) pending state")
 	}
+	// Escape must work while an input is focused (blur the search box after
+	// '/'), so it is handled before the input guard.
+	if !strings.Contains(js, `e.key === "Escape"`) {
+		t.Error("keyboard.js must handle Escape before the input-focused guard")
+	}
 }
 
 // TestShortcutsOverlayListsParityKeys verifies the shortcuts overlay documents

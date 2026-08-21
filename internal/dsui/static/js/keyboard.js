@@ -133,6 +133,21 @@
   }
 
   document.addEventListener("keydown", function (e) {
+    // Escape always works, even inside inputs: it blurs the search box so
+    // shortcuts become available again (classic Esc closes overlays).
+    if (e.key === "Escape" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      var overlay = document.getElementById("shortcuts-overlay");
+      if (overlay && !overlay.hidden) {
+        overlay.hidden = true;
+      }
+      var search = document.querySelector('.top-nav input[type="search"]');
+      if (search && document.activeElement === search) {
+        e.preventDefault();
+        search.blur();
+      }
+      return;
+    }
+
     if (inputFocused()) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
 
@@ -346,12 +361,6 @@
         toggleShortcutsOverlay();
         break;
 
-      case "Escape":
-        var overlay = document.getElementById("shortcuts-overlay");
-        if (overlay && !overlay.hidden) {
-          overlay.hidden = true;
-        }
-        break;
     }
   });
 
