@@ -68,6 +68,15 @@ Each stage lands as separate Conventional Commits, one logical change each, with
 - Live server regression: login → unread → entry open (mark-on-view, media proxy URLs, title) → star → status toggle → search → feed click (D1 check: correct list) → offset overflow (D5 check) → sorting pref flip (D4 check)
 - Commit after each verified logical change
 
+## Post-completion validation sweep, round 6 (2026-08-21)
+Untested-surface pass: escaping, auth/CSRF boundary, live prefs, mobile, media progression:
+- **a1473030** (found via mobile testing): Datastar SSE patches MORPH the DOM in place — after the initial render, updates arrive as characterData/attribute mutations, not childList. Both keyboard.js observers (mobile panel auto-switch, list selection reset) subscribed to childList only, so (a) tapping a row on mobile NEVER switched to the content panel, and (b) pagination/mark-page-read silently killed keyboard selection. Observers now subscribe to all mutation types; panel switches only when the article title changes (pre-rendered first entry must not yank the user on load); list morphs fall back to selecting row 0 (classic parity).
+- Escaping verified with hostile titles: entry titles escaped in row and detail (html/template auto-escape), feed titles escaped in the tree; entry content renders raw via template.HTML exactly like classic's safeHTML (same trust model: sanitizer at ingest).
+- Auth/CSRF boundary: all 11 POST endpoints reject missing/wrong CSRF with 400; unauthenticated GETs redirect to login with return URL.
+- Live prefs: language fr_FR and theme dark switch via settings and take effect on next render; restored.
+- Media progression: pause handler saves position via the upstream save-progression endpoint (77s round trip → data-last-position on re-render); seek/speed controls re-verified. Note: live-feed refresh had legitimately dropped the fixture enclosure (feed content changed), not a bug.
+- Mobile suites all green after the observer fix; desktop suites unchanged.
+
 ## Post-completion validation sweep, round 5 (2026-08-21)
 Integration-boundary pass over remaining flows; three fixes, all live-verified:
 - **eb237b8f**: OPML import/fetch failures were silent (log + redirect, no user-visible error; classic re-renders with the error). Failures now set a short-lived flash cookie and redirect to /ds/settings, which renders an error banner exactly once (consuming response expires the cookie). Fetch errors use the localized fetcher message.
