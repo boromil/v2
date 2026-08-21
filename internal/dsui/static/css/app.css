@@ -776,7 +776,7 @@ html[data-theme="dark"] .resize-handle {
 }
 
 .entry-row.selected {
-  background-color: var(--color-blue-50);
+  background-color: var(--color-blue-100);
 }
 
 .entry-row.read .entry-title {
@@ -1048,6 +1048,23 @@ html[data-theme="dark"] .resize-handle {
   border-color: var(--color-gray-400);
 }
 
+/* Keyboard focus visibility */
+:focus-visible {
+  outline: 2px solid var(--color-blue-500);
+  outline-offset: 1px;
+}
+
+.feed-tree-item:focus-visible {
+  outline: 2px solid var(--color-blue-500);
+  outline-offset: -2px;
+}
+
+.star-btn:focus-visible,
+.mark-read-btn:focus-visible {
+  outline: 2px solid var(--color-blue-500);
+  outline-offset: 1px;
+}
+
 /* Top nav bar */
 .top-nav {
   display: flex;
@@ -1301,7 +1318,7 @@ html:not([data-theme="light"]):root {
   }html:not([data-theme="light"]) .entry-row:hover {
     background-color: #1e1e3a;
   }html:not([data-theme="light"]) .entry-row.selected {
-    background-color: #1a2a4a;
+    background-color: #1e3a5f;
   }html:not([data-theme="light"]) .entry-row.read .entry-title {
     color: #7777aa;
   }html:not([data-theme="light"]) .entry-row.unread .entry-title {
@@ -1411,7 +1428,7 @@ html[data-theme="dark"]:root {
   }html[data-theme="dark"] .entry-row:hover {
     background-color: #1e1e3a;
   }html[data-theme="dark"] .entry-row.selected {
-    background-color: #1a2a4a;
+    background-color: #1e3a5f;
   }html[data-theme="dark"] .entry-row.read .entry-title {
     color: #7777aa;
   }html[data-theme="dark"] .entry-row.unread .entry-title {
