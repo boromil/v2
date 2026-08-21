@@ -6,9 +6,9 @@ package dsui // import "miniflux.app/v2/internal/dsui"
 import (
 	"context"
 	"fmt"
+	"html"
 	"html/template"
 	"net/http"
-	"html"
 	"net/http/httptest"
 	"net/url"
 	"os"
@@ -1636,9 +1636,9 @@ func TestSSEFetchContentKeepsParityFields(t *testing.T) {
 	}
 	body := w.Body.String()
 	for _, want := range []string{
-		"golang",                              // tag chip
+		"golang",                                 // tag chip
 		"https://comments.example.com/item?id=1", // comments link
-		"audio.mp3",                           // enclosure
+		"audio.mp3",                              // enclosure
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("scraped re-render must keep %q\nbody excerpt: %s", want, body)
@@ -1842,9 +1842,9 @@ func TestEntryContentEnclosuresDetails(t *testing.T) {
 	})
 
 	entry := &entryDetailView{
-		ID:        5,
-		Title:     "With Enclosures",
-		Content:   "<p>body</p>",
+		ID:      5,
+		Title:   "With Enclosures",
+		Content: "<p>body</p>",
 		Enclosures: []enclosureView{
 			{ID: 1, URL: "https://example.com/a.mp3", MimeType: "audio/mpeg", IsAudio: true},
 		},
@@ -2266,5 +2266,174 @@ func TestRemoveFeedIsUserScoped(t *testing.T) {
 
 	if kept, err := store.FeedByID(owner.ID, feed.ID); err != nil || kept == nil {
 		t.Errorf("owner's feed must survive another user's remove attempt (got %v, err %v)", kept, err)
+	}
+}
+
+// TestSettingsListsCategoriesWithCounts verifies the settings subscriptions
+// section renders each category with feed counts, a rename form, and a
+// remove form disabled while feeds remain assigned.
+func TestSettingsListsCategoriesWithCounts(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	req := httptest.NewRequest(http.MethodGet, "/ds/settings", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	body := w.Body.String()
+	for _, marker := range []string{
+		`action="/ds/create-category"`,
+		`action="/ds/rename-category/` + itoa(cat.ID) + `"`,
+		`action="/ds/remove-category/` + itoa(cat.ID) + `"`,
+		`data-category-row="` + itoa(cat.ID) + `"`,
+		"disabled",
+	} {
+		if !strings.Contains(body, marker) {
+			t.Errorf("settings must render %q\nbody:\n%s", marker, body)
+		}
+	}
+	_ = feed
+}
+
+// TestCreateCategory verifies category creation and duplicate rejection.
+func TestCreateCategory(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	form := url.Values{"title": {"News"}}
+	req := httptest.NewRequest(http.MethodPost, "/ds/create-category", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req, csrf := authenticateTestSession(t, store, req, user)
+	req.Header.Set("X-Csrf-Token", csrf)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != http.StatusFound {
+		t.Fatalf("expected 302, got %d", w.Code)
+	}
+	if created, _ := store.CategoryByTitle(user.ID, "News"); created == nil {
+		t.Error("category must be created")
+	}
+
+	// Duplicate → redirect with localized flash error.
+	req2 := httptest.NewRequest(http.MethodPost, "/ds/create-category", strings.NewReader(form.Encode()))
+	req2.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req2, csrf2 := authenticateTestSession(t, store, req2, user)
+	req2.Header.Set("X-Csrf-Token", csrf2)
+
+	w2 := httptest.NewRecorder()
+	handler.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusFound {
+		t.Fatalf("expected 302 for duplicate, got %d", w2.Code)
+	}
+	var flashed bool
+	for _, c := range w2.Result().Cookies() {
+		if c.Name == "dsui_flash_error" && c.Value != "" {
+			flashed = true
+		}
+	}
+	if !flashed {
+		t.Error("duplicate category must set flash error")
+	}
+}
+
+// TestRenameCategory verifies renaming and missing-category redirect.
+func TestRenameCategory(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	form := url.Values{"title": {"Renamed"}}
+	req := httptest.NewRequest(http.MethodPost, "/ds/rename-category/"+itoa(cat.ID), strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req, csrf := authenticateTestSession(t, store, req, user)
+	req.Header.Set("X-Csrf-Token", csrf)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != http.StatusFound {
+		t.Fatalf("expected 302, got %d", w.Code)
+	}
+	if renamed, _ := store.CategoryByTitle(user.ID, "Renamed"); renamed == nil {
+		t.Error("category must be renamed")
+	}
+
+	// Missing category → clean redirect.
+	req2 := httptest.NewRequest(http.MethodPost, "/ds/rename-category/99999", strings.NewReader(form.Encode()))
+	req2.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req2, csrf2 := authenticateTestSession(t, store, req2, user)
+	req2.Header.Set("X-Csrf-Token", csrf2)
+
+	w2 := httptest.NewRecorder()
+	handler.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusFound {
+		t.Fatalf("expected 302 for missing category, got %d", w2.Code)
+	}
+}
+
+// TestRemoveCategoryGuardsAssignedFeeds verifies remove refuses categories
+// with feeds (SQLite FK would cascade-delete the feeds) and removes empty ones.
+func TestRemoveCategoryGuardsAssignedFeeds(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	_ = mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	emptyCat, err := store.CreateCategory(user.ID, &model.CategoryCreationRequest{Title: "Empty"})
+	if err != nil {
+		t.Fatalf("creating empty category: %v", err)
+	}
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	// Category with feed: must refuse and flash.
+	req := httptest.NewRequest(http.MethodPost, "/ds/remove-category/"+itoa(cat.ID), nil)
+	req, csrf := authenticateTestSession(t, store, req, user)
+	req.Header.Set("X-Csrf-Token", csrf)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != http.StatusFound {
+		t.Fatalf("expected 302, got %d", w.Code)
+	}
+	var flashed bool
+	for _, c := range w.Result().Cookies() {
+		if c.Name == "dsui_flash_error" && c.Value != "" {
+			flashed = true
+		}
+	}
+	if !flashed {
+		t.Error("removing a category with feeds must flash an error")
+	}
+	if kept, _ := store.Category(user.ID, cat.ID); kept == nil {
+		t.Error("category with feeds must survive remove attempt")
+	}
+
+	// Empty category: must remove.
+	req2 := httptest.NewRequest(http.MethodPost, "/ds/remove-category/"+itoa(emptyCat.ID), nil)
+	req2, csrf2 := authenticateTestSession(t, store, req2, user)
+	req2.Header.Set("X-Csrf-Token", csrf2)
+	w2 := httptest.NewRecorder()
+	handler.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusFound {
+		t.Fatalf("expected 302, got %d", w2.Code)
+	}
+	if gone, _ := store.Category(user.ID, emptyCat.ID); gone != nil {
+		t.Error("empty category must be removed")
 	}
 }

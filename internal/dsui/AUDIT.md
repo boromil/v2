@@ -68,6 +68,14 @@ Each stage lands as separate Conventional Commits, one logical change each, with
 - Live server regression: login → unread → entry open (mark-on-view, media proxy URLs, title) → star → status toggle → search → feed click (D1 check: correct list) → offset overflow (D5 check) → sorting pref flip (D4 check)
 - Commit after each verified logical change
 
+## Post-completion validation sweep, round 8 (2026-08-21)
+Management parity completion: categories.
+- **Round-7 regression fixed**: settings.html had TWO sections with id="feeds" (reading prefs + the new management section) — invalid HTML that broke the #feeds nav anchor. Management section renamed to id="subscriptions".
+- **Gap closed**: dsui had no category CRUD (classic: create/rename/remove under Categories). Added to the subscriptions section: create form, per-category rename form, remove button — all regular form POSTs with CSRF hidden fields (/ds/create-category, /ds/rename-category/{id}, /ds/remove-category/{id}).
+- **Deliberate divergence from classic**: classic's removeCategory calls store.RemoveCategory unguarded; on SQLite the FK cascades, which would silently delete every feed in the category (and their entries). dsui refuses removal while feeds remain assigned (flash error + disabled button). Classic's opaque FK failure on Postgres is an upstream UX issue, not copied.
+- Live-verified: create → row with feed count; duplicate → localized "This category already exists." flash; rename round-trips; empty category removes; feed-bearing category refuses (flash + survives); missing id redirects; CSRF 400 without token; sidebar unaffected.
+- Regression tests: TestSettingsListsCategoriesWithCounts, TestCreateCategory, TestRenameCategory, TestRemoveCategoryGuardsAssignedFeeds.
+
 ## Post-completion validation sweep, round 7 (2026-08-21)
 Integration boundary: feed lifecycle management.
 - **Gap found and fixed**: dsui had NO way to add or remove a feed (only OPML import/export), while this audit's P6 note claimed both existed in settings — an overstated claim, now corrected. Classic exposes this via /subscribe and the feed edit page.
