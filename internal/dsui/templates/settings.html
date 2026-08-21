@@ -1,5 +1,10 @@
 {{define "settings"}}
 <div class="settings-page">
+    {{if .FlashError}}
+    <div class="flash-error" role="alert" style="background:var(--color-red-50, #fee2e2); color:var(--color-red-700, #b91c1c); padding:0.5rem 0.75rem; border-radius:0.375rem; margin-bottom:0.75rem; font-size:0.875rem;">
+        {{.FlashError}}
+    </div>
+    {{end}}
     <div class="top-nav">
         <a href="/ds/unread" class="nav-title no-underline">&larr; {{t "page.feeds.title"}}</a>
     </div>

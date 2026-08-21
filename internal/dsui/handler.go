@@ -190,6 +190,7 @@ type appViewModel struct {
 	Pagination         *paginationView
 	MenuSections       []menuSection
 	IsSettings         bool
+	FlashError         string
 	Form               *settingsFormData
 	Themes             []selectOption
 	Languages          []selectOption
@@ -384,6 +385,11 @@ func (h *handler) showSettings(w http.ResponseWriter, r *http.Request) {
 
 	form := settingsFormFromUser(user)
 
+	flashError, clearFlash := takeFlashError(r)
+	if clearFlash != nil {
+		http.SetCookie(w, clearFlash)
+	}
+
 	vm := appViewModel{
 		Language:           user.Language,
 		Direction:          "ltr",
@@ -396,6 +402,7 @@ func (h *handler) showSettings(w http.ResponseWriter, r *http.Request) {
 		ComponentsChecksum: dsstatic.JavascriptBundles["components"].Checksum,
 		Title:              "Settings — Miniflux",
 		IsSettings:         true,
+		FlashError:         flashError,
 		Form:               form,
 		Themes:             themeOptions(),
 		Languages:          languageOptions(),
@@ -464,15 +471,17 @@ func (h *handler) fetchOPML(w http.ResponseWriter, r *http.Request) {
 
 	if localizedError := responseHandler.LocalizedError(); localizedError != nil {
 		slog.Warn("dsui: unable to fetch OPML", slog.String("url", opmlURL), slog.Any("error", localizedError.Error()))
+		setFlashError(w, localizedError.Translate(user.Language))
 		response.HTMLRedirect(w, r, "/ds/settings")
 		return
 	}
 
 	if impErr := opml.NewHandler(h.store).Import(user.ID, responseHandler.Body(config.Opts.HTTPClientMaxBodySize())); impErr != nil {
 		slog.Error("dsui: OPML import failed", slog.Any("error", impErr))
+		setFlashError(w, impErr.Error())
 	}
 
-	response.HTMLRedirect(w, r, "/ds/unread")
+	response.HTMLRedirect(w, r, "/ds/settings")
 }
 
 func (h *handler) refreshFeeds(w http.ResponseWriter, r *http.Request) {
@@ -986,7 +995,7 @@ func (h *handler) importOPML(w http.ResponseWriter, r *http.Request) {
 			slog.Int64("user_id", user.ID),
 			slog.Any("error", err),
 		)
-		response.HTMLRedirect(w, r, "/ds/unread")
+		response.HTMLRedirect(w, r, "/ds/settings")
 		return
 	}
 	defer file.Close()
@@ -998,7 +1007,7 @@ func (h *handler) importOPML(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if fileHeader.Size == 0 {
-		response.HTMLRedirect(w, r, "/ds/unread")
+		response.HTMLRedirect(w, r, "/ds/settings")
 		return
 	}
 
@@ -1007,9 +1016,10 @@ func (h *handler) importOPML(w http.ResponseWriter, r *http.Request) {
 			slog.Int64("user_id", user.ID),
 			slog.Any("error", impErr),
 		)
+		setFlashError(w, impErr.Error())
 	}
 
-	response.HTMLRedirect(w, r, "/ds/unread")
+	response.HTMLRedirect(w, r, "/ds/settings")
 }
 
 func (h *handler) sseMarkPageRead(w http.ResponseWriter, r *http.Request) {
@@ -1590,4 +1600,43 @@ func elapsedLocalized(printer *locale.Printer, t time.Time) string {
 	default:
 		return printer.Plural("time_elapsed.years", int(d.Hours()/(24*365)), int(d.Hours()/(24*365)))
 	}
+}
+
+// setFlashError stores a short-lived flash message cookie that the next
+// settings render consumes (see takeFlashError).
+func setFlashError(w http.ResponseWriter, msg string) {
+	if msg == "" {
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     "dsui_flash_error",
+		Value:    url.QueryEscape(msg),
+		Path:     "/",
+		MaxAge:   30,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+}
+
+// takeFlashError reads the flash error cookie and returns the message
+// together with a cookie value that expires it (the caller must set it on the
+// response so the banner shows exactly once).
+func takeFlashError(r *http.Request) (string, *http.Cookie) {
+	c, err := r.Cookie("dsui_flash_error")
+	if err != nil || c.Value == "" {
+		return "", nil
+	}
+	v, err := url.QueryUnescape(c.Value)
+	if err != nil || v == "" {
+		return "", nil
+	}
+	clear := &http.Cookie{
+		Name:     "dsui_flash_error",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	}
+	return v, clear
 }
