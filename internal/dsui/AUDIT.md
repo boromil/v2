@@ -68,6 +68,15 @@ Each stage lands as separate Conventional Commits, one logical change each, with
 - Live server regression: login → unread → entry open (mark-on-view, media proxy URLs, title) → star → status toggle → search → feed click (D1 check: correct list) → offset overflow (D5 check) → sorting pref flip (D4 check)
 - Commit after each verified logical change
 
+## Post-completion validation sweep, round 10 — systematic UX review (2026-08-21)
+Google Reader-aesthetic pass over layout/typography/hierarchy/affordances/accessibility/i18n (review done against live DOM + CSS/template analysis; the supplied screenshots could not be rendered by this agent's model, which has no vision input).
+- **Strengths confirmed (no change)**: three-pane grid with independent scroll and resizable divider; compact 0.8125rem list rows with muted meta line; unread=600/gray-900 vs read=400/gray-600 distinction; 42rem reading measure at 1.65 line-height; star/mark-read/share/fetch/comments affordances.
+- **Selected-row contrast (fixed)**: sidebar selected item used `blue-100` but entry-list selected row used `blue-50` (near-invisible). Now both `blue-100`; dark mode selected row `#1a2a4a` → `#1e3a5f` (both the prefers-color-scheme and explicit `data-theme=dark` blocks). Verified live: selected row bg = `oklch(0.932 0.032 255.585)` (blue-100).
+- **Keyboard focus (fixed)**: zero `:focus-visible` rules existed. Added a global focus ring + inset variants for `.feed-tree-item`; removed a dead rule for the non-focusable custom `<entry-row>` element.
+- **i18n leak (fixed)**: sidebar header hardcoded "Subscriptions" → `{{t "menu.feeds"}}`. Verified live: "Feeds".
+- **Search input (fixed)**: hard-fixed 120px → `10rem` with `flex:1 1 10rem` / `min-width:6rem` / `max-width:18rem`. Verified live: 160px wide, grows.
+- **Remaining documented gaps (unchanged)**: mobile-nav buttons "Articles"/"Reader" are hardcoded English with no existing i18n key (leaving as-is per the "real native keys only, no invented translations" rule); RTL direction still hardcoded `ltr` (matches classic, which has no `dir` attribute at all); keyboard `g c`/`F`/`+`/`#` remain intentionally omitted (no feeds/categories pages in dsui).
+
 ## Post-completion validation sweep, round 9 (2026-08-21)
 User-reported issues: GUI prefs should apply on save (not reload), and the panel resize handle showed a cursor but could not drag.
 - **Resize handle fixed (dead code path)**: the drag handler rewrote `style.gridTemplateColumns` via `.replace(/1fr 4px 1fr/, ...)`, but the inline style is empty until first set (the real grid lives in the stylesheet: `240px 1fr 4px 1fr`), so the replace never matched and dragging did nothing. Now the handler writes the explicit template `240px {w}px 4px 1fr`, guarded to desktop widths, plus touch support and the existing localStorage persistence. Verified live: drag +150px widens list 578→728, width survives reload.
