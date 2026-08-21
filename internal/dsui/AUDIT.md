@@ -68,6 +68,14 @@ Each stage lands as separate Conventional Commits, one logical change each, with
 - Live server regression: login → unread → entry open (mark-on-view, media proxy URLs, title) → star → status toggle → search → feed click (D1 check: correct list) → offset overflow (D5 check) → sorting pref flip (D4 check)
 - Commit after each verified logical change
 
+## Post-completion validation sweep, round 5 (2026-08-21)
+Integration-boundary pass over remaining flows; three fixes, all live-verified:
+- **eb237b8f**: OPML import/fetch failures were silent (log + redirect, no user-visible error; classic re-renders with the error). Failures now set a short-lived flash cookie and redirect to /ds/settings, which renders an error banner exactly once (consuming response expires the cookie). Fetch errors use the localized fetcher message.
+- **8f3f49ee**: after '/' focused the search box, ALL shortcuts were dead until clicking elsewhere — Escape was swallowed by the input guard. Escape now closes the overlay and blurs the search box even while an input is focused; typing is unaffected.
+- Verified-correct (no change): 'A' marks exactly the current page's entries (page-2 test with epp=5: only those 5 ids flipped, countUnread patch correct — reading the stale initial data-signals attribute had produced a false alarm); share flow end-to-end including the public /share/{code} page (upstream route, 200); 'v' fallback (loads entry then opens original); 'm' flips both row class and toolbar label; '/' focus works; direct mark-page-read POST ignores extraneous entryIds JSON by design (page derived from signals).
+- Static i18n audit re-run with the new overlay keys: 115 dsui keys present in all 23 locales.
+- All three Playwright suites against the final build: core 10/11 (known login-redirect premise), r3 8/8, r4 16/16 (c skipped: no comments URL on the selected fixture entry).
+
 ## Post-completion validation sweep, round 4 (2026-08-21)
 Closed the P6 parity-shortcut residual list and, in the process, found two real SSE bugs:
 - **40c2ea2d**: implemented h/l, f, c/C, d, a, z t, g f, R (markers: `data-action=toggle-star|fetch-content|comments-link|refresh-all`, `data-feed-id` on rows, enclosures now inside `<details class=entry-enclosures open>` so 'a' can toggle). Selection restore: sseEntry replaces the opened row node, which silently dropped the keyboard `.selected` class — keyboard.js now tracks the selected entry id and re-applies it after list mutations (this is what made h/l lose selection mid-navigation).
