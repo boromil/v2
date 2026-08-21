@@ -160,8 +160,8 @@
             </div>
             </form><!-- end #settings-form -->
 
-            <!-- Feeds -->
-            <section id="feeds" class="settings-section">
+            <!-- Subscriptions management -->
+            <section id="subscriptions" class="settings-section">
                 <h3 class="settings-heading">{{t "menu.feeds"}}</h3>
                 <form action="/ds/add-feed" method="post" class="mb-2">
                     <input type="hidden" name="csrf" value="{{.CSRFToken}}">
@@ -185,6 +185,35 @@
                         <form action="/ds/remove-feed/{{.ID}}" method="post" data-remove-feed="{{.ID}}">
                             <input type="hidden" name="csrf" value="{{$.CSRFToken}}">
                             <button type="submit" class="toolbar-btn">{{t "action.remove"}}</button>
+                        </form>
+                    </li>
+                    {{end}}
+                </ul>
+                {{end}}
+
+                <h3 class="settings-heading" style="margin-top:1.25rem;">{{t "menu.categories"}}</h3>
+                <form action="/ds/create-category" method="post" class="mb-2">
+                    <input type="hidden" name="csrf" value="{{.CSRFToken}}">
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="text" name="title" placeholder="{{t "form.category.label.title"}}" required maxlength="200" class="settings-input" style="flex:1;">
+                        <button type="submit" class="toolbar-btn">{{t "action.save"}}</button>
+                    </div>
+                </form>
+                {{if .Categories}}
+                <ul style="list-style:none; margin:0; padding:0;">
+                    {{range .Categories}}
+                    <li style="display:flex; gap:0.5rem; align-items:center; padding:0.4rem 0; border-bottom:1px solid var(--color-gray-200, #e5e7eb);" data-category-row="{{.ID}}">
+                        <div style="flex:1; min-width:0;">
+                            <form action="/ds/rename-category/{{.ID}}" method="post" data-rename-category="{{.ID}}" style="display:flex; gap:0.5rem; align-items:center;">
+                                <input type="hidden" name="csrf" value="{{$.CSRFToken}}">
+                                <input type="text" name="title" value="{{.Title}}" required maxlength="200" class="settings-input" style="max-width:16rem;">
+                                <button type="submit" class="toolbar-btn">{{t "action.update"}}</button>
+                            </form>
+                        </div>
+                        <span style="font-size:0.75rem; color:var(--color-gray-500, #6b7280); white-space:nowrap;">{{t "page.categories.feed_count"}}: {{.FeedCount}}</span>
+                        <form action="/ds/remove-category/{{.ID}}" method="post" data-remove-category="{{.ID}}">
+                            <input type="hidden" name="csrf" value="{{$.CSRFToken}}">
+                            <button type="submit" class="toolbar-btn" {{if gt .FeedCount 0}}disabled title="{{t "page.categories.no_feed"}}"{{end}}>{{t "action.remove"}}</button>
                         </form>
                     </li>
                     {{end}}

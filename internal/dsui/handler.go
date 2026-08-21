@@ -26,8 +26,8 @@ import (
 	"miniflux.app/v2/internal/mediaproxy"
 	"miniflux.app/v2/internal/model"
 	"miniflux.app/v2/internal/proxyrotator"
-	feedHandler "miniflux.app/v2/internal/reader/handler"
 	"miniflux.app/v2/internal/reader/fetcher"
+	feedHandler "miniflux.app/v2/internal/reader/handler"
 	"miniflux.app/v2/internal/reader/opml"
 	"miniflux.app/v2/internal/reader/processor"
 	"miniflux.app/v2/internal/storage"
@@ -85,6 +85,11 @@ func Serve(store *storage.Storage, pool *worker.Pool) http.Handler {
 	// Feed management (regular form POST).
 	mux.HandleFunc("POST /ds/add-feed", h.addFeed)
 	mux.HandleFunc("POST /ds/remove-feed/{feedID}", h.removeFeed)
+
+	// Category management (regular form POST).
+	mux.HandleFunc("POST /ds/create-category", h.createCategory)
+	mux.HandleFunc("POST /ds/rename-category/{categoryID}", h.renameCategory)
+	mux.HandleFunc("POST /ds/remove-category/{categoryID}", h.removeCategory)
 
 	// SSE fragment endpoints.
 	mux.HandleFunc("GET /ds/sse/entries", h.sseEntries)
@@ -202,6 +207,7 @@ type appViewModel struct {
 	Languages          []selectOption
 	Timezones          []selectOption
 	Feeds              []settingsFeedView
+	Categories         []settingsCategoryView
 }
 
 type settingsFeedView struct {
@@ -210,8 +216,15 @@ type settingsFeedView struct {
 	SiteURL           string
 	FeedURL           string
 	Category          string
+	CategoryID        int64
 	ParsingErrorCount int
 	ParsingErrorMsg   string
+}
+
+type settingsCategoryView struct {
+	ID        int64
+	Title     string
+	FeedCount int
 }
 
 type entryView struct {
@@ -418,14 +431,38 @@ func (h *handler) showSettings(w http.ResponseWriter, r *http.Request) {
 		if f.Category != nil {
 			categoryTitle = f.Category.Title
 		}
+		var categoryID int64
+		if f.Category != nil {
+			categoryID = f.Category.ID
+		}
 		feedViews = append(feedViews, settingsFeedView{
 			ID:                f.ID,
 			Title:             f.Title,
 			SiteURL:           f.SiteURL,
 			FeedURL:           f.FeedURL,
 			Category:          categoryTitle,
+			CategoryID:        categoryID,
 			ParsingErrorCount: f.ParsingErrorCount,
 			ParsingErrorMsg:   f.ParsingErrorMsg,
+		})
+	}
+
+	// Categories with feed counts for the management section.
+	categories, err := h.store.CategoriesWithFeedCount(user.ID, "title")
+	if err != nil {
+		slog.Error("dsui: unable to list categories for settings", slog.Int64("user_id", user.ID), slog.Any("error", err))
+		categories = nil
+	}
+	categoryViews := make([]settingsCategoryView, 0, len(categories))
+	for _, c := range categories {
+		var feedCount int
+		if c.FeedCount != nil {
+			feedCount = *c.FeedCount
+		}
+		categoryViews = append(categoryViews, settingsCategoryView{
+			ID:        c.ID,
+			Title:     c.Title,
+			FeedCount: feedCount,
 		})
 	}
 
@@ -447,6 +484,7 @@ func (h *handler) showSettings(w http.ResponseWriter, r *http.Request) {
 		Languages:          languageOptions(),
 		Timezones:          timezoneOptions(),
 		Feeds:              feedViews,
+		Categories:         categoryViews,
 	}
 
 	var buf bytes.Buffer
@@ -1138,6 +1176,126 @@ func (h *handler) removeFeed(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.store.RemoveFeed(user.ID, feedID); err != nil {
 		slog.Error("dsui: unable to remove feed", slog.Int64("user_id", user.ID), slog.Int64("feed_id", feedID), slog.Any("error", err))
+		setFlashError(w, err.Error())
+	}
+	response.HTMLRedirect(w, r, "/ds/settings")
+}
+
+// createCategory adds a category from the settings subscriptions section.
+func (h *handler) createCategory(w http.ResponseWriter, r *http.Request) {
+	user, err := h.store.UserByID(request.UserID(r))
+	if err != nil {
+		response.HTMLServerError(w, r, err)
+		return
+	}
+
+	title := strings.TrimSpace(r.FormValue("title"))
+	if title == "" {
+		setFlashError(w, "Category title is required")
+		response.HTMLRedirect(w, r, "/ds/settings")
+		return
+	}
+
+	if existing, _ := h.store.CategoryByTitle(user.ID, title); existing != nil {
+		printer := locale.NewPrinter(user.Language)
+		setFlashError(w, printer.Print("error.category_already_exists"))
+		response.HTMLRedirect(w, r, "/ds/settings")
+		return
+	}
+
+	category, err := h.store.CreateCategory(user.ID, &model.CategoryCreationRequest{Title: title})
+	if err != nil {
+		slog.Error("dsui: unable to create category", slog.Int64("user_id", user.ID), slog.Any("error", err))
+		setFlashError(w, err.Error())
+	}
+	_ = category
+
+	response.HTMLRedirect(w, r, "/ds/settings")
+}
+
+// renameCategory updates a category title from the settings subscriptions section.
+func (h *handler) renameCategory(w http.ResponseWriter, r *http.Request) {
+	user, err := h.store.UserByID(request.UserID(r))
+	if err != nil {
+		response.HTMLServerError(w, r, err)
+		return
+	}
+
+	categoryID, err := strconv.ParseInt(r.PathValue("categoryID"), 10, 64)
+	if err != nil || categoryID <= 0 {
+		setFlashError(w, "Invalid category ID")
+		response.HTMLRedirect(w, r, "/ds/settings")
+		return
+	}
+
+	title := strings.TrimSpace(r.FormValue("title"))
+	if title == "" {
+		setFlashError(w, "Category title is required")
+		response.HTMLRedirect(w, r, "/ds/settings")
+		return
+	}
+
+	category, err := h.store.Category(user.ID, categoryID)
+	if err != nil {
+		response.HTMLServerError(w, r, err)
+		return
+	}
+	if category == nil {
+		response.HTMLRedirect(w, r, "/ds/settings")
+		return
+	}
+
+	category.Title = title
+	if err := h.store.UpdateCategory(category); err != nil {
+		slog.Error("dsui: unable to rename category", slog.Int64("user_id", user.ID), slog.Int64("category_id", categoryID), slog.Any("error", err))
+		setFlashError(w, err.Error())
+	}
+	response.HTMLRedirect(w, r, "/ds/settings")
+}
+
+// removeCategory deletes an empty category. Unlike classic (which relies on
+// the storage FK and can fail opaquely), dsui refuses to remove a category
+// that still has feeds assigned, because the SQLite schema cascades feed
+// deletion and that would silently drop subscriptions and their entries.
+func (h *handler) removeCategory(w http.ResponseWriter, r *http.Request) {
+	user, err := h.store.UserByID(request.UserID(r))
+	if err != nil {
+		response.HTMLServerError(w, r, err)
+		return
+	}
+
+	categoryID, err := strconv.ParseInt(r.PathValue("categoryID"), 10, 64)
+	if err != nil || categoryID <= 0 {
+		setFlashError(w, "Invalid category ID")
+		response.HTMLRedirect(w, r, "/ds/settings")
+		return
+	}
+
+	category, err := h.store.Category(user.ID, categoryID)
+	if err != nil {
+		response.HTMLServerError(w, r, err)
+		return
+	}
+	if category == nil {
+		response.HTMLRedirect(w, r, "/ds/settings")
+		return
+	}
+
+	categoryFeeds, err := h.store.Feeds(user.ID)
+	if err != nil {
+		response.HTMLServerError(w, r, err)
+		return
+	}
+	for _, f := range categoryFeeds {
+		if f.Category != nil && f.Category.ID == categoryID {
+			setFlashError(w, "This category still has feeds assigned. Move or remove them first.")
+			response.HTMLRedirect(w, r, "/ds/settings")
+			return
+		}
+	}
+
+	if err := h.store.RemoveCategory(user.ID, categoryID); err != nil {
+		slog.Error("dsui: unable to remove category", slog.Int64("user_id", user.ID), slog.Int64("category_id", categoryID), slog.Any("error", err))
 		setFlashError(w, err.Error())
 	}
 	response.HTMLRedirect(w, r, "/ds/settings")
