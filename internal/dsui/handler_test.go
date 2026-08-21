@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -1756,5 +1757,284 @@ func TestNonSearchViewIgnoresQParam(t *testing.T) {
 	}
 	if !strings.Contains(w.Body.String(), "searchQuery=QParam") {
 		t.Error("search view must pass the q param through to pagination")
+	}
+}
+
+// TestArticleToolbarParityMarkers verifies the toolbar carries stable
+// data-action markers for the keyboard parity shortcuts: toggle-star ('f'),
+// fetch-content ('d'), and comments-link ('c'/'C'). The handlers in
+// keyboard.js select by these markers, not by button text.
+func TestArticleToolbarParityMarkers(t *testing.T) {
+	tpl := parseTemplates()
+
+	printer := locale.NewPrinter("en_US")
+	tpl, err := tpl.Clone()
+	if err != nil {
+		t.Fatalf("cloning template: %v", err)
+	}
+	tpl.Funcs(template.FuncMap{
+		"t":      printer.Printf,
+		"plural": printer.Plural,
+	})
+
+	var buf strings.Builder
+	data := map[string]any{
+		"ID":          int64(42),
+		"Starred":     false,
+		"URL":         "https://example.com/42",
+		"Status":      model.EntryStatusUnread,
+		"CommentsURL": "https://example.com/comments",
+	}
+	if err := tpl.ExecuteTemplate(&buf, "article_toolbar", data); err != nil {
+		t.Fatalf("executing article_toolbar: %v", err)
+	}
+	out := buf.String()
+
+	for _, marker := range []string{
+		`data-action="toggle-star"`,
+		`data-action="fetch-content"`,
+		`data-action="comments-link"`,
+	} {
+		if !strings.Contains(out, marker) {
+			t.Errorf("toolbar must carry %s\noutput:\n%s", marker, out)
+		}
+	}
+}
+
+// TestEntryRowCarriesFeedID verifies entry rows expose data-feed-id so the
+// classic-parity "g f" shortcut can navigate to the selected entry's feed.
+func TestEntryRowCarriesFeedID(t *testing.T) {
+	tpl := parseTemplates()
+
+	var buf strings.Builder
+	data := map[string]any{
+		"ID":      int64(7),
+		"Title":   "Some Entry",
+		"Status":  model.EntryStatusUnread,
+		"Starred": false,
+		"Date":    time.Now(),
+		"Feed":    &feedRef{Title: "Feed", ID: int64(12)},
+	}
+	if err := tpl.ExecuteTemplate(&buf, "entry_row", data); err != nil {
+		t.Fatalf("executing entry_row: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, `data-feed-id="12"`) {
+		t.Errorf("entry row must expose data-feed-id=12 for g f navigation\noutput:\n%s", out)
+	}
+}
+
+// TestEntryContentEnclosuresDetails verifies enclosures render inside a
+// <details class="entry-enclosures"> element so the classic-parity 'a'
+// shortcut can toggle their visibility.
+func TestEntryContentEnclosuresDetails(t *testing.T) {
+	tpl := parseTemplates()
+
+	printer := locale.NewPrinter("en_US")
+	tpl, err := tpl.Clone()
+	if err != nil {
+		t.Fatalf("cloning template: %v", err)
+	}
+	tpl.Funcs(template.FuncMap{
+		"t":      printer.Printf,
+		"plural": printer.Plural,
+	})
+
+	entry := &entryDetailView{
+		ID:        5,
+		Title:     "With Enclosures",
+		Content:   "<p>body</p>",
+		Enclosures: []enclosureView{
+			{ID: 1, URL: "https://example.com/a.mp3", MimeType: "audio/mpeg", IsAudio: true},
+		},
+	}
+	var buf strings.Builder
+	data := map[string]any{"SelectedEntry": entry, "ShowReadingTime": true}
+	if err := tpl.ExecuteTemplate(&buf, "entry_content", data); err != nil {
+		t.Fatalf("executing entry_content: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, `<details class="entry-enclosures`) {
+		t.Errorf("enclosures must render inside <details class=\"entry-enclosures\">\noutput:\n%s", out)
+	}
+	if !strings.Contains(out, "entry-enclosure-item") {
+		t.Errorf("enclosure item must still render\noutput:\n%s", out)
+	}
+}
+
+// TestKeyboardJSParityShortcuts statically verifies keyboard.js implements
+// the classic-UI parity shortcuts and that the selectors it uses match the
+// data-action markers rendered by the templates (tested above). This is a
+// source-level guard: if either side renames a marker, this test catches it.
+func TestKeyboardJSParityShortcuts(t *testing.T) {
+	src, err := os.ReadFile("static/js/keyboard.js")
+	if err != nil {
+		t.Fatalf("reading keyboard.js: %v", err)
+	}
+	js := string(src)
+
+	for _, tc := range []struct{ key, selector string }{
+		{"f", `button[data-action="toggle-star"]`},
+		{"d", `button[data-action="fetch-content"]`},
+		{"c", `a[data-action="comments-link"]`},
+		{"R", `button[data-action="refresh-all"]`},
+	} {
+		if !strings.Contains(js, `case "`+tc.key+`"`) {
+			t.Errorf("keyboard.js must handle key %q", tc.key)
+		}
+		if !strings.Contains(js, tc.selector) {
+			t.Errorf("keyboard.js must select %q for key %q", tc.selector, tc.key)
+		}
+	}
+	for _, key := range []string{"h", "l", "C", "a", "z"} {
+		if !strings.Contains(js, `case "`+key+`"`) {
+			t.Errorf("keyboard.js must handle key %q", key)
+		}
+	}
+	if !strings.Contains(js, `"/ds/feed/" + feedID`) {
+		t.Error("keyboard.js must navigate to /ds/feed/{id} for g f")
+	}
+	if !strings.Contains(js, "pendingZ") {
+		t.Error("keyboard.js must track the z-sequence (z t) pending state")
+	}
+}
+
+// TestShortcutsOverlayListsParityKeys verifies the shortcuts overlay documents
+// the new parity keys using existing upstream i18n keys.
+func TestShortcutsOverlayListsParityKeys(t *testing.T) {
+	tpl := parseTemplates()
+	printer := locale.NewPrinter("en_US")
+	tpl, err := tpl.Clone()
+	if err != nil {
+		t.Fatalf("cloning template: %v", err)
+	}
+	tpl.Funcs(template.FuncMap{
+		"t":      printer.Printf,
+		"plural": printer.Plural,
+	})
+
+	var buf strings.Builder
+	if err := tpl.ExecuteTemplate(&buf, "shortcuts_overlay", nil); err != nil {
+		t.Fatalf("executing shortcuts_overlay: %v", err)
+	}
+	out := buf.String()
+
+	for _, dt := range []string{
+		"<dt>s / f</dt>", "<dt>h / l</dt>", "<dt>g f</dt>", "<dt>d</dt>",
+		"<dt>c / C</dt>", "<dt>a</dt>", "<dt>z t</dt>", "<dt>R</dt>",
+	} {
+		if !strings.Contains(out, dt) {
+			t.Errorf("overlay must list %s\noutput:\n%s", dt, out)
+		}
+	}
+	if want := printer.Print("page.keyboard_shortcuts.toggle_entry_attachments"); !strings.Contains(out, want) {
+		t.Errorf("overlay must describe the 'a' shortcut with %q\noutput:\n%s", want, out)
+	}
+}
+
+// TestSSEToggleStarUpdatesToolbarButton verifies the toolbar star button has
+// an id that sseToggleStar actually patches (#toolbar-star-btn-{ID}) and that
+// the SSE response patches both the row star and the toolbar star. Regression:
+// the handler used to target #toolbar-star-icon-{ID}, which never existed, so
+// the toolbar star label never updated after a star toggle.
+func TestSSEToggleStarUpdatesToolbarButton(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	entry := &model.Entry{
+		FeedID:  feed.ID,
+		UserID:  user.ID,
+		Status:  model.EntryStatusUnread,
+		Title:   "Star Me",
+		Hash:    "star-toolbar-1",
+		Content: "<p>x</p>",
+		Date:    time.Now(),
+	}
+	if _, err := store.InsertEntryForFeed(user.ID, feed.ID, entry); err != nil {
+		t.Fatalf("failed to insert entry: %v", err)
+	}
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	req := httptest.NewRequest(http.MethodPost, "/ds/sse/entry/star/"+itoa(entry.ID), nil)
+	req, csrf := authenticateTestSession(t, store, req, user)
+	req.Header.Set("X-Csrf-Token", csrf)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, `#toolbar-star-btn-`+itoa(entry.ID)) {
+		t.Errorf("SSE response must target #toolbar-star-btn-%s\nbody:\n%s", itoa(entry.ID), body)
+	}
+	if !strings.Contains(body, `data-action="toggle-star"`) {
+		t.Errorf("patched toolbar button must keep the toggle-star marker\nbody:\n%s", body)
+	}
+}
+
+// TestSSEToggleShareUpdatesToolbarButton verifies the share toggle patches the
+// toolbar share element (#toolbar-share-btn-{ID}) so the label flips between
+// Share and Unshare and, when shared, exposes the public /share/{code} link.
+// Regression: the handler used to patch only the "shared" signal, which no
+// template binds, so the toolbar never reflected the new state.
+func TestSSEToggleShareUpdatesToolbarButton(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	entry := &model.Entry{
+		UserID:  user.ID,
+		FeedID:  feed.ID,
+		Hash:    "hash_share_" + t.Name(),
+		Title:   "Share Me",
+		Content: "x",
+		Date:    time.Now(),
+	}
+	if _, err := store.InsertEntryForFeed(user.ID, feed.ID, entry); err != nil {
+		t.Fatalf("failed to insert entry: %v", err)
+	}
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	// Share it.
+	req := httptest.NewRequest(http.MethodPost, "/ds/sse/share/"+itoa(entry.ID), nil)
+	req, csrf := authenticateTestSession(t, store, req, user)
+	req.Header.Set("X-Csrf-Token", csrf)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, `#toolbar-share-btn-`+itoa(entry.ID)) {
+		t.Errorf("SSE response must target #toolbar-share-btn-%s\nbody:\n%s", itoa(entry.ID), body)
+	}
+	printer := locale.NewPrinter(user.Language)
+	if want := printer.Print("entry.unshare.label"); !strings.Contains(body, want) {
+		t.Errorf("shared state must show the %q button\nbody:\n%s", want, body)
+	}
+	if !strings.Contains(body, `href="/share/`) {
+		t.Errorf("shared state must expose the public share link\nbody:\n%s", body)
+	}
+
+	// Unshare it.
+	req = httptest.NewRequest(http.MethodPost, "/ds/sse/share/"+itoa(entry.ID), nil)
+	req, csrf = authenticateTestSession(t, store, req, user)
+	req.Header.Set("X-Csrf-Token", csrf)
+	w = httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	body = w.Body.String()
+	if want := printer.Print("entry.share.label"); !strings.Contains(body, want) {
+		t.Errorf("unshared state must show the %q button\nbody:\n%s", want, body)
+	}
+	if strings.Contains(body, `href="/share/`) {
+		t.Errorf("unshared state must not expose a share link\nbody:\n%s", body)
 	}
 }

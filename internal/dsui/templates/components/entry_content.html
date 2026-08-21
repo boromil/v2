@@ -30,8 +30,9 @@
     {{.SelectedEntry.Content}}
 </div>
 {{if .SelectedEntry.Enclosures}}
-<div class="article-body" style="padding-top:0.5rem; border-top:1px solid var(--color-gray-200);">
-    <h3 class="text-sm font-semibold mb-2" style="color:inherit;">{{t "page.entry.attachments"}}</h3>
+<details class="entry-enclosures article-body" style="padding-top:0.5rem; border-top:1px solid var(--color-gray-200);" open>
+    <summary class="text-sm font-semibold mb-2" style="color:inherit; cursor:pointer;">{{t "page.entry.attachments"}}</summary>
+    <div style="margin-top:0.5rem;">
     {{range .SelectedEntry.Enclosures}}
     <div class="entry-enclosure-item">
         {{if .IsAudio}}
@@ -71,7 +72,8 @@
         {{end}}
     </div>
     {{end}}
-</div>
+    </div>
+</details>
 {{end}}
 {{else}}
 <div class="empty-state" data-show="!$selectedEntryId">
