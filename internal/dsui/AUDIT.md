@@ -28,7 +28,7 @@ Not defects (verified non-gaps): `dir="ltr"` hardcode matches classic (classic h
 | P3 | ~~`CommentsURL` not exposed/rendered~~ **DONE** (e008b3c9): toolbar link when present | `entry.html:128-130` |
 | P4 | ~~Enclosures: audio-only~~ **DONE** (e008b3c9, f80e1e8a): typed audio/video/image rendering with Html5MimeType, download links, seek/speed media controls, and progression persistence via the classic save-progression endpoint. | `entry.html:25-45,246-280`, `app.js` enclosure handlers |
 | P5 | ~~No prev/next entry navigation~~ **DONE** (f401b373): `n`/`p` move selection + load entry (`NewEntryPaginationBuilder`, keyboard `h`/`l` + toolbar buttons) | `entry_feed.go:56`, `entry_category.go:56`, `entry_unread.go` |
-| P6 | Keyboard shortcuts: **DONE** full classic set (f401b373, e4b86093, 98d64d10, 674d93ae, 40c2ea2d): j/k, Enter/o, v, s, m, A, r, n/p, ArrowLeft/Right, '/', '?'+Esc overlay, g u|b|h|s|f, g g/G, plus parity keys h/l, f, c/C, d, a, z t, R. Intentionally omitted: g c (no categories page in dsui; feed tree groups by category), F/g f-to-feeds-list (same: no feeds page, g f goes to the selected entry's feed), '+' (add-subscription is a settings-form action, not a page), '#' (remove-feed lives in settings). | `keyboard.js` |
+| P6 | Keyboard shortcuts: **DONE** full classic set (f401b373, e4b86093, 98d64d10, 674d93ae, 40c2ea2d): j/k, Enter/o, v, s, m, A, r, n/p, ArrowLeft/Right, '/', '?'+Esc overlay, g u|b|h|s|f, g g/G, plus parity keys h/l, f, c/C, d, a, z t, R. Intentionally omitted: g c (no categories page in dsui; feed tree groups by category), F/g f-to-feeds-list (same: no feeds page, g f goes to the selected entry's feed), '+' and '#' (dsui has no dedicated feeds page; add/remove subscription live in the settings feeds section since round 7). | `keyboard.js` |
 | P7 | ~~No keyboard-shortcuts help overlay~~ **DONE** (98d64d10): '?' toggle + Escape close, localized | `keyboard_shortcuts` dialog |
 | P8 | ~~Search: no unread-only toggle~~ **DONE** (3c90e0ec, 6a797fa1): checkbox beside search box, `searchUnreadOnly` signal → status-filtered query | `search.go` `unread` param |
 | P9 | ~~No pagination keyboard nav~~ **DONE** (e4b86093, 40c2ea2d): ArrowLeft/Right click the marked pagination links; `z t` scrolls the selected item into view | | `app.js:1191-1196,1199` |
@@ -67,6 +67,14 @@ Each stage lands as separate Conventional Commits, one logical change each, with
 - Fuzz changed pure helpers where fuzz harness pattern applies
 - Live server regression: login → unread → entry open (mark-on-view, media proxy URLs, title) → star → status toggle → search → feed click (D1 check: correct list) → offset overflow (D5 check) → sorting pref flip (D4 check)
 - Commit after each verified logical change
+
+## Post-completion validation sweep, round 7 (2026-08-21)
+Integration boundary: feed lifecycle management.
+- **Gap found and fixed**: dsui had NO way to add or remove a feed (only OPML import/export), while this audit's P6 note claimed both existed in settings — an overstated claim, now corrected. Classic exposes this via /subscribe and the feed edit page.
+- Implemented: settings "Feeds" section — add-feed form (POST /ds/add-feed → reader feedHandler.CreateFeed, default FirstCategory, localized errors via the round-5 flash banner) and per-feed remove (POST /ds/remove-feed/{id} → store.RemoveFeed, entries cascade). Feed rows show title, site link, category, parsing errors.
+- Handler correctness fix during testing: store.FeedByID returns (nil, nil) for not-found, so the initial removeFeed existence check could never fire; now nil-aware (also makes the cross-user path a clean redirect).
+- Live-verified: add https://miniflux.app/feed.xml → appears in settings + sidebar, feed view lists 50 entries; unfetchable URL → localized flash error shown exactly once; remove → row gone, DB has 0 orphaned entries; missing feed id → redirect, no error; CSRF 400 without token.
+- Regression tests: TestSettingsListsFeedsWithRemoveForms, TestRemoveFeedDeletesFeed, TestRemoveFeedMissingFeedRedirects, TestAddFeedRequiresURL, TestRemoveFeedIsUserScoped.
 
 ## Post-completion validation sweep, round 6 (2026-08-21)
 Untested-surface pass: escaping, auth/CSRF boundary, live prefs, mobile, media progression:
