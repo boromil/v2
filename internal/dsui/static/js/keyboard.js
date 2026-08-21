@@ -515,28 +515,56 @@
     var h = document.getElementById('panel-resize-handle');
     if (!h) return;
     var c = document.querySelector('.app-container');
-    var sx, sw;
+    var list = document.getElementById('entry-list-panel');
+    var sx, sw, dragging = false;
+
+    function applyWidth(w) {
+        // Desktop grid only: narrow screens use the single-column layout.
+        if (window.matchMedia('(max-width: 768px)').matches) return;
+        // The grid is `240px 1fr 4px 1fr`; fixing the list panel width via
+        // grid-template-columns keeps the content panel flexible.
+        c.style.gridTemplateColumns = '240px ' + w + 'px 4px 1fr';
+    }
+
     h.onmousedown = function(e) {
         e.preventDefault();
+        dragging = true;
         sx = e.clientX;
-        sw = document.getElementById('entry-list-panel').offsetWidth;
+        sw = list.offsetWidth;
         h.classList.add('active');
         document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
     };
     window.addEventListener('mousemove', function(e) {
-        if (!sx) return;
+        if (!dragging) return;
         var w = Math.max(260, Math.min(800, sw + e.clientX - sx));
-        c.style.gridTemplateColumns = c.style.gridTemplateColumns.replace(/1fr 4px 1fr/, w + 'px 4px 1fr');
+        applyWidth(w);
         try { localStorage.setItem('dsui-entryListWidth', w); } catch(_) {}
     });
     window.addEventListener('mouseup', function() {
-        sx = null; h.classList.remove('active');
+        if (!dragging) return;
+        dragging = false; sx = null; h.classList.remove('active');
         document.body.style.cursor = ''; document.body.style.userSelect = '';
+    });
+    // Touch support for tablets.
+    h.addEventListener('touchstart', function(e) {
+        dragging = true;
+        sx = e.touches[0].clientX;
+        sw = list.offsetWidth;
+        h.classList.add('active');
+    }, { passive: true });
+    window.addEventListener('touchmove', function(e) {
+        if (!dragging) return;
+        var w = Math.max(260, Math.min(800, sw + e.touches[0].clientX - sx));
+        applyWidth(w);
+        try { localStorage.setItem('dsui-entryListWidth', w); } catch(_) {}
+    }, { passive: true });
+    window.addEventListener('touchend', function() {
+        if (!dragging) return;
+        dragging = false; h.classList.remove('active');
     });
     try {
         var w = parseInt(localStorage.getItem('dsui-entryListWidth'));
-        if (w && w >= 260 && w <= 800)
-            c.style.gridTemplateColumns = c.style.gridTemplateColumns.replace(/1fr 4px 1fr/, w + 'px 4px 1fr');
+        if (w && w >= 260 && w <= 800) applyWidth(w);
     } catch(_) {}
 })();

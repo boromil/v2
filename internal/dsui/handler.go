@@ -406,20 +406,9 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 	response.HTML(w, r, buf.Bytes())
 }
 
-func (h *handler) showSettings(w http.ResponseWriter, r *http.Request) {
-	user, err := h.store.UserByID(request.UserID(r))
-	if err != nil {
-		response.HTMLServerError(w, r, err)
-		return
-	}
-
-	form := settingsFormFromUser(user)
-
-	flashError, clearFlash := takeFlashError(r)
-	if clearFlash != nil {
-		http.SetCookie(w, clearFlash)
-	}
-
+// settingsViewModel builds the view model shared by the settings page render
+// and the post-save SSE re-render.
+func (h *handler) settingsViewModel(user *model.User, form *settingsFormData, flashError string, r *http.Request) appViewModel {
 	feeds, err := h.store.Feeds(user.ID)
 	if err != nil {
 		slog.Error("dsui: unable to list feeds for settings", slog.Int64("user_id", user.ID), slog.Any("error", err))
@@ -466,7 +455,7 @@ func (h *handler) showSettings(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	vm := appViewModel{
+	return appViewModel{
 		Language:           user.Language,
 		Direction:          "ltr",
 		ThemeClass:         themeClass(user.Theme),
@@ -486,6 +475,23 @@ func (h *handler) showSettings(w http.ResponseWriter, r *http.Request) {
 		Feeds:              feedViews,
 		Categories:         categoryViews,
 	}
+}
+
+func (h *handler) showSettings(w http.ResponseWriter, r *http.Request) {
+	user, err := h.store.UserByID(request.UserID(r))
+	if err != nil {
+		response.HTMLServerError(w, r, err)
+		return
+	}
+
+	form := settingsFormFromUser(user)
+
+	flashError, clearFlash := takeFlashError(r)
+	if clearFlash != nil {
+		http.SetCookie(w, clearFlash)
+	}
+
+	vm := h.settingsViewModel(user, form, flashError, r)
 
 	var buf bytes.Buffer
 	if err := h.tplFor(user.Language).ExecuteTemplate(&buf, "layout", vm); err != nil {
@@ -519,7 +525,32 @@ func (h *handler) sseSaveSettings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sse := datastar.NewSSE(w, r)
-	sse.MarshalAndPatchSignals(map[string]any{"importSuccess": "Settings saved"})
+
+	// Apply GUI preferences (language, theme, font) without a reload:
+	// re-render the settings page fragment in the new language and patch it
+	// into the document, then update the chrome signals that <html>'s
+	// data-attr bindings keep in sync with lang/dir/data-theme/data-font.
+	vm := h.settingsViewModel(user, settingsFormFromUser(user), "", r)
+	var buf bytes.Buffer
+	if err := h.tplFor(user.Language).ExecuteTemplate(&buf, "settings", vm); err != nil {
+		slog.Error("dsui: settings re-render failed", slog.Int64("user_id", user.ID), slog.Any("error", err))
+		sse.MarshalAndPatchSignals(map[string]any{"importSuccess": "Settings saved"})
+		return
+	}
+	if err := sse.PatchElements(buf.String(), datastar.WithSelector(".settings-page"), datastar.WithMode(datastar.ElementPatchModeInner)); err != nil {
+		slog.Warn("dsui: settings patch failed", slog.Any("error", err))
+	}
+
+	sse.MarshalAndPatchSignals(map[string]any{
+		"uiTheme": themeClass(user.Theme),
+		"uiFont":  themeFont(user.Theme),
+		"uiLang":  strings.ReplaceAll(user.Language, "_", "-"),
+		"uiDir":   "ltr",
+		"importSuccess": func() string {
+			printer := locale.NewPrinter(user.Language)
+			return printer.Print("alert.prefs_saved")
+		}(),
+	})
 }
 
 func (h *handler) fetchOPML(w http.ResponseWriter, r *http.Request) {

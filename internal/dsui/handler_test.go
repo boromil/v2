@@ -4,6 +4,7 @@
 package dsui // import "miniflux.app/v2/internal/dsui"
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"html"
@@ -2435,5 +2436,112 @@ func TestRemoveCategoryGuardsAssignedFeeds(t *testing.T) {
 	}
 	if gone, _ := store.Category(user.ID, emptyCat.ID); gone != nil {
 		t.Error("empty category must be removed")
+	}
+}
+
+// TestLayoutBindsChromeSignals verifies the layout seeds uiTheme/uiFont/uiLang
+// signals and binds <html> attributes to them via data-attr, which is what
+// lets sseSaveSettings apply GUI preferences without a reload.
+func TestLayoutBindsChromeSignals(t *testing.T) {
+	tpl := parseTemplates()
+	printer := locale.NewPrinter("en_US")
+	tpl, err := tpl.Clone()
+	if err != nil {
+		t.Fatalf("cloning template: %v", err)
+	}
+	tpl.Funcs(template.FuncMap{
+		"t":      printer.Printf,
+		"plural": printer.Plural,
+		"replace": func(s, old, new string) string {
+			return strings.ReplaceAll(s, old, new)
+		},
+	})
+
+	var buf bytes.Buffer
+	if err := tpl.ExecuteTemplate(&buf, "layout", appViewModel{
+		Language:   "fr_FR",
+		Direction:  "ltr",
+		ThemeClass: "dark",
+		ThemeFont:  "serif",
+		Form:       &settingsFormData{},
+	}); err != nil {
+		t.Fatalf("executing layout: %v", err)
+	}
+	out := buf.String()
+	for _, marker := range []string{
+		`data-signals='{"uiTheme": "dark", "uiFont": "serif", "uiLang": "fr-FR", "uiDir": "ltr"}'`,
+		`data-attr="{'data-theme': $uiTheme, 'data-font': $uiFont, 'lang': $uiLang, 'dir': $uiDir}"`,
+		`lang="fr-FR"`,
+		`data-theme="dark"`,
+	} {
+		if !strings.Contains(out, marker) {
+			t.Errorf("layout must render %q\noutput:\n%s", marker, out)
+		}
+	}
+}
+
+// TestSSESaveSettingsPatchesChromeSignals verifies the save response patches
+// the uiTheme/uiFont/uiLang signals and re-renders the settings fragment
+// (live application of GUI preferences without a reload).
+func TestSSESaveSettingsPatchesChromeSignals(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	form := url.Values{"theme": {"dark_serif"}, "language": {"fr_FR"}}
+	req := httptest.NewRequest(http.MethodPost, "/ds/sse/settings", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req, csrf := authenticateTestSession(t, store, req, user)
+	req.Header.Set("X-Csrf-Token", csrf)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	body := w.Body.String()
+	for _, marker := range []string{
+		`event: datastar-patch-signals`,
+		`"uiTheme":"dark"`,
+		`"uiFont":"serif"`,
+		`"uiLang":"fr-FR"`,
+		`event: datastar-patch-elements`,
+		`selector .settings-page`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Errorf("save response must contain %q\nbody (tail):\n%s", marker, body[min(len(body), 400):])
+		}
+	}
+
+	// User persisted.
+	reloaded, err := store.UserByID(user.ID)
+	if err != nil {
+		t.Fatalf("reloading user: %v", err)
+	}
+	if reloaded.Theme != "dark_serif" || reloaded.Language != "fr_FR" {
+		t.Errorf("expected dark_serif/fr_FR persisted, got %s/%s", reloaded.Theme, reloaded.Language)
+	}
+}
+
+// TestResizeHandleAppliesGridWidth verifies the panel resize drag handler
+// writes an explicit grid-template-columns instead of regex-rewriting the
+// inline style (which was always empty, so dragging never worked).
+func TestResizeHandleAppliesGridWidth(t *testing.T) {
+	src, err := os.ReadFile("static/js/keyboard.js")
+	if err != nil {
+		t.Fatalf("reading keyboard.js: %v", err)
+	}
+	js := string(src)
+	for _, marker := range []string{
+		"c.style.gridTemplateColumns = '240px ' + w + 'px 4px 1fr'",
+		"localStorage.setItem('dsui-entryListWidth', w)",
+	} {
+		if !strings.Contains(js, marker) {
+			t.Errorf("keyboard.js resize handler must contain %q", marker)
+		}
+	}
+	// The old broken pattern must not come back.
+	if strings.Contains(js, "gridTemplateColumns.replace(/1fr 4px 1fr/") {
+		t.Error("resize handler must not regex-rewrite gridTemplateColumns (never matched)")
 	}
 }
