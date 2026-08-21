@@ -521,8 +521,8 @@
     function applyWidth(w) {
         // Desktop grid only: narrow screens use the single-column layout.
         if (window.matchMedia('(max-width: 768px)').matches) return;
-        // The grid is `240px 1fr 4px 1fr`; fixing the list panel width via
-        // grid-template-columns keeps the content panel flexible.
+        // The default grid is `240px 1fr 4px 2fr`; fixing the list panel width
+        // via grid-template-columns keeps the content panel flexible.
         c.style.gridTemplateColumns = '240px ' + w + 'px 4px 1fr';
     }
 
