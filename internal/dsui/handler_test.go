@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"html"
 	"net/http/httptest"
 	"net/url"
 	"os"
@@ -2036,5 +2037,65 @@ func TestSSEToggleShareUpdatesToolbarButton(t *testing.T) {
 	}
 	if strings.Contains(body, `href="/share/`) {
 		t.Errorf("unshared state must not expose a share link\nbody:\n%s", body)
+	}
+}
+
+// TestFetchOPMLErrorSurfacesFlash verifies a failed remote OPML fetch sets a
+// flash cookie and the settings page renders the error banner once (then
+// clears it), instead of silently redirecting with no user-visible error.
+func TestFetchOPMLErrorSurfacesFlash(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	// Point at a closed port so the fetch fails with a localized error.
+	req := httptest.NewRequest(http.MethodPost, "/ds/fetch-opml", strings.NewReader("url=http://127.0.0.1:1/x.opml"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req, csrf := authenticateTestSession(t, store, req, user)
+	req.Header.Set("X-Csrf-Token", csrf)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != http.StatusFound {
+		t.Fatalf("expected 302, got %d", w.Code)
+	}
+	var flash string
+	for _, c := range w.Result().Cookies() {
+		if c.Name == "dsui_flash_error" {
+			flash = c.Value
+		}
+	}
+	if flash == "" {
+		t.Fatalf("expected dsui_flash_error cookie, got none; headers: %v", w.Header())
+	}
+
+	// Settings render must show the banner and clear the cookie.
+	req = httptest.NewRequest(http.MethodGet, "/ds/settings", nil)
+	req.AddCookie(&http.Cookie{Name: "dsui_flash_error", Value: flash})
+	req, _ = authenticateTestSession(t, store, req, user)
+	w = httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("settings expected 200, got %d", w.Code)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "flash-error") {
+		t.Errorf("settings must render the flash error banner\nbody:\n%s", body)
+	}
+	decoded, _ := url.QueryUnescape(flash)
+	unescaped := html.UnescapeString(body)
+	if !strings.Contains(unescaped, decoded) {
+		t.Errorf("settings must include the flash message %q\nbody:\n%s", decoded, body)
+	}
+
+	// The consuming response must expire the cookie so the banner shows once.
+	var cleared bool
+	for _, c := range w.Result().Cookies() {
+		if c.Name == "dsui_flash_error" && c.MaxAge < 0 {
+			cleared = true
+		}
+	}
+	if !cleared {
+		t.Error("settings response must expire the dsui_flash_error cookie")
 	}
 }
