@@ -1903,6 +1903,17 @@ func TestKeyboardJSParityShortcuts(t *testing.T) {
 	if !strings.Contains(js, `e.key === "Escape"`) {
 		t.Error("keyboard.js must handle Escape before the input-focused guard")
 	}
+	// Datastar patches morph the DOM in place: observers must subscribe to
+	// characterData/attributes as well as childList, or SSE updates (entry
+	// loads, list refreshes) are invisible to them.
+	for _, frag := range []string{
+		`characterData: true, attributes: true`,
+		`characterData: true`,
+	} {
+		if !strings.Contains(js, frag) {
+			t.Errorf("keyboard.js observers must subscribe to morph mutations (%q missing)", frag)
+		}
+	}
 }
 
 // TestShortcutsOverlayListsParityKeys verifies the shortcuts overlay documents

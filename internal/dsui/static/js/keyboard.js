@@ -393,13 +393,26 @@
     if (entryContent) {
       // Only auto-switch when the content panel is actually displaying an
       // entry (i.e. an article toolbar is rendered). This avoids yanking the
-      // mobile user to the content panel on unrelated child-list changes, and
-      // when they've navigated to a different panel (e.g. Feeds).
+      // mobile user to the content panel on unrelated changes, and when
+      // they've navigated to a different panel (e.g. Feeds).
+      // Datastar patches MORPH the DOM in place: entry changes usually show
+      // up as characterData/attribute mutations, not childList, so subscribe
+      // to all three (the callback re-checks current state, so extra fires
+      // are harmless).
+      // Remember the title the pane shows so we only switch panels when a
+      // NEW entry loads (the server pre-renders the first entry into the
+      // pane; its toolbar/styling mutations must not yank the user away
+      // from the list panel on load).
+      var lastShownTitle = (entryContent.querySelector(".article-title") || {}).textContent || null;
       var observer = new MutationObserver(function () {
         if (window.innerWidth > 768) return;
         var container = document.querySelector(".app-container");
         if (!container || container.getAttribute("data-active-panel") === "content") return;
-        if (!entryContent.querySelector("#article-toolbar .toolbar-btn")) return;
+        var titleEl = entryContent.querySelector(".article-title");
+        if (!titleEl) return;
+        var title = titleEl.textContent;
+        if (title === lastShownTitle) return;
+        lastShownTitle = title;
         container.setAttribute("data-active-panel", "content");
         if (nav) {
           nav.querySelectorAll("button").forEach(function (b) {
@@ -409,7 +422,7 @@
           if (contentBtn) contentBtn.classList.add("active");
         }
       });
-      observer.observe(entryContent, { childList: true, subtree: true });
+      observer.observe(entryContent, { childList: true, subtree: true, characterData: true, attributes: true });
 
       // The observer is only needed on mobile; disconnect it on desktop so it
       // stops firing on every content/panel change, and re-connect when back
@@ -418,7 +431,7 @@
         if (window.innerWidth > 768) {
           observer.disconnect();
         } else if (document.getElementById(entryContent.id)) {
-          observer.observe(entryContent, { childList: true, subtree: true });
+          observer.observe(entryContent, { childList: true, subtree: true, characterData: true, attributes: true });
         }
       };
       window.addEventListener("resize", syncObserver);
@@ -452,9 +465,19 @@
         if (sel) {
           var rows = getVisibleEntryRows();
           selectedIdx = rows.indexOf(sel);
+        } else {
+          // List fully re-rendered (e.g. page change): select the first row
+          // so j/k continue from a sane position, like classic.
+          var firstRows = getVisibleEntryRows();
+          if (firstRows.length > 0) selectIndex(0);
         }
       });
-      listObserver.observe(entryList, { childList: true });
+      // Datastar patches MORPH the DOM in place: full-list refreshes
+      // (pagination, mark-page-read) often mutate row text/attributes rather
+      // than replacing nodes, so a childList-only observer never fires. With
+      // no .selected row surviving a morph, selection is silently lost —
+      // fall back to the first row (classic resets to the top item).
+      listObserver.observe(entryList, { childList: true, subtree: true, characterData: true, attributes: true });
     }
 
     // Settings page scroll spy for sidebar nav
