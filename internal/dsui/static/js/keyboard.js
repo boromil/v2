@@ -6,7 +6,9 @@
   "use strict";
 
   var selectedIdx = -1;
+  var selectedEntryId = null; // data-id of the selected row; survives row re-renders
   var pendingGo = false; // 'g' pressed, awaiting second key
+  var pendingZ = false; // 'z' pressed, awaiting 't' (classic "z t")
 
   function inputFocused() {
     var tag = document.activeElement?.tagName;
@@ -22,6 +24,7 @@
   }
 
   function clearSelection() {
+    selectedEntryId = null;
     document.querySelectorAll("#entry-list entry-row.selected").forEach(function (el) {
       el.classList.remove("selected");
     });
@@ -30,6 +33,7 @@
   function selectRow(row) {
     clearSelection();
     row.classList.add("selected");
+    selectedEntryId = row.getAttribute("data-id");
     scrollToRow(row);
   }
 
@@ -92,6 +96,19 @@
       case "s":
         window.location.href = "/ds/settings";
         break;
+      case "f":
+        goToFeedOfSelected();
+        break;
+    }
+  }
+
+  // Classic "g f": open the feed page of the selected/current entry.
+  function goToFeedOfSelected() {
+    var row = getSelectedRow();
+    if (!row) return;
+    var feedID = row.getAttribute("data-feed-id");
+    if (feedID) {
+      window.location.href = "/ds/feed/" + feedID;
     }
   }
 
@@ -121,6 +138,17 @@
 
     var key = e.key;
     var row;
+
+    // z-sequence: first 'z' arms, 't' completes, anything else cancels.
+    if (pendingZ) {
+      pendingZ = false;
+      e.preventDefault();
+      if (key === "t") {
+        var selRow = getSelectedRow();
+        if (selRow) scrollToRow(selRow);
+      }
+      return;
+    }
 
     // g-sequence: first 'g' arms, next key completes or cancels.
     if (pendingGo) {
@@ -218,6 +246,69 @@
             clickElement(starBtn);
           }
         }
+        break;
+
+      case "f":
+        // Classic parity: f toggles star on the article toolbar (current entry).
+        e.preventDefault();
+        clickElement(document.querySelector('#article-toolbar button[data-action="toggle-star"]'));
+        break;
+
+      case "h":
+        // Classic parity: h goes to previous entry.
+        e.preventDefault();
+        navigateEntry(-1);
+        break;
+
+      case "l":
+        // Classic parity: l goes to next entry.
+        e.preventDefault();
+        navigateEntry(1);
+        break;
+
+      case "c":
+        // Classic parity: c opens the comments link in a new tab.
+        e.preventDefault();
+        var commentsLink = document.querySelector('#article-toolbar a[data-action="comments-link"]');
+        if (commentsLink) {
+          window.open(commentsLink.href, "_blank", "noopener");
+        }
+        break;
+
+      case "C":
+        // Classic parity: C opens the comments link in the current tab.
+        e.preventDefault();
+        var commentsLink2 = document.querySelector('#article-toolbar a[data-action="comments-link"]');
+        if (commentsLink2) {
+          window.location.href = commentsLink2.href;
+        }
+        break;
+
+      case "d":
+        // Classic parity: d fetches the original content of the current entry.
+        e.preventDefault();
+        clickElement(document.querySelector('#article-toolbar button[data-action="fetch-content"]'));
+        break;
+
+      case "a":
+        // Classic parity: a toggles the enclosures section.
+        e.preventDefault();
+        var enclosures = document.querySelector("#entry-content details.entry-enclosures");
+        if (enclosures) {
+          enclosures.open = !enclosures.open;
+        }
+        break;
+
+      case "R":
+        // Classic parity: R refreshes all feeds.
+        e.preventDefault();
+        clickElement(document.querySelector('button[data-action="refresh-all"]'));
+        break;
+
+      case "z":
+        // Classic parity: z t scrolls the selected item into view. Arm like 'g'.
+        e.preventDefault();
+        pendingZ = true;
         break;
 
       case "m":
@@ -330,6 +421,23 @@
     var entryList = document.getElementById("entry-list");
     if (entryList) {
       var listObserver = new MutationObserver(function () {
+        // Row nodes are replaced by SSE patches (e.g. sseEntry re-renders the
+        // opened row). The replacement drops the .selected class, so restore
+        // it from the tracked entry id to keep keyboard selection stable.
+        var current = entryList.querySelector("entry-row.selected");
+        if (current && current.getAttribute("data-id") === selectedEntryId) {
+          selectedIdx = getVisibleEntryRows().indexOf(current);
+          return;
+        }
+        if (selectedEntryId !== null) {
+          var byId = entryList.querySelector('entry-row[data-id="' + selectedEntryId + '"]');
+          if (byId) {
+            clearSelection();
+            byId.classList.add("selected");
+            selectedIdx = getVisibleEntryRows().indexOf(byId);
+            return;
+          }
+        }
         selectedIdx = -1;
         var sel = entryList.querySelector("entry-row.selected");
         if (sel) {

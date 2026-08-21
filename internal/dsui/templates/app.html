@@ -12,6 +12,7 @@
             <span class="nav-title">Subscriptions</span>
             <button class="toolbar-btn"
                 data-on:click="@post('/ds/refresh')"
+                data-action="refresh-all"
                 title="{{t "menu.refresh_all_feeds"}}"
                 style="font-size:0.875rem;padding:0.125rem 0.375rem;margin-left:auto;">&#8635;</button>
             <a href="/ds/settings" class="no-underline" title="Settings" style="font-size:1rem; color:var(--color-gray-500);">&#9881;</a>
@@ -48,7 +49,7 @@
             <button class="mark-read-btn" data-on:click="@post('/ds/sse/mark-all-read')">{{t "menu.mark_all_as_read"}}</button>
             {{end}}
             {{if .FeedID}}
-            <button class="mark-read-btn" data-on:click="@post('/ds/refresh/{{.FeedID}}')">&#8635;</button>
+            <button class="mark-read-btn" data-action="refresh-feed" data-on:click="@post('/ds/refresh/{{.FeedID}}')">&#8635;</button>
             {{end}}
         </div>
         <div id="entry-list" class="flex-1 overflow-y-auto">

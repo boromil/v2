@@ -1,25 +1,21 @@
 {{define "article_toolbar"}}
 <div id="article-toolbar" class="article-toolbar" data-show="$selectedEntryId">
-    <button class="toolbar-btn"
-        data-on:click="@post('/ds/sse/entry/star/{{.ID}}')">
-        {{if .Starred}}{{t "entry.starred.toggle.off"}}{{else}}{{t "entry.starred.toggle.on"}}{{end}}
-    </button>
+    {{template "toolbar_star_button" .}}
     <a href="{{.URL}}" target="_blank" rel="noopener" class="toolbar-btn no-underline">
         {{t "entry.external_link.label"}}
     </a>
     <button class="toolbar-btn"
+        data-action="fetch-content"
         data-on:click="@post('/ds/sse/fetch-content/{{.ID}}')">
         {{t "entry.scraper.label"}}
     </button>
     {{if .CommentsURL}}
-    <a href="{{.CommentsURL}}" target="_blank" rel="noopener" class="toolbar-btn no-underline">
+    <a href="{{.CommentsURL}}" target="_blank" rel="noopener" class="toolbar-btn no-underline"
+        data-action="comments-link">
         {{t "entry.comments.label"}}
     </a>
     {{end}}
-    <button class="toolbar-btn"
-        data-on:click="@post('/ds/sse/share/{{.ID}}')">
-        {{if .ShareCode}}{{t "entry.unshare.label"}}{{else}}{{t "entry.share.label"}}{{end}}
-    </button>
+    {{template "toolbar_share_button" .}}
     <button class="toolbar-btn"
         data-action="toggle-status"
         data-signals='{"entryIds":[{{.ID}}]}'
@@ -27,4 +23,30 @@
         {{if eq .Status "unread"}}{{t "entry.status.mark_as_read"}}{{else}}{{t "entry.status.mark_as_unread"}}{{end}}
     </button>
 </div>
+{{end}}
+
+{{define "toolbar_star_button"}}
+<button class="toolbar-btn"
+    data-action="toggle-star"
+    id="toolbar-star-btn-{{.ID}}"
+    data-on:click="@post('/ds/sse/entry/star/{{.ID}}')">
+    {{if .Starred}}{{t "entry.starred.toggle.off"}}{{else}}{{t "entry.starred.toggle.on"}}{{end}}
+</button>
+{{end}}
+
+{{define "toolbar_share_button"}}
+<span class="inline-flex items-center" id="toolbar-share-btn-{{.ID}}">
+{{if .ShareCode}}
+<a href="/share/{{.ShareCode}}" target="_blank" rel="noopener" class="toolbar-btn no-underline"
+    title="{{t "entry.shared_entry.title"}}"
+    data-action="shared-link">{{t "entry.shared_entry.label"}}</a>
+<button class="toolbar-btn"
+    data-action="toggle-share"
+    data-on:click="@post('/ds/sse/share/{{.ID}}')">{{t "entry.unshare.label"}}</button>
+{{else}}
+<button class="toolbar-btn"
+    data-action="toggle-share"
+    data-on:click="@post('/ds/sse/share/{{.ID}}')">{{t "entry.share.label"}}</button>
+{{end}}
+</span>
 {{end}}

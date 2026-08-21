@@ -1,6 +1,7 @@
 {{define "entry_row"}}
 <entry-row class="entry-row {{if eq .Status "unread"}}unread{{else}}read{{end}}"
     data-id="{{.ID}}"
+    data-feed-id="{{if .Feed}}{{.Feed.ID}}{{end}}"
     id="entry-row-{{.ID}}"
     data-on:click="@get('/ds/sse/entry/{{.ID}}')">
     <div class="flex items-center gap-2">
