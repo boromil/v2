@@ -68,7 +68,14 @@ Each stage lands as separate Conventional Commits, one logical change each, with
 - Live server regression: login → unread → entry open (mark-on-view, media proxy URLs, title) → star → status toggle → search → feed click (D1 check: correct list) → offset overflow (D5 check) → sorting pref flip (D4 check)
 - Commit after each verified logical change
 
-## Post-completion validation sweep (2026-08-20)
+## Post-completion validation sweep, round 2 (2026-08-21)
+Deep pass over secondary render paths plus a real-browser (Chromium/Playwright) interaction suite:
+- Found+fixed **e6e67fb9**: fetch-content re-render rebuilt the detail by hand and dropped tags/comments/reading time/share code/enclosures; now re-fetches with enclosures and reuses `entryToDetailView` (regression: `TestSSEFetchContentKeepsParityFields`).
+- Found+fixed **5caae601**: `sseEntry` and toggle-status single-row re-renders dropped `ReadingTime`/`ShowReadingTime`, so the reading-time chip vanished after opening an entry or toggling status (regression: `TestRowRerenderKeepsReadingTime`).
+- Found+fixed **6a37339e**: stale `?q=` on non-search app pages leaked a dead `searchQuery` into pagination URLs; only `/ds/search` consumes `q` now (regression: `TestNonSearchViewIgnoresQParam`).
+- Classic keybinding audit: dsui `A` (mark page read), `m`, `s`, `v`, `?`/Esc, `/`, `g u|b|h|s`, `gg`/`G`, j/k all match classic semantics; dsui's extra `r`=reload is harmless. `R` (refresh feeds) remains in the documented-open P6 residual list.
+- Real-browser checks (Playwright Chromium against the live server): login→rows, search("go")=12 → feed click=10 rows (D1 holds in-browser), entry `<time>` relative header, j/j/k selection advance+back with title evidence, `n` loads next entry into the pane, `m` flips toolbar status label, `?`+Esc overlay, unread-only checkbox filters 4→3 live, pagination link markers. 10/10 behavioral checks pass (one harness premise about the post-login redirect was wrong, not the app: login redirects to the classic default home page by upstream design).
+- Empty-state catalog values verified per view in fr_FR (`alert.no_*` keys all resolve).
 - Fresh `go vet ./...`, `go build ./...`, `go test ./...` (55 packages, no cache): green.
 - Static i18n audit: 109 `t`/`plural`/printer keys used across dsui templates and Go code exist in all 23 locale files.
 - Found and fixed (57e47caa): entry header date used a hardcoded English `"January 2, 2006"` layout; now renders localized relative time via `elapsed` (classic parity), with iso `datetime` + absolute `title` tooltip.
