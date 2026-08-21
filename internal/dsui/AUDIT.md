@@ -68,6 +68,12 @@ Each stage lands as separate Conventional Commits, one logical change each, with
 - Live server regression: login → unread → entry open (mark-on-view, media proxy URLs, title) → star → status toggle → search → feed click (D1 check: correct list) → offset overflow (D5 check) → sorting pref flip (D4 check)
 - Commit after each verified logical change
 
+## Post-completion validation sweep, round 3 (2026-08-21)
+Extended Playwright suite to flows not covered before; all pass against the live server:
+- `g u` view jump, `G` bottom / `gg` top selection jumps (index evidence), `s` star toggle round-trip, share→unshare→share toolbar cycle, fetch-content re-render keeps tags + `<time>` header (live e6e67fb9 confirmation), search pagination page 2 renders different rows with correct `N / M` indicator, settings save round-trip via the browser form.
+- Media controls exercised with a stubbed audio element: seek −10s adjusts `currentTime` 100→90, speed +0.25 adjusts `playbackRate` 1→1.25 and the indicator label.
+- Investigation note: SSE/HTML "row counts" gathered via `grep -c entry-row` are 3× the true row count (each row emits 3 matching lines); browser locator counts are authoritative. A suspected search-pagination total discrepancy ("2 / 2") was disproven: FTS `go` matches 12 entries, so 2 pages at `entries_per_page=10` is correct. No bug.
+
 ## Post-completion validation sweep, round 2 (2026-08-21)
 Deep pass over secondary render paths plus a real-browser (Chromium/Playwright) interaction suite:
 - Found+fixed **e6e67fb9**: fetch-content re-render rebuilt the detail by hand and dropped tags/comments/reading time/share code/enclosures; now re-fetches with enclosures and reuses `entryToDetailView` (regression: `TestSSEFetchContentKeepsParityFields`).
