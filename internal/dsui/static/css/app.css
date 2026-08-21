@@ -626,7 +626,7 @@
 /* Three-panel app layout */
 .app-container {
   display: grid;
-  grid-template-columns: 240px 1fr 4px 1fr;
+  grid-template-columns: 240px minmax(320px, 420px) 4px 1fr;
   height: 100vh;
   overflow: hidden;
 }
@@ -1582,8 +1582,8 @@ html[data-theme="dark"] input[type="file"] {
 .settings-file-input {
   display: block;
   width: 100%;
+  max-width: 320px;
   font-size: 0.8125rem;
-  margin-bottom: 0.5rem;
   color: inherit;
 }
 .settings-file-input::file-selector-button {
