@@ -769,7 +769,7 @@ func (h *handler) sseToggleStar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var starBuf bytes.Buffer
+	var starBuf, toolbarStarBuf bytes.Buffer
 	starData := map[string]any{
 		"ID":      entry.ID,
 		"Starred": newStarred,
@@ -778,10 +778,14 @@ func (h *handler) sseToggleStar(w http.ResponseWriter, r *http.Request) {
 		response.HTMLServerError(w, r, fmt.Errorf("star_button template: %w", err))
 		return
 	}
+	if err := h.tplFor(user.Language).ExecuteTemplate(&toolbarStarBuf, "toolbar_star_button", starData); err != nil {
+		response.HTMLServerError(w, r, fmt.Errorf("toolbar_star_button template: %w", err))
+		return
+	}
 
 	sse := datastar.NewSSE(w, r)
 	sse.PatchElements(starBuf.String(), datastar.WithSelector(fmt.Sprintf("#star-icon-%d", entry.ID)))
-	sse.PatchElements(starBuf.String(), datastar.WithSelector(fmt.Sprintf("#toolbar-star-icon-%d", entry.ID)))
+	sse.PatchElements(toolbarStarBuf.String(), datastar.WithSelector(fmt.Sprintf("#toolbar-star-btn-%d", entry.ID)))
 	sse.MarshalAndPatchSignals(map[string]any{
 		"starred": newStarred,
 	})
@@ -1174,7 +1178,18 @@ func (h *handler) sseToggleShare(w http.ResponseWriter, r *http.Request) {
 		WithEntryIDs(entryID).
 		GetEntry()
 
+	shareData := map[string]any{
+		"ID":        entry.ID,
+		"ShareCode": entry.ShareCode,
+	}
+	var shareBuf bytes.Buffer
+	if err := h.tplFor(user.Language).ExecuteTemplate(&shareBuf, "toolbar_share_button", shareData); err != nil {
+		response.HTMLServerError(w, r, fmt.Errorf("toolbar_share_button template: %w", err))
+		return
+	}
+
 	sse := datastar.NewSSE(w, r)
+	sse.PatchElements(shareBuf.String(), datastar.WithSelector(fmt.Sprintf("#toolbar-share-btn-%d", entry.ID)))
 	sse.MarshalAndPatchSignals(map[string]any{
 		"shared": entry.ShareCode != "",
 	})
