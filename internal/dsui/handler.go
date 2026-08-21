@@ -13,6 +13,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -25,6 +26,7 @@ import (
 	"miniflux.app/v2/internal/mediaproxy"
 	"miniflux.app/v2/internal/model"
 	"miniflux.app/v2/internal/proxyrotator"
+	feedHandler "miniflux.app/v2/internal/reader/handler"
 	"miniflux.app/v2/internal/reader/fetcher"
 	"miniflux.app/v2/internal/reader/opml"
 	"miniflux.app/v2/internal/reader/processor"
@@ -79,6 +81,10 @@ func Serve(store *storage.Storage, pool *worker.Pool) http.Handler {
 	// OPML import (regular form POST).
 	mux.HandleFunc("POST /ds/import-opml", h.importOPML)
 	mux.HandleFunc("POST /ds/fetch-opml", h.fetchOPML)
+
+	// Feed management (regular form POST).
+	mux.HandleFunc("POST /ds/add-feed", h.addFeed)
+	mux.HandleFunc("POST /ds/remove-feed/{feedID}", h.removeFeed)
 
 	// SSE fragment endpoints.
 	mux.HandleFunc("GET /ds/sse/entries", h.sseEntries)
@@ -195,6 +201,17 @@ type appViewModel struct {
 	Themes             []selectOption
 	Languages          []selectOption
 	Timezones          []selectOption
+	Feeds              []settingsFeedView
+}
+
+type settingsFeedView struct {
+	ID                int64
+	Title             string
+	SiteURL           string
+	FeedURL           string
+	Category          string
+	ParsingErrorCount int
+	ParsingErrorMsg   string
 }
 
 type entryView struct {
@@ -390,6 +407,28 @@ func (h *handler) showSettings(w http.ResponseWriter, r *http.Request) {
 		http.SetCookie(w, clearFlash)
 	}
 
+	feeds, err := h.store.Feeds(user.ID)
+	if err != nil {
+		slog.Error("dsui: unable to list feeds for settings", slog.Int64("user_id", user.ID), slog.Any("error", err))
+		feeds = nil
+	}
+	feedViews := make([]settingsFeedView, 0, len(feeds))
+	for _, f := range feeds {
+		categoryTitle := ""
+		if f.Category != nil {
+			categoryTitle = f.Category.Title
+		}
+		feedViews = append(feedViews, settingsFeedView{
+			ID:                f.ID,
+			Title:             f.Title,
+			SiteURL:           f.SiteURL,
+			FeedURL:           f.FeedURL,
+			Category:          categoryTitle,
+			ParsingErrorCount: f.ParsingErrorCount,
+			ParsingErrorMsg:   f.ParsingErrorMsg,
+		})
+	}
+
 	vm := appViewModel{
 		Language:           user.Language,
 		Direction:          "ltr",
@@ -407,6 +446,7 @@ func (h *handler) showSettings(w http.ResponseWriter, r *http.Request) {
 		Themes:             themeOptions(),
 		Languages:          languageOptions(),
 		Timezones:          timezoneOptions(),
+		Feeds:              feedViews,
 	}
 
 	var buf bytes.Buffer
@@ -1019,6 +1059,87 @@ func (h *handler) importOPML(w http.ResponseWriter, r *http.Request) {
 		setFlashError(w, impErr.Error())
 	}
 
+	response.HTMLRedirect(w, r, "/ds/settings")
+}
+
+// addFeed creates a feed subscription from a URL submitted via the settings
+// feeds section. It mirrors the classic UI's single-subscription path:
+// discover nothing, trust the given URL, default to the first category.
+func (h *handler) addFeed(w http.ResponseWriter, r *http.Request) {
+	user, err := h.store.UserByID(request.UserID(r))
+	if err != nil {
+		response.HTMLServerError(w, r, err)
+		return
+	}
+
+	feedURL := strings.TrimSpace(r.FormValue("url"))
+	if feedURL == "" {
+		setFlashError(w, "Feed URL is required")
+		response.HTMLRedirect(w, r, "/ds/settings")
+		return
+	}
+
+	// Default to the user's first category, like classic's add_subscription.
+	category, err := h.store.FirstCategory(user.ID)
+	if err != nil {
+		slog.Error("dsui: unable to load default category", slog.Int64("user_id", user.ID), slog.Any("error", err))
+		response.HTMLServerError(w, r, err)
+		return
+	}
+
+	slog.Info("dsui: adding feed",
+		slog.Int64("user_id", user.ID),
+		slog.String("url", feedURL),
+	)
+
+	feed, localizedError := feedHandler.CreateFeed(h.store, user.ID, &model.FeedCreationRequest{
+		CategoryID: category.ID,
+		FeedURL:    feedURL,
+	})
+	if localizedError != nil {
+		slog.Warn("dsui: unable to create feed",
+			slog.Int64("user_id", user.ID),
+			slog.String("url", feedURL),
+			slog.Any("error", localizedError.Error()),
+		)
+		setFlashError(w, localizedError.Translate(user.Language))
+		response.HTMLRedirect(w, r, "/ds/settings")
+		return
+	}
+
+	slog.Info("dsui: feed created",
+		slog.Int64("user_id", user.ID),
+		slog.Int64("feed_id", feed.ID),
+	)
+	response.HTMLRedirect(w, r, "/ds/settings")
+}
+
+// removeFeed deletes a feed and its entries, mirroring classic's feed remove action.
+func (h *handler) removeFeed(w http.ResponseWriter, r *http.Request) {
+	user, err := h.store.UserByID(request.UserID(r))
+	if err != nil {
+		response.HTMLServerError(w, r, err)
+		return
+	}
+
+	feedID, err := strconv.ParseInt(r.PathValue("feedID"), 10, 64)
+	if err != nil || feedID <= 0 {
+		setFlashError(w, "Invalid feed ID")
+		response.HTMLRedirect(w, r, "/ds/settings")
+		return
+	}
+
+	if f, err := h.store.FeedByID(user.ID, feedID); err != nil || f == nil {
+		// FeedByID returns (nil, nil) when the feed does not exist for this user.
+		slog.Warn("dsui: remove feed not found", slog.Int64("user_id", user.ID), slog.Int64("feed_id", feedID), slog.Any("error", err))
+		response.HTMLRedirect(w, r, "/ds/settings")
+		return
+	}
+
+	if err := h.store.RemoveFeed(user.ID, feedID); err != nil {
+		slog.Error("dsui: unable to remove feed", slog.Int64("user_id", user.ID), slog.Int64("feed_id", feedID), slog.Any("error", err))
+		setFlashError(w, err.Error())
+	}
 	response.HTMLRedirect(w, r, "/ds/settings")
 }
 

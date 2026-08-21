@@ -2115,3 +2115,156 @@ func TestFetchOPMLErrorSurfacesFlash(t *testing.T) {
 		t.Error("settings response must expire the dsui_flash_error cookie")
 	}
 }
+
+// TestSettingsListsFeedsWithRemoveForms verifies the settings feeds section
+// renders every feed with a remove form targeting /ds/remove-feed/{ID}.
+// Regression: dsui previously had no feed management UI at all.
+func TestSettingsListsFeedsWithRemoveForms(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	req := httptest.NewRequest(http.MethodGet, "/ds/settings", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, `action="/ds/add-feed"`) {
+		t.Error("settings must render the add-feed form")
+	}
+	if !strings.Contains(body, `action="/ds/remove-feed/`+itoa(feed.ID)+`"`) {
+		t.Errorf("settings must render a remove form for feed %d\nbody:\n%s", feed.ID, body)
+	}
+	if !strings.Contains(body, `data-feed-row="`+itoa(feed.ID)+`"`) {
+		t.Errorf("settings must mark the feed row with data-feed-row %d\nbody:\n%s", feed.ID, body)
+	}
+}
+
+// TestRemoveFeedDeletesFeed verifies POST /ds/remove-feed/{ID} removes the
+// feed (and cascades to entries) and redirects back to settings.
+func TestRemoveFeedDeletesFeed(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	_ = mtest.CreateTestEntries(t, store, user.ID, feed.ID, 2)
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	req := httptest.NewRequest(http.MethodPost, "/ds/remove-feed/"+itoa(feed.ID), nil)
+	req, csrf := authenticateTestSession(t, store, req, user)
+	req.Header.Set("X-Csrf-Token", csrf)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("expected redirect 302, got %d: %s", w.Code, w.Body.String())
+	}
+	if loc := w.Header().Get("Location"); loc != "/ds/settings" {
+		t.Errorf("expected redirect to /ds/settings, got %q", loc)
+	}
+	if removed, err := store.FeedByID(user.ID, feed.ID); err != nil || removed != nil {
+		t.Errorf("feed must be removed from storage (got %v, err %v)", removed, err)
+	}
+	count, err := store.NewEntryQueryBuilder(user.ID).WithFeedID(feed.ID).CountEntries()
+	if err != nil {
+		t.Fatalf("counting entries: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("expected 0 entries after feed removal, got %d", count)
+	}
+}
+
+// TestRemoveFeedMissingFeedRedirects verifies removing a nonexistent feed
+// redirects to settings instead of erroring.
+func TestRemoveFeedMissingFeedRedirects(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	req := httptest.NewRequest(http.MethodPost, "/ds/remove-feed/99999", nil)
+	req, csrf := authenticateTestSession(t, store, req, user)
+	req.Header.Set("X-Csrf-Token", csrf)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("expected redirect 302, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// TestAddFeedRequiresURL verifies the add-feed form rejects an empty URL
+// with a flash error and redirect (no network access needed).
+func TestAddFeedRequiresURL(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	form := url.Values{}
+	req := httptest.NewRequest(http.MethodPost, "/ds/add-feed", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req, csrf := authenticateTestSession(t, store, req, user)
+	req.Header.Set("X-Csrf-Token", csrf)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("expected redirect 302, got %d: %s", w.Code, w.Body.String())
+	}
+	var flashed bool
+	for _, c := range w.Result().Cookies() {
+		if c.Name == "dsui_flash_error" && c.Value != "" {
+			flashed = true
+		}
+	}
+	if !flashed {
+		t.Error("empty feed URL must set the flash error cookie")
+	}
+}
+
+// TestRemoveFeedIsUserScoped verifies a user cannot remove another user's feed.
+func TestRemoveFeedIsUserScoped(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	owner := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, owner.ID)
+	feed := mtest.CreateTestFeed(t, store, owner.ID, cat.ID)
+
+	otherUser, err := store.CreateUser(&model.UserCreationRequest{
+		Username: "other-user",
+		Password: "test123",
+	})
+	if err != nil {
+		t.Skipf("cannot create second user: %v", err)
+	}
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	req := httptest.NewRequest(http.MethodPost, "/ds/remove-feed/"+itoa(feed.ID), nil)
+	req, csrf := authenticateTestSession(t, store, req, otherUser)
+	req.Header.Set("X-Csrf-Token", csrf)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if kept, err := store.FeedByID(owner.ID, feed.ID); err != nil || kept == nil {
+		t.Errorf("owner's feed must survive another user's remove attempt (got %v, err %v)", kept, err)
+	}
+}

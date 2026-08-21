@@ -160,6 +160,38 @@
             </div>
             </form><!-- end #settings-form -->
 
+            <!-- Feeds -->
+            <section id="feeds" class="settings-section">
+                <h3 class="settings-heading">{{t "menu.feeds"}}</h3>
+                <form action="/ds/add-feed" method="post" class="mb-2">
+                    <input type="hidden" name="csrf" value="{{.CSRFToken}}">
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="url" name="url" placeholder="https://example.com/feed.xml" required class="settings-input" style="flex:1;">
+                        <button type="submit" class="toolbar-btn">{{t "action.subscribe"}}</button>
+                    </div>
+                </form>
+                {{if .Feeds}}
+                <ul class="settings-feed-list" style="list-style:none; margin:0; padding:0;">
+                    {{range .Feeds}}
+                    <li class="settings-feed-item" style="display:flex; gap:0.5rem; align-items:center; padding:0.4rem 0; border-bottom:1px solid var(--color-gray-200, #e5e7eb);" data-feed-row="{{.ID}}">
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{.Title}}</div>
+                            <div style="font-size:0.75rem; color:var(--color-gray-500, #6b7280); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                <a href="{{.SiteURL}}" target="_blank" rel="noopener noreferrer" class="no-underline">{{t "form.feed.label.site_url"}}</a>
+                                {{if .Category}} · {{.Category}}{{end}}
+                                {{if .ParsingErrorCount}} · <span class="feed-error" style="color:var(--color-red-600, #dc2626);">{{.ParsingErrorMsg}} ({{.ParsingErrorCount}})</span>{{end}}
+                            </div>
+                        </div>
+                        <form action="/ds/remove-feed/{{.ID}}" method="post" data-remove-feed="{{.ID}}">
+                            <input type="hidden" name="csrf" value="{{$.CSRFToken}}">
+                            <button type="submit" class="toolbar-btn">{{t "action.remove"}}</button>
+                        </form>
+                    </li>
+                    {{end}}
+                </ul>
+                {{end}}
+            </section>
+
             <!-- Import & Export -->
             <section id="import" class="settings-section">
                 <h3 class="settings-heading">{{t "menu.import"}} &amp; {{t "menu.export"}}</h3>
