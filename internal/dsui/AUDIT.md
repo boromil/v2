@@ -68,6 +68,13 @@ Each stage lands as separate Conventional Commits, one logical change each, with
 - Live server regression: login → unread → entry open (mark-on-view, media proxy URLs, title) → star → status toggle → search → feed click (D1 check: correct list) → offset overflow (D5 check) → sorting pref flip (D4 check)
 - Commit after each verified logical change
 
+## Post-completion validation sweep, round 9 (2026-08-21)
+User-reported issues: GUI prefs should apply on save (not reload), and the panel resize handle showed a cursor but could not drag.
+- **Resize handle fixed (dead code path)**: the drag handler rewrote `style.gridTemplateColumns` via `.replace(/1fr 4px 1fr/, ...)`, but the inline style is empty until first set (the real grid lives in the stylesheet: `240px 1fr 4px 1fr`), so the replace never matched and dragging did nothing. Now the handler writes the explicit template `240px {w}px 4px 1fr`, guarded to desktop widths, plus touch support and the existing localStorage persistence. Verified live: drag +150px widens list 578→728, width survives reload.
+- **GUI prefs apply on save, no reload — pure Datastar**: layout now seeds `uiTheme/uiFont/uiLang/uiDir` signals on `<html>` and binds `data-attr="{'data-theme': $uiTheme, 'data-font': $uiFont, 'lang': $uiLang, 'dir': $uiDir}"`. On save the SSE response (a) re-renders the settings fragment in the new language and patches it (`selector .settings-page`, mode inner), and (b) patches the chrome signals — data-attr keeps the html attributes live, so the CSS theme flips instantly.
+- Research note: tried ExecuteScript first; it injects an inline `<script>` which the app CSP (`script-src 'self'`) blocks, and the SDK v1.2.2 protocol has no attribute-patch event — `data-attr` is the documented mechanism ("sets the value of any HTML attribute to an expression, and keeps it in sync"). Verified empirically that data-attr works on the `<html>` element and reacts to SSE signal patches.
+- Live-verified: theme dark+serif applies instantly (body bg flips to rgb(26,26,46)), lang becomes fr-FR, labels re-render in French ("Paramètres du lecteur"), toast localized ("Préférences sauvegardées !"), NO reload (beforeunload never fired), prefs persist across reload, restore to light/en works. Regression tests: TestLayoutBindsChromeSignals, TestSSESaveSettingsPatchesChromeSignals, TestResizeHandleAppliesGridWidth.
+
 ## Post-completion validation sweep, round 8 (2026-08-21)
 Management parity completion: categories.
 - **Round-7 regression fixed**: settings.html had TWO sections with id="feeds" (reading prefs + the new management section) — invalid HTML that broke the #feeds nav anchor. Management section renamed to id="subscriptions".

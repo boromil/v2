@@ -1,6 +1,8 @@
 {{define "layout"}}
 <!DOCTYPE html>
-<html lang="{{replace .Language "_" "-"}}" dir="{{.Direction}}" data-theme="{{.ThemeClass}}" data-font="{{.ThemeFont}}">
+<html lang="{{replace .Language "_" "-"}}" dir="{{.Direction}}" data-theme="{{.ThemeClass}}" data-font="{{.ThemeFont}}"
+    data-signals='{"uiTheme": "{{.ThemeClass}}", "uiFont": "{{.ThemeFont}}", "uiLang": "{{replace .Language "_" "-"}}", "uiDir": "{{.Direction}}"}'
+    data-attr="{'data-theme': $uiTheme, 'data-font': $uiFont, 'lang': $uiLang, 'dir': $uiDir}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
