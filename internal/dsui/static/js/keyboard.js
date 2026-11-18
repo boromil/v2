@@ -151,6 +151,9 @@
     if (inputFocused()) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
 
+    // The user can turn shortcuts off in the settings (classic parity).
+    if (document.body.dataset.keyboardShortcuts === "false") return;
+
     var key = e.key;
     var row;
 

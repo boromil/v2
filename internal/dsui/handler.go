@@ -203,6 +203,7 @@ type appViewModel struct {
 	Pagination         *paginationView
 	MenuSections       []menuSection
 	IsSettings         bool
+	KeyboardShortcuts  bool
 	FlashError         string
 	Form               *settingsFormData
 	Themes             []selectOption
@@ -336,6 +337,7 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 		KeyboardChecksum:   dsstatic.JavascriptBundles["keyboard"].Checksum,
 		ComponentsChecksum: dsstatic.JavascriptBundles["components"].Checksum,
 		CanMarkAllRead:     viewName == "unread" || viewName == "feed" || viewName == "category",
+		KeyboardShortcuts:  user.KeyboardShortcuts,
 	}
 
 	vm.ListTitle = listTitleForView(viewName, feedID, categoryID, h.store, user.ID, user.Language)
@@ -483,6 +485,7 @@ func (h *handler) settingsViewModel(user *model.User, form *settingsFormData, fl
 		ComponentsChecksum: dsstatic.JavascriptBundles["components"].Checksum,
 		Title:              "Settings — Miniflux",
 		IsSettings:         true,
+		KeyboardShortcuts:  user.KeyboardShortcuts,
 		FlashError:         flashError,
 		Form:               form,
 		Themes:             themeOptions(),

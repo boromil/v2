@@ -21,6 +21,7 @@ import (
 
 	"miniflux.app/v2/internal/config"
 	"miniflux.app/v2/internal/database/dialect"
+	dsstatic "miniflux.app/v2/internal/dsui/static"
 	"miniflux.app/v2/internal/http/request"
 	"miniflux.app/v2/internal/locale"
 	"miniflux.app/v2/internal/model"
@@ -2779,5 +2780,95 @@ func TestSSEEntryRefreshesSidebarCounters(t *testing.T) {
 	}
 	if saved.Status != model.EntryStatusRead {
 		t.Errorf("entry must be marked as read, got %q", saved.Status)
+	}
+}
+
+// TestLayoutRendersKeyboardShortcutsPreference verifies the user preference is
+// exposed to the keyboard handler.
+func TestLayoutRendersKeyboardShortcutsPreference(t *testing.T) {
+	for _, enabled := range []bool{true, false} {
+		store := mtest.SetupTestDB(t, dialect.SQLite)
+		user := mtest.CreateTestUser(t, store)
+		user.KeyboardShortcuts = enabled
+		if err := store.UpdateUser(user); err != nil {
+			t.Fatalf("unable to set keyboard shortcut preference: %v", err)
+		}
+
+		handler := Serve(store, worker.NewPool(store, 1))
+		req := httptest.NewRequest(http.MethodGet, "/ds/unread", nil)
+		req, _ = authenticateTestSession(t, store, req, user)
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+
+		want := `data-keyboard-shortcuts="false"`
+		if enabled {
+			want = `data-keyboard-shortcuts="true"`
+		}
+		if !strings.Contains(w.Body.String(), want) {
+			t.Errorf("expected %s in rendered page", want)
+		}
+	}
+}
+
+// TestKeyboardJSRespectsPreference verifies the client handler bails out when
+// the preference is disabled.
+func TestKeyboardJSRespectsPreference(t *testing.T) {
+	asset, ok := dsstatic.JavascriptBundles["keyboard"]
+	if !ok {
+		t.Fatal("keyboard bundle not found")
+	}
+	if !strings.Contains(string(asset.Data), `dataset.keyboardShortcuts === "false"`) {
+		t.Error("keyboard handler must stop when the user disabled shortcuts")
+	}
+}
+
+// TestStarredEmptyStateUsesViewMessage verifies the reading pane shows the
+// view-specific empty message instead of always saying there are no unread
+// entries.
+func TestStarredEmptyStateUsesViewMessage(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	_ = mtest.CreateTestEntries(t, store, user.ID, feed.ID, 2)
+
+	handler := Serve(store, worker.NewPool(store, 1))
+	req := httptest.NewRequest(http.MethodGet, "/ds/starred", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	body := w.Body.String()
+	if !strings.Contains(body, "There are no starred entries.") {
+		t.Error("expected the starred empty-state message in the reading pane")
+	}
+	if strings.Contains(body, "There are no unread entries.") {
+		t.Error("starred view must not show the unread empty-state message")
+	}
+}
+
+// TestEntryDetailDatetimeHasOffset verifies the <time> element carries a full
+// RFC 3339 timestamp including the user timezone offset.
+func TestEntryDetailDatetimeHasOffset(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	entry := mtest.CreateTestEntry(t, store, user.ID, feed.ID)
+
+	handler := Serve(store, worker.NewPool(store, 1))
+	req := httptest.NewRequest(http.MethodGet, "/ds/sse/entry/"+itoa(entry.ID), nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	m := regexp.MustCompile(`datetime="(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2}))"`).FindStringSubmatch(w.Body.String())
+	if m == nil {
+		t.Fatalf("expected an RFC 3339 datetime attribute with offset, got: %s", w.Body.String())
+	}
+	if _, err := time.Parse(time.RFC3339, m[1]); err != nil {
+		t.Errorf("datetime %q is not valid RFC 3339: %v", m[1], err)
 	}
 }
