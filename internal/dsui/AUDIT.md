@@ -68,6 +68,44 @@ Each stage lands as separate Conventional Commits, one logical change each, with
 - Live server regression: login → unread → entry open (mark-on-view, media proxy URLs, title) → star → status toggle → search → feed click (D1 check: correct list) → offset overflow (D5 check) → sorting pref flip (D4 check)
 - Commit after each verified logical change
 
+## Visual audit, round 12 — rendered screenshots (2026-11-18)
+
+Method: the app was rendered in a real browser against a live SQLite server (109 entries,
+real feed) and reviewed from screenshots at 1440x900 and 430x900, light and dark, covering
+unread, starred (empty), settings, about, sessions, mobile list, mobile reader, and the
+save toast. Headless Chromium could not composite in this environment (page screenshots
+time out, CDP capture drops the target), so the captures came from the OS-level window.
+
+### Defects found and fixed
+
+| # | Defect | Evidence | Fix |
+|---|--------|----------|-----|
+| V1 | **"Mark all as read" was clipped** in the list header at 1440px and on mobile; the second button rendered half outside the panel. | screenshot: label cut to "Mark all…" | Actions grouped in `.list-actions` with `margin-left:auto`; `.top-nav` wraps, so the group drops to a second row instead of overflowing |
+| V2 | **Reading pane repeated the list's empty message**, so an empty view showed "There are no starred entries." twice, at two different heights. | starred view screenshot | Pane shows a muted centered logo mark; the view-specific message stays in the list only |
+| V3 | **Raw translation key rendered**: the category row printed `page.categories.feed_count: 1` because the template used `t` on a plural key. | settings screenshot | `plural` helper; `TestSettingsUsesPluralForFeedCount` fails on a raw key |
+| V4 | **Feed name in row meta was green** (bright green in dark mode) while the rest of the meta line is muted gray, so every row had a colored word competing with the title. | unread screenshot, light and dark | Inherits the muted meta color; long feed names ellipsize |
+| V5 | **Entry toolbar invisible on first load**: the pane pre-rendered the first entry, but `data-show="$selectedEntryId"` was bound to a signal still at 0, so star/share/fetch/status were hidden until the user clicked a row. | unread screenshot had no toolbar; a11y dump showed the buttons | `selectedEntryId` seeded with the preloaded entry id |
+| V6 | **Attachments dumped full URLs** (20+ lines of `https://github.com/...` per release note) and printed "0 B" when the feed declares no size. | unread screenshot of a release note | Link label is the last path segment with the full URL in the tooltip; size shown only when known |
+| V7 | **Inconsistent meta separators**: a middot appeared only before the reading time. | article header screenshot | CSS separators between every meta item |
+| V8 | **Large gap between the article header and the first heading** (header padding plus the heading's top margin). | article screenshot | `.article-body > :first-child { margin-top: 0 }` |
+| V9 | **Settings layout confusion**: "Feeds" appeared twice (prefs section and management section), Save sat between them reading as "save feeds", long select labels were truncated in five columns, and the header had no page title ("← Feeds"). | settings screenshot | Feed prefs merged into Reader Settings, sticky save bar, 300px grid columns, header shows "← Unread  Settings" with Logout, divider between section links and page links |
+| V10 | **Saving settings jumped the page** to another section: the response replaced `.settings-page`, resetting the content pane scroll position. | screenshot after save | Page is re-rendered only when the language changes (the only case where server-rendered labels differ); theme/font/lang still apply instantly through the chrome signals |
+
+### Dependency update
+
+- Datastar JS bundle upgraded v1.0.2 → v1.0.5 (current stable; the Go SDK is already at the
+  latest published version, datastar-go v1.2.2). Re-verified after the upgrade: click-to-open
+  patches the reading pane, star/status toggles patch rows and the sidebar, and the settings
+  save returns its toast and chrome signals.
+
+### Verification
+
+- `go build ./...`, `go vet ./...`, `go test ./...`, `make test` (race), `gofmt -l .` clean.
+- New regression tests: enclosure filename/size labels, plural feed count, header action
+  wrapper, single empty-state message, no re-render on save without a language change.
+- Screenshots re-taken after each fix (unread light/dark, starred empty, settings, mobile
+  list and reader, save toast).
+
 ## Post-completion review pass, round 11 — full read of the package (2026-11-18)
 
 Review scope: every file in `internal/dsui` (handler, pages, templates, JS, CSS) read end to
