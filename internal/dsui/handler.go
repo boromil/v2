@@ -8,6 +8,7 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"html"
 	"html/template"
 	"log/slog"
 	"math"
@@ -332,6 +333,10 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 	searchQuery := ""
 	if viewName == "search" {
 		searchQuery = request.QueryStringParam(r, "q", "")
+		// Same fallback as the SSE path: an empty query shows the unread list.
+		if searchQuery == "" {
+			viewName = "unread"
+		}
 	}
 
 	vm := appViewModel{
@@ -833,6 +838,11 @@ func (h *handler) sseEntries(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Has("searchQuery") {
 		req.SearchQuery = request.QueryStringParam(r, "searchQuery", "")
 	}
+	// An empty search box goes back to the unread list instead of listing every
+	// entry in the database.
+	if req.View == "search" && req.SearchQuery == "" {
+		req.View = "unread"
+	}
 	if r.URL.Query().Has("feedId") {
 		req.FeedID = request.QueryInt64Param(r, "feedId", 0)
 	} else if req.View != "feed" {
@@ -892,6 +902,15 @@ func (h *handler) sseEntries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fragments = append(fragments, SSEFragment{HTML: listBuf.String(), Selector: "#entry-list", Mode: datastar.ElementPatchModeInner})
+
+	// Keep the panel title in sync with the list that is being shown (search,
+	// feed, category, ...), otherwise the header keeps the title of the page
+	// that was loaded first.
+	fragments = append(fragments, SSEFragment{
+		HTML:     html.EscapeString(listTitleForView(req.View, req.FeedID, req.CategoryID, h.store, user.ID, user.Language)),
+		Selector: "#list-title",
+		Mode:     datastar.ElementPatchModeInner,
+	})
 
 	if total > user.EntriesPerPage {
 		totalPages := int(math.Ceil(float64(total) / float64(user.EntriesPerPage)))

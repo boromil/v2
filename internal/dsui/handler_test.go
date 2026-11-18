@@ -3434,3 +3434,57 @@ func TestSSESaveSettingsSkipsRerenderWithoutLanguageChange(t *testing.T) {
 		}
 	}
 }
+
+// TestSSEEntriesPatchesListTitle verifies the panel title follows the list that
+// is being shown instead of keeping the title of the first page load.
+func TestSSEEntriesPatchesListTitle(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	_ = mtest.CreateTestEntries(t, store, user.ID, feed.ID, 2)
+
+	handler := Serve(store, worker.NewPool(store, 1))
+	req := httptest.NewRequest(http.MethodGet, "/ds/sse/entries?view=starred", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	body := w.Body.String()
+	if !strings.Contains(body, "selector #list-title") {
+		t.Fatalf("expected the list title to be patched, got:\n%s", body)
+	}
+	if !strings.Contains(body, "Starred") {
+		t.Error("expected the starred list title in the patch")
+	}
+}
+
+// TestEmptySearchFallsBackToUnread verifies an empty search box does not list
+// every entry in the database.
+func TestEmptySearchFallsBackToUnread(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	entries := mtest.CreateTestEntries(t, store, user.ID, feed.ID, 2)
+	// Mark one entry as read: the unread fallback must hide it.
+	if err := store.SetEntriesStatus(user.ID, []int64{entries[0].ID}, model.EntryStatusRead); err != nil {
+		t.Fatalf("unable to mark entry as read: %v", err)
+	}
+
+	handler := Serve(store, worker.NewPool(store, 1))
+	req := httptest.NewRequest(http.MethodGet, "/ds/sse/entries?view=search&searchQuery=", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	body := w.Body.String()
+	if !strings.Contains(body, `"view":"unread"`) && !strings.Contains(body, `"view": "unread"`) {
+		t.Errorf("expected the view signal to fall back to unread, got:\n%s", body)
+	}
+	if strings.Contains(body, `id="entry-row-`+itoa(entries[0].ID)+`"`) {
+		t.Error("read entries must not be listed by an empty search")
+	}
+}

@@ -120,3 +120,65 @@ if (!customElements.get("entry-row")) {
     });
   }
 })();
+
+// Toasts dismiss themselves after a few seconds. Registered first because the
+// toast markup exists on every page, while the reading pane does not.
+(function () {
+  "use strict";
+
+  ["toast-error", "toast-success", "toast-info"].forEach(function (id) {
+    var toast = document.getElementById(id);
+    if (!toast) return;
+    var timer = null;
+    new MutationObserver(function () {
+      clearTimeout(timer);
+      if (toast.style.display === "none") return;
+      timer = setTimeout(function () { toast.click(); }, 4000);
+    }).observe(toast, { attributes: true, attributeFilter: ["style"] });
+  });
+})();
+
+// Reading-pane behavior: loading feedback while an entry is fetched and
+// scrolling the new article back to the top.
+(function () {
+  "use strict";
+
+  var pane = document.getElementById("entry-content");
+  var panel = document.getElementById("entry-content-panel");
+  if (!pane) return;
+
+  var lastTitle = (pane.querySelector(".article-title") || {}).textContent || "";
+  var loadTimer = null;
+
+  function startLoading() {
+    if (!panel) return;
+    panel.classList.add("is-loading");
+    clearTimeout(loadTimer);
+    // Safety net: never leave the bar running if the request fails.
+    loadTimer = setTimeout(stopLoading, 8000);
+  }
+
+  function stopLoading() {
+    clearTimeout(loadTimer);
+    if (panel) panel.classList.remove("is-loading");
+  }
+
+  document.addEventListener("click", function (event) {
+    var target = event.target;
+    if (!target || !target.closest) return;
+    var row = target.closest("entry-row");
+    if (!row) return;
+    // Starring does not replace the reading pane.
+    if (target.closest(".star-btn")) return;
+    startLoading();
+  });
+
+  new MutationObserver(function () {
+    var titleEl = pane.querySelector(".article-title");
+    var title = titleEl ? titleEl.textContent : "";
+    if (title === lastTitle) return;
+    lastTitle = title;
+    stopLoading();
+    pane.scrollTop = 0;
+  }).observe(pane, { childList: true, subtree: true, characterData: true });
+})();

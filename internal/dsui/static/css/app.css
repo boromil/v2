@@ -803,6 +803,10 @@ html[data-theme="dark"] .resize-handle {
   background-color: var(--color-gray-50);
 }
 
+.entry-row:active {
+  background-color: var(--color-gray-100);
+}
+
 .entry-row.selected {
   background-color: var(--color-blue-100);
 }
@@ -857,14 +861,18 @@ html[data-theme="dark"] .resize-handle {
   cursor: pointer;
   border: none;
   background: none;
-  padding: 0;
+  /* Enlarge the hit area without moving the glyph. */
+  padding: 0.125rem;
+  margin: -0.125rem 0.125rem -0.125rem -0.125rem;
+  border-radius: 0.25rem;
   font-size: 0.8125rem;
   line-height: 1;
-  transition: color 100ms;
+  transition: color 100ms, transform 100ms;
 }
 
 .star-btn:hover {
   color: var(--color-amber-500);
+  transform: scale(1.2);
 }
 
 .star-btn.starred {
@@ -873,7 +881,10 @@ html[data-theme="dark"] .resize-handle {
 
 /* Article content */
 .article-header {
-  padding: 1rem 1.5rem 0.75rem;
+  padding: 1rem 0 0.75rem;
+  /* Same centered measure as the body, so title, meta, and text share one
+     left edge. */
+  padding-inline: max(1.5rem, calc((100% - 42rem) / 2));
   border-bottom: 1px solid var(--color-gray-200);
 }
 
@@ -933,12 +944,11 @@ html[data-theme="dark"] .resize-handle {
 }
 
 .article-body {
-  padding: 1rem 1.5rem 2rem;
+  padding: 1rem 0 2rem;
+  padding-inline: max(1.5rem, calc((100% - 42rem) / 2));
   font-size: 0.9375rem;
   line-height: 1.65;
   color: var(--color-gray-800);
-  max-width: 42rem;
-  margin: 0 auto;
   overflow-wrap: break-word;
 }
 
@@ -1066,9 +1076,14 @@ html[data-theme="dark"] .resize-handle {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1.5rem;
+  padding: 0.5rem 0;
+  padding-inline: max(1.5rem, calc((100% - 42rem) / 2));
   border-bottom: 1px solid var(--color-gray-100);
   background-color: var(--color-gray-50);
+  /* Keep the entry actions reachable while reading a long article. */
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .toolbar-btn {
@@ -1229,6 +1244,34 @@ html[data-theme="dark"] .resize-handle {
   padding: 0.5rem;
   font-size: 0.8125rem;
   color: var(--color-gray-600);
+  border-top: 1px solid var(--color-gray-200);
+  background-color: var(--color-gray-50);
+}
+
+/* Indeterminate progress bar shown while an entry is being fetched. */
+#entry-content-panel {
+  position: relative;
+}
+
+#entry-content-panel.is-loading::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: 3;
+  height: 2px;
+  background-image: linear-gradient(90deg, transparent, var(--color-blue-500), transparent);
+  background-size: 40% 100%;
+  background-repeat: no-repeat;
+  animation: ds-progress 900ms linear infinite;
+}
+
+@keyframes ds-progress {
+  from {
+    background-position: -40% 0;
+  }
+  to {
+    background-position: 140% 0;
+  }
 }
 
 .pagination a {
@@ -2273,4 +2316,27 @@ html[data-theme="dark"] .settings-save-bar {
 
 html[data-theme="dark"] .settings-nav-sep {
   background: #33334d;
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) .entry-row:active {
+    background-color: #2a2a4a;
+  }
+  html:not([data-theme="light"]) .pagination {
+    border-top-color: #2a2a4a;
+    background-color: #16213e;
+  }
+}
+
+html[data-theme="dark"] .entry-row:active {
+  background-color: #2a2a4a;
+}
+html[data-theme="dark"] .pagination {
+  border-top-color: #2a2a4a;
+  background-color: #16213e;
+}
+
+/* The search unread toggle is only meaningful while searching. */
+.search-unread-toggle {
+  display: flex;
 }

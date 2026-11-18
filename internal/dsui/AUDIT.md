@@ -68,6 +68,51 @@ Each stage lands as separate Conventional Commits, one logical change each, with
 - Live server regression: login → unread → entry open (mark-on-view, media proxy URLs, title) → star → status toggle → search → feed click (D1 check: correct list) → offset overflow (D5 check) → sorting pref flip (D4 check)
 - Commit after each verified logical change
 
+## Refinement pass, round 13 — look, feel, usage (2026-11-18)
+
+Polish pass on top of the visual audit, driven by screenshots of the unread, search,
+settings, and empty states.
+
+### Look
+
+- **One reading column.** Title, meta, toolbar, and body now share the same centered
+  42rem measure (`padding-inline: max(1.5rem, calc((100% - 42rem) / 2))`). Before, the
+  header and toolbar spanned the pane while the body was centered, so the title and the
+  text started ~90px apart on a wide pane.
+- **Toolbar stays put** while reading a long article (sticky at the top of the pane).
+- **Pagination is a footer**: top border and tinted background instead of floating text.
+- **Star** got a larger hit area (negative margin so the glyph does not move), a hover
+  scale, and amber when starred; rows have a pressed state.
+
+### Feel
+
+- **Loading feedback**: a 2px indeterminate bar runs along the top of the reading pane
+  between the row click and the new content, with an 8s safety stop.
+- **Scroll reset**: opening another entry scrolls the pane back to the top; it used to
+  keep the previous article's scroll offset.
+- **Toasts dismiss themselves** after 4 seconds instead of waiting for a click.
+
+### Usage
+
+- The search **"Unread" toggle only appears in the search view**; it was permanent
+  clutter in every list header.
+- **Emptying the search box returns to the unread list** instead of listing every entry
+  in the database (both the SSE path and a direct `/ds/search` load normalize).
+- The **list panel title follows the list** (Search, Starred, feed or category name);
+  it used to keep the title of whatever page was loaded first.
+- After a page change or search, **no row stays highlighted** when the reading pane is
+  showing a different article; `j`/`k` picks the first row on the next keypress.
+- The **search query signal is seeded from the URL**, so reloading a search keeps the
+  input and the signal in sync.
+
+### Verification
+
+- `go build ./...`, `go vet ./...`, `go test ./...`, `make test` (race), `gofmt -l .` clean.
+- New tests: list title patched with the entries, empty search falls back to unread.
+- Live: search shows results with the "Search" title and the unread toggle, clearing the
+  box returns to unread with the toggle hidden, save toast appears and disappears on its
+  own, and the article header, meta, toolbar, and body share one left edge.
+
 ## Visual audit, round 12 — rendered screenshots (2026-11-18)
 
 Method: the app was rendered in a real browser against a live SQLite server (109 entries,

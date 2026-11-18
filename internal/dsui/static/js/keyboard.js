@@ -468,12 +468,10 @@
         if (sel) {
           var rows = getVisibleEntryRows();
           selectedIdx = rows.indexOf(sel);
-        } else {
-          // List fully re-rendered (e.g. page change): select the first row
-          // so j/k continue from a sane position, like classic.
-          var firstRows = getVisibleEntryRows();
-          if (firstRows.length > 0) selectIndex(0);
         }
+        // The previously opened entry is gone from the list (page change,
+        // search, different view). Do not highlight a row that the reading
+        // pane is not showing; j/k picks the first row on the next keypress.
       });
       // Datastar patches MORPH the DOM in place: full-list refreshes
       // (pagination, mark-page-read) often mutate row text/attributes rather
