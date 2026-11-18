@@ -26,7 +26,7 @@ func NewSQLiteMigrationProvider() MigrationProvider {
 //go:embed schema/sqlite/schema.sql
 var sqliteSchema string
 
-var sqliteSchemaVersion = 5
+var sqliteSchemaVersion = 6
 
 var sqliteMigrations = []func(tx *sql.Tx) error{
 	func(tx *sql.Tx) (err error) {
@@ -57,6 +57,15 @@ var sqliteMigrations = []func(tx *sql.Tx) error{
 	func(tx *sql.Tx) (err error) {
 		_, err = tx.Exec(`
 			ALTER TABLE users ADD COLUMN strip_content_before_first_heading int default 0;
+		`)
+		return err
+	},
+	func(tx *sql.Tx) (err error) {
+		_, err = tx.Exec(`
+			ALTER TABLE integrations ADD COLUMN gotify_enabled int default 0;
+			ALTER TABLE integrations ADD COLUMN gotify_url text default '';
+			ALTER TABLE integrations ADD COLUMN gotify_token text default '';
+			ALTER TABLE integrations ADD COLUMN gotify_priority int default 0;
 		`)
 		return err
 	},
