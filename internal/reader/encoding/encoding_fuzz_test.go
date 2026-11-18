@@ -14,8 +14,8 @@ package encoding
 
 import (
 	"bytes"
-	"math/rand/v2"
 	"io"
+	"math/rand/v2"
 	"testing"
 	"unicode/utf8"
 )
@@ -28,10 +28,10 @@ func fuzzBytes(r *rand.Rand, maxLen int) []byte {
 	pieces := [][]byte{
 		[]byte("<?xml version=\"1.0\" encoding=\"UTF-8\"?><rss>"),
 		[]byte("text with unicode 日本語 and émojis 😀"),
-		{0xFF, 0xFE, 0x00, 0x41, 0x00},   // UTF-16 LE BOM-ish
-		{0xEF, 0xBB, 0xBF, 'a', 'b'},     // UTF-8 BOM
-		{0xC3, 0x28},                      // invalid 2-byte seq
-		{0x80, 0x80, 0x80},                // continuation bytes
+		{0xFF, 0xFE, 0x00, 0x41, 0x00}, // UTF-16 LE BOM-ish
+		{0xEF, 0xBB, 0xBF, 'a', 'b'},   // UTF-8 BOM
+		{0xC3, 0x28},                   // invalid 2-byte seq
+		{0x80, 0x80, 0x80},             // continuation bytes
 		[]byte("<meta charset=\"iso-8859-1\"><body>"),
 	}
 	n := 1 + r.IntN(8)

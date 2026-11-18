@@ -113,7 +113,8 @@ func itoa(v uint64) string {
 // checkTimezoneRange invariant on any successful parse: the resulting offset
 // must stay within [-12h,+14h] and Parse must never panic. complements
 // TestFuzzDateTimezoneRange; run with:
-//   go test -fuzz=FuzzParseTimezoneRange -run=X ./internal/reader/date
+//
+//	go test -fuzz=FuzzParseTimezoneRange -run=X ./internal/reader/date
 func FuzzParseTimezoneRange(f *testing.F) {
 	f.Add("2017-12-22T22:09:49+14:00")
 	f.Add("2017-12-22T22:09:49-12:00")
