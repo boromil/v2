@@ -68,6 +68,57 @@ Each stage lands as separate Conventional Commits, one logical change each, with
 - Live server regression: login → unread → entry open (mark-on-view, media proxy URLs, title) → star → status toggle → search → feed click (D1 check: correct list) → offset overflow (D5 check) → sorting pref flip (D4 check)
 - Commit after each verified logical change
 
+## Post-completion review pass, round 11 — full read of the package (2026-11-18)
+
+Review scope: every file in `internal/dsui` (handler, pages, templates, JS, CSS) read end to
+end against `internal/ui`, then verified against a live SQLite server (real feed,
+109 entries, curl + sqlite3 for state checks). Each finding below is a commit.
+
+### Defects found and fixed
+
+| # | Defect | Evidence | Fix |
+|---|--------|----------|-----|
+| D9 | **Password change reset every boolean preference.** The password form posted to `/ds/sse/settings`, whose partial-form apply writes the checkbox fields unconditionally: reading time, keyboard shortcuts, strip-heading, mark-read-on-view all flipped to false. The form also never asked for the current password, so a hijacked session could take over the account. | `applyToUser` + form with only password/confirmation; live-verified 1→0 after submit | Dedicated `POST /ds/sse/password` that only touches the password, requires the current password when one is set, runs the same validator, signs out other sessions, rotates the current one, and re-renders the section (`ef8b2da2`) |
+| D10 | **Mark-read-on-view ignored for the preloaded entry**, and the media-completion variant ignored entirely (`user.MarkReadOnView` was checked directly instead of `Entry.ShouldMarkAsReadOnView`). | `showApp` never touched status; `sseEntry` used the raw flag | Both paths use `ShouldMarkAsReadOnView`; the preloaded entry is marked read before the menu is built (`4111f113`) |
+| D11 | **Sidebar unread counters went stale.** Opening an entry, toggling its status, or marking a page read patched only a page-level `countUnread` signal; the per-feed and per-category counters in the tree kept their old values until a reload. | live: tree still showed 105 after reading an entry | `sidebarFragment` re-renders the tree and its counters on every status change (`4111f113`) |
+| D12 | **Reading pane always said "no unread entries"** in starred, history, shares, feed, and category views. | `entry_content.html` hardcoded `alert.no_unread_entry` | Per-view empty message (`438f14b0`) |
+| D13 | **`<time datetime>` had no timezone offset**, so the markup was not a valid machine timestamp. | `2006-01-02T15:04:05` | RFC 3339 with offset (`438f14b0`) |
+| D14 | **`keyboard_shortcuts` preference ignored**: shortcuts stayed active after being disabled in the settings. | no reference to the field in JS | `data-keyboard-shortcuts` on `<body>`, handler bails out (`438f14b0`) |
+| D15 | **Refresh had no guards.** Every click pushed a job batch (classic rate-limits through the session force-refresh interval), the per-host polling limit was not applied, and a single-feed refresh accepted any feed id without an ownership check. | `refreshFeeds`/`refreshFeed` | Session interval, `WithLimitPerHost`, ownership check, localized toasts (`ccd45709`) |
+| D16 | **Hardcoded English server messages and labels**: refresh toasts, feed/category validation flashes, mobile panel labels, settings page title, category-in-use guard. | grep of Go literals + templates | Localized through existing keys plus three new keys translated in all 24 locales (`ccd45709`); `TestDsuiTranslationKeysExistInEveryLocale` now fails when a key is missing anywhere |
+
+### Parity gaps closed
+
+| # | Gap | Implementation |
+|---|-----|----------------|
+| P11 | Shared entries page | `/ds/shares` as a first-class reader view (list + pane + pagination + SSE), menu entry (`d45fad08`) |
+| P12 | About page | `/ds/about`: version/commit/build date/Go version, plus admin-only database version, database size, and global options (`d45fad08`) |
+| P13 | Sessions page | `/ds/sessions`: list with current-session marker and revoke action that never removes the requesting session (`d45fad08`) |
+| P14 | Logout | Form in the sidebar and on every standalone page, posting to the shared `/logout` route with the session CSRF token (`d45fad08`) |
+| P15 | Admin screens | Integrations, authentication, API keys, and user management stay in the classic UI and are linked from the settings nav. They are set-once screens whose update paths (Fever token hashing, Google Reader password hashing, duplicate checks, notifier construction) would be duplicated wholesale; linking keeps one implementation. |
+
+### Deliberate boundaries (unchanged)
+
+- `dir="ltr"` stays hardcoded: the classic UI has no `dir` attribute at all, and Miniflux
+  has no RTL locale.
+- Keyboard `g c` (categories page), `F` (feeds page), `+`/`#` remain omitted: dsui has no
+  dedicated feeds/categories pages.
+
+### Verification
+
+- `go build ./...`, `go vet ./...`, `go test ./...`, `make test` (race), `gofmt -l .` clean.
+- 20 new regression tests across the fixes above (password/preference preservation, current
+  password requirement, mark-read-on-view, sidebar counters, per-view empty state, RFC 3339,
+  shortcuts preference, refresh rate limit, refresh ownership, shares view, about, sessions,
+  session revocation, logout form, locale key coverage).
+- Live SQLite server: login → unread/starred/history/shares/settings/about/sessions render
+  with correct titles → add feed → SSE open marks read and patches `#subscription-panel
+  .feed-tree` with the new counters → status toggle patches row, toolbar, and tree →
+  share creates a code and `/ds/shares` lists the entry → settings save returns the
+  localized toast and chrome signals → password change rejects a wrong current password,
+  preserves preferences, and the new password logs in → session revoke deletes the row →
+  logout ends the session.
+
 ## Post-completion validation sweep, round 10 — systematic UX review (2026-08-21)
 Google Reader-aesthetic pass over layout/typography/hierarchy/affordances/accessibility/i18n (review done against live DOM + CSS/template analysis; the supplied screenshots could not be rendered by this agent's model, which has no vision input).
 - **Strengths confirmed (no change)**: three-pane grid with independent scroll and resizable divider; compact 0.8125rem list rows with muted meta line; unread=600/gray-900 vs read=400/gray-600 distinction; 42rem reading measure at 1.65 line-height; star/mark-read/share/fetch/comments affordances.
