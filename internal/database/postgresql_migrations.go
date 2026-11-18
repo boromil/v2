@@ -1591,14 +1591,16 @@ var migrations = [...]func(tx *sql.Tx) error{
 		return err
 	},
 	func(tx *sql.Tx) (err error) {
+		// IF NOT EXISTS keeps this safe for databases that ran the fork's
+		// migrations before upstream's newer ones shifted the version numbers.
 		_, err = tx.Exec(`
-			ALTER TABLE users ADD COLUMN auto_fetch_short_entries boolean default 'f';
+			ALTER TABLE users ADD COLUMN IF NOT EXISTS auto_fetch_short_entries boolean default 'f';
 		`)
 		return err
 	},
 	func(tx *sql.Tx) (err error) {
 		_, err = tx.Exec(`
-			ALTER TABLE users ADD COLUMN strip_content_before_first_heading boolean default 'f';
+			ALTER TABLE users ADD COLUMN IF NOT EXISTS strip_content_before_first_heading boolean default 'f';
 		`)
 		return err
 	},
