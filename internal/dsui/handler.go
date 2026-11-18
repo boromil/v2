@@ -338,14 +338,9 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 		CanMarkAllRead:     viewName == "unread" || viewName == "feed" || viewName == "category",
 	}
 
-	// Build subscription menu.
-	vm.MenuSections = h.buildMenu(user, viewName, feedID, categoryID)
 	vm.ListTitle = listTitleForView(viewName, feedID, categoryID, h.store, user.ID, user.Language)
 	vm.EmptyMessage = emptyMessageForView(printerFor(user.Language), viewName)
 	vm.Title = vm.ListTitle + " — Miniflux"
-	nav, _ := h.store.GetNavMetadata(user.ID)
-	vm.CountUnread = nav.CountUnread
-	vm.CountErrorFeeds = nav.CountErrorFeeds
 
 	// Load entries.
 	entries, total, err := h.queryEntriesSorted(user.ID, viewName, feedID, categoryID, searchQuery, false, offset, user.EntriesPerPage, user.EntryOrder, user.EntryDirection)
@@ -395,10 +390,29 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 			WithEnclosures().
 			GetEntry()
 		if err == nil && firstEntry != nil {
-			detail := entryToDetailView(firstEntry, user)
-			vm.SelectedEntry = detail
+			// The first entry is rendered in the reading pane, so honor the
+			// mark-as-read-on-view preference for it. ShouldMarkAsReadOnView
+			// keeps audio/video entries unread when the user asked to wait for
+			// player completion.
+			if firstEntry.ShouldMarkAsReadOnView(user) {
+				if err := h.store.SetEntriesStatus(user.ID, []int64{firstEntry.ID}, model.EntryStatusRead); err != nil {
+					slog.Warn("dsui: unable to mark preloaded entry as read", slog.Int64("entry_id", firstEntry.ID), slog.Any("error", err))
+				} else {
+					firstEntry.Status = model.EntryStatusRead
+					entries[0].Status = model.EntryStatusRead
+					vm.Entries[0].Status = model.EntryStatusRead
+				}
+			}
+			vm.SelectedEntry = entryToDetailView(firstEntry, user)
 		}
 	}
+
+	// Build the subscription menu after the preload so the unread counters
+	// reflect the entry that was just marked as read.
+	vm.MenuSections = h.buildMenu(user, viewName, feedID, categoryID)
+	nav, _ := h.store.GetNavMetadata(user.ID)
+	vm.CountUnread = nav.CountUnread
+	vm.CountErrorFeeds = nav.CountErrorFeeds
 
 	var buf bytes.Buffer
 	if err := h.tplFor(user.Language).ExecuteTemplate(&buf, "layout", vm); err != nil {
@@ -881,6 +895,13 @@ func (h *handler) sseEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Signals carry the current view so the sidebar keeps its selection and
+	// the unread counters can be re-rendered in place.
+	var req EntryRequest
+	if err := readSignals(r, &req); err != nil {
+		slog.Debug("dsui: unable to read signals for entry view", slog.Any("error", err))
+	}
+
 	entryID := request.RouteInt64Param(r, "entryID")
 	entry, err := h.store.NewEntryQueryBuilder(user.ID).
 		WithEntryIDs(entryID).
@@ -895,13 +916,16 @@ func (h *handler) sseEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Mark as read if configured.
-	if entry.Status == model.EntryStatusUnread && user.MarkReadOnView {
+	// Mark as read if configured. ShouldMarkAsReadOnView also honors the
+	// "wait for player completion" behavior for audio/video entries.
+	statusChanged := false
+	if entry.ShouldMarkAsReadOnView(user) {
 		if err := h.store.SetEntriesStatus(user.ID, []int64{entry.ID}, model.EntryStatusRead); err != nil {
 			response.HTMLServerError(w, r, err)
 			return
 		}
 		entry.Status = model.EntryStatusRead
+		statusChanged = true
 	}
 
 	detail := entryToDetailView(entry, user)
@@ -926,15 +950,24 @@ func (h *handler) sseEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	renderSSEResponse(w, r, SSEResponse{
-		Fragments: []SSEFragment{
-			{HTML: contentBuf.String(), Selector: "#entry-content", Mode: datastar.ElementPatchModeInner},
-			{HTML: rowBuf.String(), Selector: fmt.Sprintf("#entry-row-%d", entry.ID)},
-		},
-		Signals: map[string]any{
-			"selectedEntryId": entry.ID,
-		},
-	})
+	fragments := []SSEFragment{
+		{HTML: contentBuf.String(), Selector: "#entry-content", Mode: datastar.ElementPatchModeInner},
+		{HTML: rowBuf.String(), Selector: fmt.Sprintf("#entry-row-%d", entry.ID)},
+	}
+	signals := map[string]any{"selectedEntryId": entry.ID}
+
+	// Opening an unread entry changes the unread counters shown in the feed
+	// tree, so refresh it along with the reading pane.
+	if statusChanged {
+		if sidebar, counters, err := h.sidebarFragment(user, req.View, req.FeedID, req.CategoryID); err == nil {
+			fragments = append(fragments, sidebar)
+			for k, v := range counters {
+				signals[k] = v
+			}
+		}
+	}
+
+	renderSSEResponse(w, r, SSEResponse{Fragments: fragments, Signals: signals})
 }
 
 func (h *handler) sseSubscriptions(w http.ResponseWriter, r *http.Request) {
@@ -944,20 +977,39 @@ func (h *handler) sseSubscriptions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sections := h.buildMenu(user, "", 0, 0)
-	data := map[string]any{"MenuSections": sections}
-	var buf bytes.Buffer
-	if err := h.tplFor(user.Language).ExecuteTemplate(&buf, "subscription_list", data); err != nil {
+	sidebar, counters, err := h.sidebarFragment(user, "", 0, 0)
+	if err != nil {
 		response.HTMLServerError(w, r, fmt.Errorf("subscription_list template: %w", err))
 		return
 	}
-	renderSSEResponse(w, r, SSEResponse{
-		Fragments: []SSEFragment{
-			// Patch the feed tree inner, not the whole #subscription-panel, so the
-			// aside's id, .top-nav, and <nav> shell persist across updates.
-			{HTML: buf.String(), Selector: "#subscription-panel .feed-tree", Mode: datastar.ElementPatchModeInner},
+	renderSSEResponse(w, r, SSEResponse{Fragments: []SSEFragment{sidebar}, Signals: counters})
+}
+
+// sidebarFragment renders the feed tree for SSE patching, together with the
+// counters that the page signals mirror. The patch targets the inner content of
+// #subscription-panel .feed-tree so the aside's id, .top-nav, and <nav> shell
+// persist across updates.
+func (h *handler) sidebarFragment(user *model.User, view string, feedID, categoryID int64) (SSEFragment, map[string]any, error) {
+	sections := h.buildMenu(user, view, feedID, categoryID)
+	var buf bytes.Buffer
+	if err := h.tplFor(user.Language).ExecuteTemplate(&buf, "subscription_list", map[string]any{"MenuSections": sections}); err != nil {
+		return SSEFragment{}, nil, err
+	}
+
+	nav, err := h.store.GetNavMetadata(user.ID)
+	if err != nil {
+		return SSEFragment{}, nil, err
+	}
+
+	return SSEFragment{
+			HTML:     buf.String(),
+			Selector: "#subscription-panel .feed-tree",
+			Mode:     datastar.ElementPatchModeInner,
 		},
-	})
+		map[string]any{
+			"countUnread":     nav.CountUnread,
+			"countErrorFeeds": nav.CountErrorFeeds,
+		}, nil
 }
 
 func (h *handler) sseToggleStar(w http.ResponseWriter, r *http.Request) {
@@ -1012,7 +1064,10 @@ func (h *handler) sseToggleEntryStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		EntryIDs []int64 `json:"entryIds"`
+		EntryIDs   []int64 `json:"entryIds"`
+		View       string  `json:"view"`
+		FeedID     int64   `json:"feedId"`
+		CategoryID int64   `json:"categoryId"`
 	}
 	if err := readSignals(r, &req); err != nil || len(req.EntryIDs) == 0 {
 		response.HTMLBadRequest(w, r, fmt.Errorf("missing entryIds"))
@@ -1101,9 +1156,16 @@ func (h *handler) sseToggleEntryStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(fragments) > 0 {
-		renderSSEResponse(w, r, SSEResponse{
-			Fragments: fragments,
-		})
+		signals := map[string]any{}
+		// Marking an entry read or unread changes the unread counters shown in
+		// the feed tree.
+		if sidebar, counters, err := h.sidebarFragment(user, req.View, req.FeedID, req.CategoryID); err == nil {
+			fragments = append(fragments, sidebar)
+			for k, v := range counters {
+				signals[k] = v
+			}
+		}
+		renderSSEResponse(w, r, SSEResponse{Fragments: fragments, Signals: signals})
 	} else {
 		sendSSERedirect(w, r, "/ds/unread")
 	}
@@ -1142,7 +1204,6 @@ func (h *handler) sseMarkAllRead(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Rebuild entry list and subscription tree for SSE patches.
-	sections := h.buildMenu(user, req.View, req.FeedID, req.CategoryID)
 	entries, _, err := h.queryEntriesSorted(user.ID, req.View, req.FeedID, req.CategoryID, req.SearchQuery, req.SearchUnreadOnly, 0, user.EntriesPerPage, user.EntryOrder, user.EntryDirection)
 	if err != nil {
 		response.HTMLServerError(w, r, err)
@@ -1165,25 +1226,22 @@ func (h *handler) sseMarkAllRead(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var listBuf, subBuf bytes.Buffer
+	var listBuf bytes.Buffer
 	if err := h.tplFor(user.Language).ExecuteTemplate(&listBuf, "entry_list", map[string]any{"Entries": evs, "EmptyMessage": emptyMessageForView(printerFor(user.Language), req.View)}); err != nil {
 		response.HTMLServerError(w, r, fmt.Errorf("entry_list template: %w", err))
 		return
 	}
-	if err := h.tplFor(user.Language).ExecuteTemplate(&subBuf, "subscription_list", map[string]any{"MenuSections": sections}); err != nil {
-		response.HTMLServerError(w, r, fmt.Errorf("subscription_list template: %w", err))
-		return
+	fragments := []SSEFragment{
+		{HTML: listBuf.String(), Selector: "#entry-list", Mode: datastar.ElementPatchModeInner},
 	}
-
-	renderSSEResponse(w, r, SSEResponse{
-		Fragments: []SSEFragment{
-			{HTML: listBuf.String(), Selector: "#entry-list", Mode: datastar.ElementPatchModeInner},
-			{HTML: subBuf.String(), Selector: "#subscription-panel .feed-tree", Mode: datastar.ElementPatchModeInner},
-		},
-		Signals: map[string]any{
-			"countUnread": 0,
-		},
-	})
+	signals := map[string]any{"countUnread": 0}
+	if sidebar, counters, err := h.sidebarFragment(user, req.View, req.FeedID, req.CategoryID); err == nil {
+		fragments = append(fragments, sidebar)
+		for k, v := range counters {
+			signals[k] = v
+		}
+	}
+	renderSSEResponse(w, r, SSEResponse{Fragments: fragments, Signals: signals})
 }
 
 func (h *handler) importOPML(w http.ResponseWriter, r *http.Request) {
@@ -1485,15 +1543,17 @@ func (h *handler) sseMarkPageRead(w http.ResponseWriter, r *http.Request) {
 
 	// Patch #entry-list with inner mode so the container id persists (the
 	// entry_list template emits children only).
-	nav, _ := h.store.GetNavMetadata(user.ID)
-	renderSSEResponse(w, r, SSEResponse{
-		Fragments: []SSEFragment{
-			{HTML: listBuf.String(), Selector: "#entry-list", Mode: datastar.ElementPatchModeInner},
-		},
-		Signals: map[string]any{
-			"countUnread": nav.CountUnread,
-		},
-	})
+	fragments := []SSEFragment{
+		{HTML: listBuf.String(), Selector: "#entry-list", Mode: datastar.ElementPatchModeInner},
+	}
+	signals := map[string]any{}
+	if sidebar, counters, err := h.sidebarFragment(user, req.View, req.FeedID, req.CategoryID); err == nil {
+		fragments = append(fragments, sidebar)
+		for k, v := range counters {
+			signals[k] = v
+		}
+	}
+	renderSSEResponse(w, r, SSEResponse{Fragments: fragments, Signals: signals})
 }
 
 func (h *handler) sseFetchContent(w http.ResponseWriter, r *http.Request) {

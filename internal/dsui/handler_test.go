@@ -13,6 +13,8 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -2617,5 +2619,165 @@ func TestResizeHandleAppliesGridWidth(t *testing.T) {
 	// The old broken pattern must not come back.
 	if strings.Contains(js, "gridTemplateColumns.replace(/1fr 4px 1fr/") {
 		t.Error("resize handler must not regex-rewrite gridTemplateColumns (never matched)")
+	}
+}
+
+// firstRenderedEntryID returns the id of the first entry row in the page, which
+// is the entry the server preloaded into the reading pane.
+func firstRenderedEntryID(t *testing.T, body string) int64 {
+	t.Helper()
+	m := regexp.MustCompile(`id="entry-row-(\d+)"`).FindStringSubmatch(body)
+	if m == nil {
+		t.Fatalf("no entry row rendered in body")
+	}
+	id, err := strconv.ParseInt(m[1], 10, 64)
+	if err != nil {
+		t.Fatalf("invalid entry id %q: %v", m[1], err)
+	}
+	return id
+}
+
+// TestShowAppMarksPreloadedEntryRead verifies the entry rendered in the reading
+// pane on first load honors the mark-as-read-on-view preference, and that the
+// sidebar counters are built after the update so they never show a stale count.
+func TestShowAppMarksPreloadedEntryRead(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	user.MarkReadOnView = true
+	if err := store.UpdateUser(user); err != nil {
+		t.Fatalf("unable to enable mark-read-on-view: %v", err)
+	}
+
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	entries := mtest.CreateTestEntries(t, store, user.ID, feed.ID, 3)
+
+	handler := Serve(store, worker.NewPool(store, 1))
+	req := httptest.NewRequest(http.MethodGet, "/ds/unread", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	body := w.Body.String()
+	preloadedID := firstRenderedEntryID(t, body)
+
+	readCount := 0
+	for _, entry := range entries {
+		saved, err := store.NewEntryQueryBuilder(user.ID).WithEntryIDs(entry.ID).GetEntry()
+		if err != nil {
+			t.Fatalf("fetch entry %d: %v", entry.ID, err)
+		}
+		if saved.Status == model.EntryStatusRead {
+			readCount++
+			if saved.ID != preloadedID {
+				t.Errorf("entry %d was marked as read but %d is the preloaded entry", saved.ID, preloadedID)
+			}
+		}
+	}
+	if readCount != 1 {
+		t.Errorf("expected exactly the preloaded entry to be marked as read, got %d read entries", readCount)
+	}
+
+	if !strings.Contains(body, `class="unread-count">2<`) {
+		t.Error("sidebar unread counter must be rendered after the preloaded entry was marked as read")
+	}
+}
+
+// TestShowAppKeepsPreloadedEntryUnread verifies nothing is marked as read when
+// the user did not ask for mark-as-read-on-view.
+func TestShowAppKeepsPreloadedEntryUnread(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	user.MarkReadOnView = false
+	if err := store.UpdateUser(user); err != nil {
+		t.Fatalf("unable to disable mark-read-on-view: %v", err)
+	}
+
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	entries := mtest.CreateTestEntries(t, store, user.ID, feed.ID, 2)
+
+	handler := Serve(store, worker.NewPool(store, 1))
+	req := httptest.NewRequest(http.MethodGet, "/ds/unread", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	for _, entry := range entries {
+		saved, err := store.NewEntryQueryBuilder(user.ID).WithEntryIDs(entry.ID).GetEntry()
+		if err != nil {
+			t.Fatalf("fetch entry %d: %v", entry.ID, err)
+		}
+		if saved.Status != model.EntryStatusUnread {
+			t.Errorf("entry %d must stay unread, got %q", entry.ID, saved.Status)
+		}
+	}
+}
+
+// TestSSEEntryRefreshesSidebarCounters verifies opening an unread entry marks it
+// read and patches the feed tree so the unread counters follow, and that nothing
+// is patched when mark-as-read-on-view is disabled.
+func TestSSEEntryRefreshesSidebarCounters(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	user.MarkReadOnView = false
+	if err := store.UpdateUser(user); err != nil {
+		t.Fatalf("unable to disable mark-read-on-view: %v", err)
+	}
+
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	entries := mtest.CreateTestEntries(t, store, user.ID, feed.ID, 2)
+
+	handler := Serve(store, worker.NewPool(store, 1))
+
+	openEntry := func(entryID int64) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodGet, "/ds/sse/entry/"+itoa(entryID), nil)
+		req, _ = authenticateTestSession(t, store, req, user)
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+		return w
+	}
+
+	// Preference off: entry stays unread and the sidebar is left alone.
+	w := openEntry(entries[0].ID)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	if strings.Contains(w.Body.String(), "feed-tree") {
+		t.Error("sidebar must not be patched when no entry status changed")
+	}
+	saved, err := store.NewEntryQueryBuilder(user.ID).WithEntryIDs(entries[0].ID).GetEntry()
+	if err != nil {
+		t.Fatalf("fetch entry: %v", err)
+	}
+	if saved.Status != model.EntryStatusUnread {
+		t.Errorf("entry must stay unread with mark-read-on-view disabled, got %q", saved.Status)
+	}
+
+	// Preference on: entry is marked read and the sidebar counters are patched.
+	user.MarkReadOnView = true
+	if err := store.UpdateUser(user); err != nil {
+		t.Fatalf("unable to enable mark-read-on-view: %v", err)
+	}
+
+	w = openEntry(entries[0].ID)
+	body := w.Body.String()
+	if !strings.Contains(body, "feed-tree") {
+		t.Error("opening an unread entry must patch the feed tree counters")
+	}
+	if !strings.Contains(body, `"countUnread":1`) && !strings.Contains(body, `"countUnread": 1`) {
+		t.Errorf("expected countUnread to be patched to 1, got: %s", body)
+	}
+	saved, err = store.NewEntryQueryBuilder(user.ID).WithEntryIDs(entries[0].ID).GetEntry()
+	if err != nil {
+		t.Fatalf("fetch entry: %v", err)
+	}
+	if saved.Status != model.EntryStatusRead {
+		t.Errorf("entry must be marked as read, got %q", saved.Status)
 	}
 }
