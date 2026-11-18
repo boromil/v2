@@ -13,6 +13,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -2310,6 +2311,13 @@ func TestAddFeedRequiresURL(t *testing.T) {
 	for _, c := range w.Result().Cookies() {
 		if c.Name == "dsui_flash_error" && c.Value != "" {
 			flashed = true
+			msg, err := url.QueryUnescape(c.Value)
+			if err != nil {
+				t.Fatalf("unable to decode flash cookie: %v", err)
+			}
+			if msg != "The feed URL cannot be empty." {
+				t.Errorf("expected the localized feed URL error, got %q", msg)
+			}
 		}
 	}
 	if !flashed {
@@ -2870,5 +2878,156 @@ func TestEntryDetailDatetimeHasOffset(t *testing.T) {
 	}
 	if _, err := time.Parse(time.RFC3339, m[1]); err != nil {
 		t.Errorf("datetime %q is not valid RFC 3339: %v", m[1], err)
+	}
+}
+
+// TestDsuiTranslationKeysExistInEveryLocale guards every key used by the
+// Datastar UI against a missing translation: locale.Printer falls back to the
+// key itself, so a missing entry shows a raw key to the user.
+func TestDsuiTranslationKeysExistInEveryLocale(t *testing.T) {
+	keys := map[string]bool{}
+
+	templateKeyRe := regexp.MustCompile(`\{\{(?:t|plural)\s+"([^"]+)"`)
+	addTemplateKeys := func(name string) {
+		data, err := templateFiles.ReadFile(name)
+		if err != nil {
+			t.Fatalf("unable to read template %s: %v", name, err)
+		}
+		for _, m := range templateKeyRe.FindAllStringSubmatch(string(data), -1) {
+			keys[m[1]] = true
+		}
+	}
+	addTemplateKeys("templates/layout.html")
+	addTemplateKeys("templates/app.html")
+	addTemplateKeys("templates/settings.html")
+	components, err := templateFiles.ReadDir("templates/components")
+	if err != nil {
+		t.Fatalf("unable to list component templates: %v", err)
+	}
+	for _, entry := range components {
+		addTemplateKeys("templates/components/" + entry.Name())
+	}
+
+	goFiles, err := filepath.Glob("*.go")
+	if err != nil {
+		t.Fatalf("unable to list package files: %v", err)
+	}
+	printerKeyRe := regexp.MustCompile(`\.(?:Print|Printf|Plural)\("([^"]+)"`)
+	localizedErrRe := regexp.MustCompile(`locale\.NewLocalizedError\("([^"]+)"\)`)
+	for _, name := range goFiles {
+		if strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		data, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatalf("unable to read %s: %v", name, err)
+		}
+		for _, m := range printerKeyRe.FindAllStringSubmatch(string(data), -1) {
+			keys[m[1]] = true
+		}
+		for _, m := range localizedErrRe.FindAllStringSubmatch(string(data), -1) {
+			keys[m[1]] = true
+		}
+	}
+
+	if len(keys) < 50 {
+		t.Fatalf("expected to collect the dsui translation keys, got %d", len(keys))
+	}
+
+	for language := range locale.AvailableLanguages {
+		printer := locale.NewPrinter(language)
+		for key := range keys {
+			// Plural keys live in a separate table, so check both.
+			if printer.Print(key) == key && printer.Plural(key, 2) == key {
+				t.Errorf("language %s is missing the translation key %q", language, key)
+			}
+		}
+	}
+}
+
+// ensureTestConfig initializes config.Opts from the environment when a test
+// needs configuration values and no other test has done it yet.
+func ensureTestConfig(t *testing.T) {
+	t.Helper()
+	if config.Opts != nil {
+		return
+	}
+	parsedOptions, err := config.NewConfigParser().ParseEnvironmentVariables()
+	if err != nil {
+		t.Fatalf("unable to configure test options: %v", err)
+	}
+	config.Opts = parsedOptions
+	t.Cleanup(func() { config.Opts = nil })
+}
+
+// TestRefreshAllFeedsIsRateLimited verifies the dsui refresh button honors the
+// same force-refresh interval as the classic UI instead of pushing a job batch
+// on every click.
+func TestRefreshAllFeedsIsRateLimited(t *testing.T) {
+	ensureTestConfig(t)
+	interval := config.Opts.ForceRefreshInterval()
+	if interval <= 0 {
+		t.Skip("force refresh interval is disabled in this configuration")
+	}
+
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	// A user without feeds keeps the worker pool idle (no network access).
+	session, secret := model.NewWebSession("test-agent", "127.0.0.1")
+	if err := store.CreateWebSession(session); err != nil {
+		t.Fatalf("unable to create session: %v", err)
+	}
+	session.SetUser(user)
+	oldID, newSecret := session.Rotate()
+	if err := store.RotateWebSession(oldID, session); err != nil {
+		t.Fatalf("unable to rotate session: %v", err)
+	}
+
+	handler := Serve(store, worker.NewPool(store, 1))
+	refresh := func() *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost, "/ds/refresh", nil)
+		req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: session.ID + "." + newSecret})
+		req.Header.Set("X-Csrf-Token", session.CSRF())
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+		return w
+	}
+	_ = secret
+
+	first := refresh()
+	if strings.Contains(first.Body.String(), "too many feed refreshes") {
+		t.Fatalf("first refresh must not be rate limited: %s", first.Body.String())
+	}
+	if !strings.Contains(first.Body.String(), "All feeds are being refreshed in the background") {
+		t.Errorf("expected the localized background refresh message, got: %s", first.Body.String())
+	}
+
+	second := refresh()
+	if !strings.Contains(second.Body.String(), "too many feed refreshes") {
+		t.Errorf("second refresh within the interval must be rate limited, got: %s", second.Body.String())
+	}
+}
+
+// TestRefreshFeedIsUserScoped verifies a user cannot trigger a refresh for a
+// feed owned by someone else.
+func TestRefreshFeedIsUserScoped(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	owner := mtest.CreateTestUserWithFields(t, store, "feed_owner", false)
+	other := mtest.CreateTestUserWithFields(t, store, "feed_other", false)
+
+	cat := mtest.CreateTestCategory(t, store, owner.ID)
+	feed := mtest.CreateTestFeed(t, store, owner.ID, cat.ID)
+
+	handler := Serve(store, worker.NewPool(store, 1))
+	req := httptest.NewRequest(http.MethodPost, "/ds/refresh/"+itoa(feed.ID), nil)
+	req, csrf := authenticateTestSession(t, store, req, other)
+	req.Header.Set("X-Csrf-Token", csrf)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404 for another user's feed, got %d: %s", w.Code, w.Body.String())
 	}
 }

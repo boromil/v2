@@ -2,8 +2,8 @@
 <!-- Mobile panel navigation -->
 <nav class="mobile-nav" id="mobile-nav">
     <button data-panel="subscriptions" class="active">{{t "menu.feeds"}}</button>
-    <button data-panel="list">Articles</button>
-    <button data-panel="content">Reader</button>
+    <button data-panel="list">{{t "menu.feed_entries"}}</button>
+    <button data-panel="content">{{t "menu.reader"}}</button>
 </nav>
 <div class="app-container" data-active-panel="list">
     <!-- LEFT PANEL: Subscriptions -->
@@ -15,7 +15,7 @@
                 data-action="refresh-all"
                 title="{{t "menu.refresh_all_feeds"}}"
                 style="font-size:0.875rem;padding:0.125rem 0.375rem;margin-left:auto;">&#8635;</button>
-            <a href="/ds/settings" class="no-underline" title="Settings" style="font-size:1rem; color:var(--color-gray-500);">&#9881;</a>
+            <a href="/ds/settings" class="no-underline" title="{{t "menu.settings"}}" style="font-size:1rem; color:var(--color-gray-500);">&#9881;</a>
         </div>
         <nav class="flex-1 overflow-y-auto">
             {{if .CountErrorFeeds}}

@@ -483,7 +483,7 @@ func (h *handler) settingsViewModel(user *model.User, form *settingsFormData, fl
 		JSChecksum:         dsstatic.JavascriptBundles["datastar"].Checksum,
 		KeyboardChecksum:   dsstatic.JavascriptBundles["keyboard"].Checksum,
 		ComponentsChecksum: dsstatic.JavascriptBundles["components"].Checksum,
-		Title:              "Settings — Miniflux",
+		Title:              printerFor(user.Language).Print("page.settings.title") + " — Miniflux",
 		IsSettings:         true,
 		KeyboardShortcuts:  user.KeyboardShortcuts,
 		FlashError:         flashError,
@@ -712,22 +712,38 @@ func (h *handler) refreshFeeds(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	printer := printerFor(user.Language)
+	sess := request.WebSession(r)
+
+	// Avoid accidental and excessive refreshes, like the classic UI.
+	if time.Since(sess.LastForceRefresh()) < config.Opts.ForceRefreshInterval() {
+		interval := int(config.Opts.ForceRefreshInterval().Minutes())
+		sse := datastar.NewSSE(w, r)
+		sse.MarshalAndPatchSignals(map[string]any{
+			"refreshMessage": printer.Plural("alert.too_many_feeds_refresh", interval, interval),
+		})
+		return
+	}
+
 	slog.Info("dsui: refresh feeds triggered", slog.Int64("user_id", user.ID))
 
 	jobs, err := h.store.NewBatchBuilder().
 		WithoutDisabledFeeds().
 		WithUserID(user.ID).
+		WithLimitPerHost(config.Opts.PollingLimitPerHost()).
 		FetchJobs()
 	if err != nil {
 		response.HTMLServerError(w, r, err)
 		return
 	}
 
+	sess.MarkForceRefreshed()
+
 	go h.pool.Push(jobs)
 
 	sse := datastar.NewSSE(w, r)
 	sse.MarshalAndPatchSignals(map[string]any{
-		"refreshMessage": fmt.Sprintf("Refreshing %d feeds...", len(jobs)),
+		"refreshMessage": printer.Print("alert.background_feed_refresh"),
 	})
 }
 
@@ -739,6 +755,14 @@ func (h *handler) refreshFeed(w http.ResponseWriter, r *http.Request) {
 	}
 
 	feedID := request.RouteInt64Param(r, "feedID")
+
+	// Only refresh feeds that belong to the current user.
+	feed, err := h.store.FeedByID(user.ID, feedID)
+	if err != nil || feed == nil {
+		response.HTMLNotFound(w, r)
+		return
+	}
+
 	slog.Info("dsui: refresh single feed", slog.Int64("user_id", user.ID), slog.Int64("feed_id", feedID))
 
 	// Build a single job for this feed.
@@ -746,7 +770,7 @@ func (h *handler) refreshFeed(w http.ResponseWriter, r *http.Request) {
 
 	sse := datastar.NewSSE(w, r)
 	sse.MarshalAndPatchSignals(map[string]any{
-		"refreshMessage": "Refreshing feed...",
+		"refreshMessage": printerFor(user.Language).Print("alert.feed_refresh_started"),
 	})
 }
 
@@ -1299,7 +1323,7 @@ func (h *handler) addFeed(w http.ResponseWriter, r *http.Request) {
 
 	feedURL := strings.TrimSpace(r.FormValue("url"))
 	if feedURL == "" {
-		setFlashError(w, "Feed URL is required")
+		setFlashError(w, printerFor(user.Language).Print("error.feed_url_not_empty"))
 		response.HTMLRedirect(w, r, "/ds/settings")
 		return
 	}
@@ -1349,7 +1373,7 @@ func (h *handler) removeFeed(w http.ResponseWriter, r *http.Request) {
 
 	feedID, err := strconv.ParseInt(r.PathValue("feedID"), 10, 64)
 	if err != nil || feedID <= 0 {
-		setFlashError(w, "Invalid feed ID")
+		setFlashError(w, printerFor(user.Language).Print("error.feed_not_found"))
 		response.HTMLRedirect(w, r, "/ds/settings")
 		return
 	}
@@ -1378,7 +1402,7 @@ func (h *handler) createCategory(w http.ResponseWriter, r *http.Request) {
 
 	title := strings.TrimSpace(r.FormValue("title"))
 	if title == "" {
-		setFlashError(w, "Category title is required")
+		setFlashError(w, printerFor(user.Language).Print("error.title_required"))
 		response.HTMLRedirect(w, r, "/ds/settings")
 		return
 	}
@@ -1410,14 +1434,14 @@ func (h *handler) renameCategory(w http.ResponseWriter, r *http.Request) {
 
 	categoryID, err := strconv.ParseInt(r.PathValue("categoryID"), 10, 64)
 	if err != nil || categoryID <= 0 {
-		setFlashError(w, "Invalid category ID")
+		setFlashError(w, printerFor(user.Language).Print("error.category_not_found"))
 		response.HTMLRedirect(w, r, "/ds/settings")
 		return
 	}
 
 	title := strings.TrimSpace(r.FormValue("title"))
 	if title == "" {
-		setFlashError(w, "Category title is required")
+		setFlashError(w, printerFor(user.Language).Print("error.title_required"))
 		response.HTMLRedirect(w, r, "/ds/settings")
 		return
 	}
@@ -1453,7 +1477,7 @@ func (h *handler) removeCategory(w http.ResponseWriter, r *http.Request) {
 
 	categoryID, err := strconv.ParseInt(r.PathValue("categoryID"), 10, 64)
 	if err != nil || categoryID <= 0 {
-		setFlashError(w, "Invalid category ID")
+		setFlashError(w, printerFor(user.Language).Print("error.category_not_found"))
 		response.HTMLRedirect(w, r, "/ds/settings")
 		return
 	}
@@ -1475,7 +1499,7 @@ func (h *handler) removeCategory(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, f := range categoryFeeds {
 		if f.Category != nil && f.Category.ID == categoryID {
-			setFlashError(w, "This category still has feeds assigned. Move or remove them first.")
+			setFlashError(w, printerFor(user.Language).Print("error.category_has_feeds"))
 			response.HTMLRedirect(w, r, "/ds/settings")
 			return
 		}
