@@ -12,7 +12,7 @@
         {{end}}
         <span><time datetime="{{.SelectedEntry.Date.Format "2006-01-02T15:04:05Z07:00"}}" title="{{.SelectedEntry.Date.Format "2006-01-02 15:04"}}">{{elapsed .SelectedEntry.Date}}</time></span>
         {{if and .SelectedEntry.ShowReadingTime (gt .SelectedEntry.ReadingTime 0)}}
-        <span>&middot; {{plural "entry.estimated_reading_time" .SelectedEntry.ReadingTime .SelectedEntry.ReadingTime}}</span>
+        <span>{{plural "entry.estimated_reading_time" .SelectedEntry.ReadingTime .SelectedEntry.ReadingTime}}</span>
         {{end}}
     </div>
     {{if .SelectedEntry.Tags}}
@@ -66,8 +66,9 @@
         </div>
         {{end}}
         {{if not .IsAudio}}
-        <div class="text-xs mb-1">
-            <a href="{{.URL}}" download class="no-underline" style="color:var(--color-blue-600);">{{.URL}}</a>
+        <div class="entry-enclosure-link">
+            <a href="{{.URL}}" download title="{{.URL}}">{{.FileName}}</a>
+            {{if .SizeLabel}}<span class="entry-enclosure-size">{{.SizeLabel}}</span>{{end}}
         </div>
         {{end}}
     </div>
@@ -76,8 +77,8 @@
 </details>
 {{end}}
 {{else}}
-<div class="empty-state" data-show="!$selectedEntryId">
-    <p>{{if .EmptyMessage}}{{.EmptyMessage}}{{else}}{{t "alert.no_unread_entry"}}{{end}}</p>
+<div class="pane-empty" data-show="!$selectedEntryId">
+    <img src="/favicon.ico" alt="" class="pane-empty-logo">
 </div>
 {{end}}
 {{end}}

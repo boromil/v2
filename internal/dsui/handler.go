@@ -13,6 +13,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
@@ -277,9 +278,11 @@ type entryDetailView struct {
 type enclosureView struct {
 	ID               int64
 	URL              string
+	FileName         string
 	MimeType         string
 	Html5Mime        string
 	Size             int64
+	SizeLabel        string
 	MediaProgression int64
 	IsAudio          bool
 	IsVideo          bool
@@ -543,6 +546,7 @@ func (h *handler) sseSaveSettings(w http.ResponseWriter, r *http.Request) {
 
 	// Read settings from form values.
 	form := parseSettingsForm(r)
+	previousLanguage := user.Language
 	form.applyToUser(user)
 	if err := h.store.UpdateUser(user); err != nil {
 		slog.Error("dsui: UpdateUser failed", slog.Int64("user_id", user.ID), slog.Any("error", err))
@@ -555,21 +559,22 @@ func (h *handler) sseSaveSettings(w http.ResponseWriter, r *http.Request) {
 
 	sse := datastar.NewSSE(w, r)
 
-	// Apply GUI preferences (language, theme, font) without a reload:
-	// re-render the settings page fragment in the new language and patch it
-	// into the document, then update the chrome signals that <html>'s
-	// data-attr bindings keep in sync with lang/dir/data-theme/data-font.
-	vm := h.settingsViewModel(user, settingsFormFromUser(user), "", r)
-	var buf bytes.Buffer
-	if err := h.tplFor(user.Language).ExecuteTemplate(&buf, "settings", vm); err != nil {
-		slog.Error("dsui: settings re-render failed", slog.Int64("user_id", user.ID), slog.Any("error", err))
-		sse.MarshalAndPatchSignals(map[string]any{
-			"importSuccess": printerFor(user.Language).Print("alert.prefs_saved"),
-		})
-		return
-	}
-	if err := sse.PatchElements(buf.String(), datastar.WithSelector(".settings-page"), datastar.WithMode(datastar.ElementPatchModeInner)); err != nil {
-		slog.Warn("dsui: settings patch failed", slog.Any("error", err))
+	// Apply GUI preferences (language, theme, font) without a reload: the
+	// chrome signals below are bound to <html> with data-attr, so theme, font,
+	// and direction switch instantly.
+	//
+	// Only a language change requires re-rendering the page, because every
+	// label is server-translated. Replacing the settings fragment on every save
+	// also reset the scroll position of the content pane, which made the view
+	// jump to another section after saving.
+	if user.Language != previousLanguage {
+		vm := h.settingsViewModel(user, settingsFormFromUser(user), "", r)
+		var buf bytes.Buffer
+		if err := h.tplFor(user.Language).ExecuteTemplate(&buf, "settings", vm); err != nil {
+			slog.Error("dsui: settings re-render failed", slog.Int64("user_id", user.ID), slog.Any("error", err))
+		} else if err := sse.PatchElements(buf.String(), datastar.WithSelector(".settings-page"), datastar.WithMode(datastar.ElementPatchModeInner)); err != nil {
+			slog.Warn("dsui: settings patch failed", slog.Any("error", err))
+		}
 	}
 
 	sse.MarshalAndPatchSignals(map[string]any{
@@ -1745,9 +1750,11 @@ func entryToDetailView(entry *model.Entry, user *model.User) *entryDetailView {
 		d.Enclosures = append(d.Enclosures, enclosureView{
 			ID:               enc.ID,
 			URL:              encURL,
+			FileName:         enclosureFileName(encURL),
 			MimeType:         enc.MimeType,
 			Html5Mime:        enc.Html5MimeType(),
 			Size:             enc.Size,
+			SizeLabel:        enclosureSizeLabel(enc.Size),
 			MediaProgression: enc.MediaProgression,
 			IsAudio:          enc.IsAudio(),
 			IsVideo:          enc.IsVideo(),
@@ -1755,6 +1762,42 @@ func entryToDetailView(entry *model.Entry, user *model.User) *entryDetailView {
 		})
 	}
 	return d
+}
+
+// enclosureFileName returns the last path segment of the enclosure URL. It is
+// used as the download label so an entry with many attachments does not render
+// a wall of full URLs.
+func enclosureFileName(rawURL string) string {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return rawURL
+	}
+
+	if name := path.Base(parsed.Path); name != "." && name != "/" && name != "" {
+		return name
+	}
+	return rawURL
+}
+
+// enclosureSizeLabel renders the enclosure size, or nothing when the feed did
+// not declare one (common for release-note attachments).
+func enclosureSizeLabel(size int64) string {
+	if size <= 0 {
+		return ""
+	}
+	return formatFileSize(size)
+}
+
+// formatFileSize renders a byte count as a human readable size.
+func formatFileSize(size int64) string {
+	const unit = 1024
+	if size < unit {
+		return fmt.Sprintf("%d B", size)
+	}
+
+	base := math.Log(float64(size)) / math.Log(unit)
+	number := math.Pow(unit, base-math.Floor(base))
+	return fmt.Sprintf("%.1f %ciB", number, "KMGTPE"[int64(base)-1])
 }
 
 func (h *handler) queryEntries(userID int64, view string, feedID, categoryID int64, searchQuery string, offset, limit int) (model.Entries, int, error) {

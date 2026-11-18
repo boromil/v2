@@ -49,13 +49,15 @@
                     {{t "menu.unread"}}
                 </label>
             </form>
-            {{if .CanMarkAllRead}}
-            <button class="mark-read-btn" data-on:click="@post('/ds/sse/mark-page-read')">{{t "menu.mark_page_as_read"}}</button>
-            <button class="mark-read-btn" data-on:click="@post('/ds/sse/mark-all-read')">{{t "menu.mark_all_as_read"}}</button>
-            {{end}}
-            {{if .FeedID}}
-            <button class="mark-read-btn" data-action="refresh-feed" data-on:click="@post('/ds/refresh/{{.FeedID}}')">&#8635;</button>
-            {{end}}
+            <div class="list-actions">
+                {{if .CanMarkAllRead}}
+                <button class="mark-read-btn" data-on:click="@post('/ds/sse/mark-page-read')">{{t "menu.mark_page_as_read"}}</button>
+                <button class="mark-read-btn" data-on:click="@post('/ds/sse/mark-all-read')">{{t "menu.mark_all_as_read"}}</button>
+                {{end}}
+                {{if .FeedID}}
+                <button class="mark-read-btn" data-action="refresh-feed" data-on:click="@post('/ds/refresh/{{.FeedID}}')">&#8635;</button>
+                {{end}}
+            </div>
         </div>
         <div id="entry-list" class="flex-1 overflow-y-auto">
             {{template "entry_list" .}}

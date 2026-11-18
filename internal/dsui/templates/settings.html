@@ -6,7 +6,12 @@
     </div>
     {{end}}
     <div class="top-nav">
-        <a href="/ds/unread" class="nav-title no-underline">&larr; {{t "page.feeds.title"}}</a>
+        <a href="/ds/unread" class="nav-title no-underline">&larr; {{t "page.unread.title"}}</a>
+        <span class="nav-title" style="font-weight:500;">{{t "page.settings.title"}}</span>
+        <form action="/logout" method="post" style="display:inline;margin:0 0 0 auto;">
+            <input type="hidden" name="csrf" value="{{.CSRFToken}}">
+            <button type="submit" class="toolbar-btn">{{t "menu.logout"}}</button>
+        </form>
     </div>
     <div class="settings-layout">
         <!-- Sidebar navigation -->
@@ -18,6 +23,7 @@
             <a href="#import" class="settings-nav-item">{{t "menu.import"}} &amp; {{t "menu.export"}}</a>
             <a href="#account" class="settings-nav-item">{{t "page.settings.title"}}</a>
             <a href="#password" class="settings-nav-item">{{t "form.user.label.password"}}</a>
+            <div class="settings-nav-sep" role="presentation"></div>
             <a href="/ds/sessions" class="settings-nav-item">{{t "menu.sessions"}}</a>
             <a href="/ds/about" class="settings-nav-item">{{t "menu.about"}}</a>
             <a href="/integrations" class="settings-nav-item">{{t "menu.integrations"}}</a>
@@ -71,6 +77,25 @@
                             <option value="on-view-but-wait-for-player-completion" {{if eq .Form.MarkReadBehavior "on-view-but-wait-for-player-completion"}}selected{{end}}>{{t "form.prefs.label.mark_read_on_view_or_media_completion"}}</option>
                             <option value="on-player-completion" {{if eq .Form.MarkReadBehavior "on-player-completion"}}selected{{end}}>{{t "form.prefs.label.mark_read_on_media_completion"}}</option>
                         </select>
+                    </label>
+                    <label class="settings-field">
+                        <span class="settings-field-label">{{t "form.prefs.label.categories_sorting_order"}}</span>
+                        <select name="categories_sorting_order" class="settings-select" data-bind:categoriesSortingOrder>
+                            <option value="unread_count" {{if eq .Form.CategoriesSortingOrder "unread_count"}}selected{{end}}>{{t "form.prefs.select.unread_count"}}</option>
+                            <option value="alphabetical" {{if eq .Form.CategoriesSortingOrder "alphabetical"}}selected{{end}}>{{t "form.prefs.select.alphabetical"}}</option>
+                        </select>
+                    </label>
+                    <label class="settings-field">
+                        <span class="settings-field-label">{{t "form.prefs.label.default_reading_speed"}}</span>
+                        <input type="number" name="default_reading_speed" class="settings-input" min="1" value="{{.Form.DefaultReadingSpeed}}" data-bind:defaultReadingSpeed>
+                    </label>
+                    <label class="settings-field">
+                        <span class="settings-field-label">{{t "form.prefs.label.cjk_reading_speed"}}</span>
+                        <input type="number" name="cjk_reading_speed" class="settings-input" min="1" value="{{.Form.CJKReadingSpeed}}" data-bind:cjkReadingSpeed>
+                    </label>
+                    <label class="settings-field">
+                        <span class="settings-field-label">{{t "form.prefs.label.media_playback_rate"}}</span>
+                        <input type="number" name="media_playback_rate" class="settings-input" min="0.25" max="4.0" step="0.25" value="{{printf "%.2f" .Form.MediaPlaybackRate}}" data-bind:mediaPlaybackRate>
                     </label>
                 </div>
             </section>
@@ -132,33 +157,7 @@
                 </div>
             </section>
 
-            <!-- Feeds -->
-            <section id="feeds" class="settings-section">
-                <h3 class="settings-heading">{{t "page.feeds.title"}}</h3>
-                <div class="settings-grid">
-                    <label class="settings-field">
-                        <span class="settings-field-label">{{t "form.prefs.label.categories_sorting_order"}}</span>
-                        <select name="categories_sorting_order" class="settings-select" data-bind:categoriesSortingOrder>
-                            <option value="unread_count" {{if eq .Form.CategoriesSortingOrder "unread_count"}}selected{{end}}>{{t "form.prefs.select.unread_count"}}</option>
-                            <option value="alphabetical" {{if eq .Form.CategoriesSortingOrder "alphabetical"}}selected{{end}}>{{t "form.prefs.select.alphabetical"}}</option>
-                        </select>
-                    </label>
-                    <label class="settings-field">
-                        <span class="settings-field-label">{{t "form.prefs.label.default_reading_speed"}}</span>
-                        <input type="number" name="default_reading_speed" class="settings-input" min="1" value="{{.Form.DefaultReadingSpeed}}" data-bind:defaultReadingSpeed>
-                    </label>
-                    <label class="settings-field">
-                        <span class="settings-field-label">{{t "form.prefs.label.cjk_reading_speed"}}</span>
-                        <input type="number" name="cjk_reading_speed" class="settings-input" min="1" value="{{.Form.CJKReadingSpeed}}" data-bind:cjkReadingSpeed>
-                    </label>
-                    <label class="settings-field">
-                        <span class="settings-field-label">{{t "form.prefs.label.media_playback_rate"}}</span>
-                        <input type="number" name="media_playback_rate" class="settings-input" min="0.25" max="4.0" step="0.25" value="{{printf "%.2f" .Form.MediaPlaybackRate}}" data-bind:mediaPlaybackRate>
-                    </label>
-                </div>
-            </section>
-
-            <div class="py-2">
+            <div class="settings-save-bar">
                 <button type="button" class="toolbar-btn" style="background:var(--color-blue-600);color:#fff;border-color:var(--color-blue-600);"
                     data-on:click="@post('/ds/sse/settings', {contentType: 'form'})">
                     {{t "action.save"}}
@@ -167,7 +166,7 @@
             </form><!-- end #settings-form -->
 
             <!-- Subscriptions management -->
-            <section id="subscriptions" class="settings-section">
+            <section id="feeds" class="settings-section">
                 <h3 class="settings-heading">{{t "menu.feeds"}}</h3>
                 <form action="/ds/add-feed" method="post" class="mb-2">
                     <input type="hidden" name="csrf" value="{{.CSRFToken}}">
@@ -216,7 +215,7 @@
                                 <button type="submit" class="toolbar-btn">{{t "action.update"}}</button>
                             </form>
                         </div>
-                        <span style="font-size:0.75rem; color:var(--color-gray-500, #6b7280); white-space:nowrap;">{{t "page.categories.feed_count"}}: {{.FeedCount}}</span>
+                        <span style="font-size:0.75rem; color:var(--color-gray-500, #6b7280); white-space:nowrap;">{{plural "page.categories.feed_count" .FeedCount .FeedCount}}</span>
                         <form action="/ds/remove-category/{{.ID}}" method="post" data-remove-category="{{.ID}}">
                             <input type="hidden" name="csrf" value="{{$.CSRFToken}}">
                             <button type="submit" class="toolbar-btn" {{if gt .FeedCount 0}}disabled title="{{t "page.categories.no_feed"}}"{{end}}>{{t "action.remove"}}</button>

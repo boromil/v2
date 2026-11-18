@@ -3264,3 +3264,173 @@ func TestAppHasLogoutAction(t *testing.T) {
 		t.Error("logout form must carry the CSRF token")
 	}
 }
+
+// TestEnclosureFileName verifies download labels use the last URL path segment
+// instead of the full URL.
+func TestEnclosureFileName(t *testing.T) {
+	scenarios := []struct {
+		url  string
+		want string
+	}{
+		{"https://example.com/files/podcast.mp3", "podcast.mp3"},
+		{"https://example.com/files/podcast.mp3?token=abc", "podcast.mp3"},
+		{"https://example.com/download", "download"},
+		{"https://example.com/", "https://example.com/"},
+		{"not a url", "not a url"},
+	}
+	for _, scenario := range scenarios {
+		if got := enclosureFileName(scenario.url); got != scenario.want {
+			t.Errorf("enclosureFileName(%q) = %q, want %q", scenario.url, got, scenario.want)
+		}
+	}
+}
+
+// TestFormatFileSize verifies the human readable size shown next to enclosure
+// links.
+func TestFormatFileSize(t *testing.T) {
+	scenarios := map[int64]string{
+		512:        "512 B",
+		1024:       "1.0 KiB",
+		1536:       "1.5 KiB",
+		1234567:    "1.2 MiB",
+		1073741824: "1.0 GiB",
+	}
+	for size, want := range scenarios {
+		if got := formatFileSize(size); got != want {
+			t.Errorf("formatFileSize(%d) = %q, want %q", size, got, want)
+		}
+	}
+}
+
+// TestEntryDetailEnclosureLabel verifies the detail view exposes the filename
+// and size used by the attachments list.
+func TestEntryDetailEnclosureLabel(t *testing.T) {
+	user := &model.User{ShowReadingTime: true}
+	entry := &model.Entry{
+		ID:      1,
+		Title:   "Podcast",
+		Content: "body",
+		Enclosures: model.EnclosureList{{
+			ID:       7,
+			URL:      "https://example.com/files/episode-42.mp3",
+			MimeType: "audio/mpeg",
+			Size:     1048576,
+		}},
+	}
+
+	detail := entryToDetailView(entry, user)
+	if len(detail.Enclosures) != 1 {
+		t.Fatalf("expected one enclosure, got %d", len(detail.Enclosures))
+	}
+	if got := detail.Enclosures[0].FileName; got != "episode-42.mp3" {
+		t.Errorf("expected filename episode-42.mp3, got %q", got)
+	}
+	if got := detail.Enclosures[0].SizeLabel; got != "1.0 MiB" {
+		t.Errorf("expected size label 1.0 MiB, got %q", got)
+	}
+}
+
+// TestSettingsUsesPluralForFeedCount guards against rendering the raw plural
+// key next to a category.
+func TestSettingsUsesPluralForFeedCount(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	_ = mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+
+	handler := Serve(store, worker.NewPool(store, 1))
+	req := httptest.NewRequest(http.MethodGet, "/ds/settings", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	body := w.Body.String()
+	if strings.Contains(body, "page.categories.feed_count") {
+		t.Error("category feed count must be rendered through the plural helper")
+	}
+	if !strings.Contains(body, "1 feed") {
+		t.Error("expected the localized feed count next to the category")
+	}
+}
+
+// TestListHeaderWrapsActions verifies the mark-read actions live in their own
+// container so a narrow list panel wraps them instead of clipping the labels.
+func TestListHeaderWrapsActions(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	_ = mtest.CreateTestEntries(t, store, user.ID, feed.ID, 2)
+
+	handler := Serve(store, worker.NewPool(store, 1))
+	req := httptest.NewRequest(http.MethodGet, "/ds/unread", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	body := w.Body.String()
+	if !strings.Contains(body, `<div class="list-actions">`) {
+		t.Error("expected the mark-read buttons in a .list-actions container")
+	}
+}
+
+// TestEmptyViewDoesNotDuplicateMessage verifies the reading pane no longer
+// repeats the list's empty-state message.
+func TestEmptyViewDoesNotDuplicateMessage(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	handler := Serve(store, worker.NewPool(store, 1))
+	req := httptest.NewRequest(http.MethodGet, "/ds/starred", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	body := w.Body.String()
+	if count := strings.Count(body, "There are no starred entries."); count != 1 {
+		t.Errorf("expected the empty-state message once, got %d", count)
+	}
+	if !strings.Contains(body, "pane-empty") {
+		t.Error("expected the neutral reading-pane placeholder")
+	}
+}
+
+// TestEnclosureSizeLabel verifies feeds that do not declare a size render no
+// size label instead of "0 B".
+func TestEnclosureSizeLabel(t *testing.T) {
+	if got := enclosureSizeLabel(0); got != "" {
+		t.Errorf("expected no label for a zero size, got %q", got)
+	}
+	if got := enclosureSizeLabel(2048); got != "2.0 KiB" {
+		t.Errorf("expected 2.0 KiB, got %q", got)
+	}
+}
+
+// TestSSESaveSettingsSkipsRerenderWithoutLanguageChange verifies that saving
+// non-text preferences does not replace the settings fragment: the replacement
+// reset the scroll position of the content pane and made the view jump.
+func TestSSESaveSettingsSkipsRerenderWithoutLanguageChange(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	w := postSettings(t, store, user, map[string]string{
+		"theme":             "dark_serif",
+		"show_reading_time": "1",
+		"language":          user.Language,
+	})
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	body := w.Body.String()
+	if strings.Contains(body, "selector .settings-page") {
+		t.Error("saving without a language change must not replace the settings fragment")
+	}
+	for _, marker := range []string{`"uiTheme":"dark"`, `"uiFont":"serif"`, `importSuccess`} {
+		if !strings.Contains(body, marker) {
+			t.Errorf("expected %q in the SSE response", marker)
+		}
+	}
+}
