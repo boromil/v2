@@ -2116,6 +2116,21 @@ func TestSSEToggleShareUpdatesToolbarButton(t *testing.T) {
 	if !strings.Contains(body, `class="share-link"`) || !strings.Contains(body, "/share/") {
 		t.Errorf("shared state must expose the public share link\nbody:\n%s", body)
 	}
+	// The click handler copies data-share-url; without it the JS falls back to
+	// the href, which the browser may render relative.
+	shareCode, err := store.EntryShareCode(user.ID, entry.ID)
+	if err != nil || shareCode == "" {
+		t.Fatalf("expected a share code after sharing, got %q (err: %v)", shareCode, err)
+	}
+	if want := `data-share-url="` + shareURL(shareCode) + `"`; !strings.Contains(body, want) {
+		t.Errorf("shared state must carry the absolute URL in %s\nbody:\n%s", want, body)
+	}
+	if want := `data-copied-label="` + printer.Print("alert.url_copied") + `"`; !strings.Contains(body, want) {
+		t.Errorf("shared state must carry the copied label in %s\nbody:\n%s", want, body)
+	}
+	if want := `>` + printer.Print("entry.share.link_label") + `<`; !strings.Contains(body, want) {
+		t.Errorf("shared state must label the link %q\nbody:\n%s", want, body)
+	}
 
 	// Unshare it.
 	req = httptest.NewRequest(http.MethodPost, "/ds/sse/share/"+itoa(entry.ID), nil)
@@ -2130,7 +2145,7 @@ func TestSSEToggleShareUpdatesToolbarButton(t *testing.T) {
 	if want := printer.Print("entry.share.label"); !strings.Contains(body, want) {
 		t.Errorf("unshared state must show the %q button\nbody:\n%s", want, body)
 	}
-	if strings.Contains(body, `href="/share/`) {
+	if strings.Contains(body, "share-link") {
 		t.Errorf("unshared state must not expose a share link\nbody:\n%s", body)
 	}
 }
@@ -3682,10 +3697,21 @@ func TestShareURL(t *testing.T) {
 	}
 
 	got := shareURL("abc123")
-	if !strings.HasSuffix(got, "/share/abc123") {
-		t.Errorf("expected the share path in %q", got)
+	if want := strings.TrimSuffix(config.Opts.BaseURL(), "/") + "/share/abc123"; got != want {
+		t.Errorf("expected %q, got %q", want, got)
 	}
-	if strings.HasSuffix(config.Opts.RootURL(), "/") && strings.Contains(got, "//share/") {
-		t.Errorf("expected no double slash in %q", got)
+
+	// A BASE_URL with a subpath must survive: ROOT_URL drops the path, so a
+	// link built from it 404s on a Miniflux served under /miniflux.
+	original := config.Opts
+	t.Cleanup(func() { config.Opts = original })
+	t.Setenv("BASE_URL", "https://example.com/miniflux/")
+	parsedOptions, err := config.NewConfigParser().ParseEnvironmentVariables()
+	if err != nil {
+		t.Fatalf("unable to configure test options: %v", err)
+	}
+	config.Opts = parsedOptions
+	if got, want := shareURL("abc123"), "https://example.com/miniflux/share/abc123"; got != want {
+		t.Errorf("expected the BASE_URL subpath to be kept, got %q, want %q", got, want)
 	}
 }

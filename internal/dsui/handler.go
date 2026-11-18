@@ -1758,13 +1758,14 @@ func (h *handler) sseToggleShare(w http.ResponseWriter, r *http.Request) {
 
 // ─── Query helpers ───────────────────────────────────────────────────────
 
-// shareURL returns the absolute public link of a shared entry, so the reader
-// can show and copy it.
+// shareURL returns the absolute public URL of a shared entry. It is built from
+// BASE_URL, not ROOT_URL: ROOT_URL drops the subpath, so a Miniflux served
+// under https://example.com/miniflux would hand out a link that 404s.
 func shareURL(shareCode string) string {
 	if shareCode == "" {
 		return ""
 	}
-	return strings.TrimSuffix(config.Opts.RootURL(), "/") + "/share/" + shareCode
+	return strings.TrimSuffix(config.Opts.BaseURL(), "/") + "/share/" + shareCode
 }
 
 func entryToDetailView(entry *model.Entry, user *model.User) *entryDetailView {

@@ -118,7 +118,7 @@ func integrationSections(integration *model.Integration, printer *locale.Printer
 				textField("fever_username", print("form.integration.fever_username"), integration.FeverUsername),
 				secretField("fever_password", print("form.integration.fever_password"), ""),
 			},
-			Hint: print("form.integration.fever_endpoint") + " " + config.Opts.RootURL() + "/fever/",
+			Hint: print("form.integration.fever_endpoint") + " " + config.Opts.BaseURL() + "/fever/",
 		},
 		{
 			Title: print("form.integration.googlereader_activate"), EnableName: "googlereader_enabled", Enabled: integration.GoogleReaderEnabled,
@@ -126,7 +126,7 @@ func integrationSections(integration *model.Integration, printer *locale.Printer
 				textField("googlereader_username", print("form.integration.googlereader_username"), integration.GoogleReaderUsername),
 				secretField("googlereader_password", print("form.integration.googlereader_password"), ""),
 			},
-			Hint: print("form.integration.googlereader_endpoint") + " " + config.Opts.RootURL() + "/",
+			Hint: print("form.integration.googlereader_endpoint") + " " + config.Opts.BaseURL() + "/",
 		},
 		{
 			Title: print("form.integration.gotify_activate"), EnableName: "gotify_enabled", Enabled: integration.GotifyEnabled,

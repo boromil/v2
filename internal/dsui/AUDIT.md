@@ -75,13 +75,20 @@ another button labelled "Share" (the public-link label) plus "Unshare", so the r
 could not see or copy the URL.
 
 - The shared state now shows a **hyperlink-styled "link"** next to "Unshare", with the
-  full public URL in its tooltip.
-- Clicking it copies the URL to the clipboard and shows a "URL copied to the clipboard."
-  toast. The copy falls back to `document.execCommand("copy")` on insecure origins or when
-  the async Clipboard API is blocked, and if both fail the link opens the public page so
-  the URL can still be copied from the address bar.
-- `entryDetailView` carries `ShareURL` (absolute URL built from `ROOT_URL`) so the SSE
-  re-render and the first render agree.
+  full public URL in its tooltip. It borrows the toolbar button box (same padding, no
+  border) and the pair sits in a `.toolbar-share-group`, so the row keeps an even
+  rhythm instead of the link hugging its neighbours.
+- Clicking it copies the URL and shows a "URL copied to the clipboard." toast. The copy
+  falls back to `document.execCommand("copy")` on insecure origins or when the async
+  Clipboard API is blocked. If no copy path works the link navigates to the public page
+  (a `window.open` there is popup-blocked, since the user activation is spent by the time
+  the clipboard promise rejects).
+- The confirmation toast steps above a refresh or import toast that is already visible
+  (`.share-toast.is-stacked`) rather than covering it.
+- `entryDetailView` carries `ShareURL`, an absolute URL built from **`BASE_URL`**, not
+  `ROOT_URL`: `ROOT_URL` drops the subpath, so a Miniflux served under `/miniflux` would
+  hand out a link that 404s. The Fever and Google Reader endpoint hints on
+  `/ds/integrations` had the same bug and were fixed with it.
 - New locale keys: `entry.share.link_label` and `alert.url_copied`, translated in all 24
   locales.
 

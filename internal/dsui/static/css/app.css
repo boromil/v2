@@ -2515,15 +2515,36 @@ html[data-theme="dark"] .toolbar-btn.danger:hover {
   background-color: #3b1d24;
 }
 
-/* Public share link shown in the entry toolbar once an entry is shared. */
+/* The share link and its unshare button travel together, spaced like any two
+   toolbar buttons. */
+.toolbar-share-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Public share link shown in the entry toolbar once an entry is shared. It
+   borrows the toolbar button box so the row keeps an even rhythm: same text
+   size, same inline padding, no border. */
 .share-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
   font-size: 0.75rem;
+  line-height: 1.25;
+  border-radius: 0.25rem;
   color: var(--color-blue-600);
   text-decoration: underline;
-  text-decoration-color: color-mix(in oklch, var(--color-blue-600) 40%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  text-decoration-color: color-mix(in oklch, var(--color-blue-600) 35%, transparent);
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background-color 100ms, text-decoration-color 100ms;
 }
 .share-link:hover {
+  background-color: var(--color-gray-100);
   text-decoration-color: var(--color-blue-600);
 }
 
@@ -2531,8 +2552,20 @@ html[data-theme="dark"] .toolbar-btn.danger:hover {
   html:not([data-theme="light"]) .share-link {
     color: #6ab0ff;
   }
+  html:not([data-theme="light"]) .share-link:hover {
+    background-color: #2a2a4a;
+  }
 }
 
 html[data-theme="dark"] .share-link {
   color: #6ab0ff;
+}
+html[data-theme="dark"] .share-link:hover {
+  background-color: #2a2a4a;
+}
+
+/* Copy confirmation steps above a refresh or import toast that is already on
+   screen instead of covering it. */
+.share-toast.is-stacked {
+  bottom: 4.25rem;
 }

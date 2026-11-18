@@ -187,6 +187,15 @@ if (!customElements.get("entry-row")) {
 (function () {
   "use strict";
 
+  // A copy confirmation must not land on top of a refresh or import toast, so
+  // it steps up when one of those is already visible.
+  function otherToastVisible() {
+    return ["toast-error", "toast-success", "toast-info"].some(function (id) {
+      var el = document.getElementById(id);
+      return el && getComputedStyle(el).display !== "none";
+    });
+  }
+
   function showToast(message) {
     if (!message) return;
     document.querySelectorAll(".toast.share-toast").forEach(function (toast) {
@@ -194,6 +203,7 @@ if (!customElements.get("entry-row")) {
     });
     var toast = document.createElement("div");
     toast.className = "toast toast-info share-toast";
+    if (otherToastVisible()) toast.classList.add("is-stacked");
     toast.setAttribute("role", "status");
     toast.textContent = message;
     document.body.appendChild(toast);
@@ -221,6 +231,18 @@ if (!customElements.get("entry-row")) {
     return copied;
   }
 
+  // Resolves to true when the URL reached the clipboard. The async API rejects
+  // on insecure origins and in some embedded browsers, hence the fallback.
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text).then(
+        function () { return true; },
+        function () { return legacyCopy(text); }
+      );
+    }
+    return Promise.resolve(legacyCopy(text));
+  }
+
   document.addEventListener("click", function (event) {
     var link = event.target && event.target.closest && event.target.closest(".share-link");
     if (!link) return;
@@ -230,23 +252,15 @@ if (!customElements.get("entry-row")) {
 
     event.preventDefault();
 
-    var copied = function () {
-      showToast(label);
-    };
-    var fallback = function () {
-      if (legacyCopy(url)) {
-        copied();
-      } else {
-        // Last resort: open the public page so the URL can be copied from the
-        // address bar.
-        window.open(url, "_blank", "noopener");
+    copyText(url).then(function (copied) {
+      if (copied) {
+        showToast(label);
+        return;
       }
-    };
-
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(url).then(copied).catch(fallback);
-    } else {
-      fallback();
-    }
+      // Last resort: open the public page, where the URL sits in the address
+      // bar. window.open would be blocked here because the user activation is
+      // spent by the time the clipboard promise rejects.
+      window.location.assign(url);
+    });
   });
 })();

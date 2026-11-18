@@ -35,11 +35,10 @@
 {{end}}
 
 {{define "toolbar_share_button"}}
-<span class="inline-flex items-center" id="toolbar-share-btn-{{.ID}}">
+<span class="toolbar-share-group" id="toolbar-share-btn-{{.ID}}">
 {{if .ShareCode}}
 <a href="{{.ShareURL}}" target="_blank" rel="noopener" class="share-link"
     title="{{.ShareURL}}"
-    data-action="shared-link"
     data-share-url="{{.ShareURL}}"
     data-copied-label="{{t "alert.url_copied"}}">{{t "entry.share.link_label"}}</a>
 <button class="toolbar-btn"
