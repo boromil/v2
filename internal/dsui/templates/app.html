@@ -16,6 +16,11 @@
                 title="{{t "menu.refresh_all_feeds"}}"
                 style="font-size:0.875rem;padding:0.125rem 0.375rem;margin-left:auto;">&#8635;</button>
             <a href="/ds/settings" class="no-underline" title="{{t "menu.settings"}}" style="font-size:1rem; color:var(--color-gray-500);">&#9881;</a>
+            <form action="/logout" method="post" style="display:inline;margin:0;">
+                <input type="hidden" name="csrf" value="{{.CSRFToken}}">
+                <button type="submit" class="toolbar-btn" title="{{t "menu.logout"}}"
+                    style="font-size:0.875rem;padding:0.125rem 0.375rem;color:var(--color-gray-500);">&#9211;</button>
+            </form>
         </div>
         <nav class="flex-1 overflow-y-auto">
             {{if .CountErrorFeeds}}

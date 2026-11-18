@@ -1,0 +1,39 @@
+{{define "sessions"}}
+<div class="settings-page">
+    {{template "page_nav" .}}
+    <div class="settings-content">
+        <section class="settings-section">
+            <h3 class="settings-heading">{{t "page.sessions.title"}}</h3>
+            <table class="page-table">
+                <thead>
+                    <tr>
+                        <th>{{t "page.sessions.table.date"}}</th>
+                        <th>{{t "page.sessions.table.ip"}}</th>
+                        <th>{{t "page.sessions.table.user_agent"}}</th>
+                        <th>{{t "page.sessions.table.actions"}}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .Sessions}}
+                    <tr data-session-row="{{.ID}}">
+                        <td title="{{.CreatedAt.Format "2006-01-02 15:04"}}">{{elapsed .CreatedAt}}</td>
+                        <td>{{.IP}}</td>
+                        <td class="page-cell-truncate" title="{{.UserAgent}}">{{.UserAgent}}</td>
+                        <td>
+                            {{if .Current}}
+                            {{t "page.sessions.table.current_session"}}
+                            {{else}}
+                            <form action="/ds/sessions/{{.ID}}/remove" method="post" style="display:inline;margin:0;">
+                                <input type="hidden" name="csrf" value="{{$.CSRFToken}}">
+                                <button type="submit" class="toolbar-btn">{{t "action.remove"}}</button>
+                            </form>
+                            {{end}}
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </section>
+    </div>
+</div>
+{{end}}

@@ -3031,3 +3031,236 @@ func TestRefreshFeedIsUserScoped(t *testing.T) {
 		t.Errorf("expected 404 for another user's feed, got %d: %s", w.Code, w.Body.String())
 	}
 }
+
+// TestShowAppSharesView verifies the shared entries page only lists entries
+// that have a share code.
+func TestShowAppSharesView(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	entries := mtest.CreateTestEntries(t, store, user.ID, feed.ID, 3)
+
+	shared := entries[1]
+	if _, err := store.EntryShareCode(user.ID, shared.ID); err != nil {
+		t.Fatalf("unable to share entry: %v", err)
+	}
+
+	handler := Serve(store, worker.NewPool(store, 1))
+	req := httptest.NewRequest(http.MethodGet, "/ds/shares", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "Shared entries") {
+		t.Error("expected the shared entries list title")
+	}
+	if !strings.Contains(body, `id="entry-row-`+itoa(shared.ID)+`"`) {
+		t.Error("expected the shared entry in the list")
+	}
+	for _, entry := range entries {
+		if entry.ID == shared.ID {
+			continue
+		}
+		if strings.Contains(body, `id="entry-row-`+itoa(entry.ID)+`"`) {
+			t.Errorf("entry %d is not shared and must not be listed", entry.ID)
+		}
+	}
+}
+
+// TestSSEEntriesSharesView verifies the SSE path honors the shares view.
+func TestSSEEntriesSharesView(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	feed := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	entries := mtest.CreateTestEntries(t, store, user.ID, feed.ID, 2)
+
+	shared := entries[0]
+	if _, err := store.EntryShareCode(user.ID, shared.ID); err != nil {
+		t.Fatalf("unable to share entry: %v", err)
+	}
+
+	handler := Serve(store, worker.NewPool(store, 1))
+	req := httptest.NewRequest(http.MethodGet, "/ds/sse/entries?view=shares", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	body := w.Body.String()
+	if !strings.Contains(body, `id="entry-row-`+itoa(shared.ID)+`"`) {
+		t.Error("expected the shared entry in the SSE fragment")
+	}
+	if strings.Contains(body, `id="entry-row-`+itoa(entries[1].ID)+`"`) {
+		t.Error("unshared entries must not appear in the shares view")
+	}
+}
+
+// TestShowAboutPage verifies the about page renders the version information.
+func TestShowAboutPage(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	handler := Serve(store, worker.NewPool(store, 1))
+	req := httptest.NewRequest(http.MethodGet, "/ds/about", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{"<title>About — Miniflux</title>", "Credits", "Go version:", "Apache 2.0"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("expected %q in the about page", want)
+		}
+	}
+	// Global configuration is admin-only.
+	if strings.Contains(body, "Global configuration options") {
+		t.Error("non-admin users must not see the global configuration")
+	}
+}
+
+// TestShowAboutPageAdminConfig verifies admins see the global configuration.
+func TestShowAboutPageAdminConfig(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestAdminUser(t, store)
+
+	handler := Serve(store, worker.NewPool(store, 1))
+	req := httptest.NewRequest(http.MethodGet, "/ds/about", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if !strings.Contains(w.Body.String(), "Global configuration options") {
+		t.Error("admins must see the global configuration section")
+	}
+}
+
+// TestShowSessionsPage verifies the sessions page lists the user sessions and
+// marks the current one.
+func TestShowSessionsPage(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	other, _ := model.NewWebSession("other-agent", "10.0.0.1")
+	if err := store.CreateWebSession(other); err != nil {
+		t.Fatalf("unable to create other session: %v", err)
+	}
+	other.SetUser(user)
+	otherOldID, _ := other.Rotate()
+	if err := store.RotateWebSession(otherOldID, other); err != nil {
+		t.Fatalf("unable to persist other session user: %v", err)
+	}
+
+	handler := Serve(store, worker.NewPool(store, 1))
+	req := httptest.NewRequest(http.MethodGet, "/ds/sessions", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "other-agent") {
+		t.Error("expected the other session user agent in the list")
+	}
+	if !strings.Contains(body, `data-session-row="`+other.ID+`"`) {
+		t.Error("expected a row for the other session")
+	}
+	if !strings.Contains(body, "Current Session") {
+		t.Error("expected the current session to be marked")
+	}
+}
+
+// TestRemoveSession verifies a session can be revoked from the sessions page.
+func TestRemoveSession(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	other, _ := model.NewWebSession("other-agent", "10.0.0.1")
+	if err := store.CreateWebSession(other); err != nil {
+		t.Fatalf("unable to create other session: %v", err)
+	}
+	other.SetUser(user)
+	otherOldID, _ := other.Rotate()
+	if err := store.RotateWebSession(otherOldID, other); err != nil {
+		t.Fatalf("unable to persist other session user: %v", err)
+	}
+
+	handler := Serve(store, worker.NewPool(store, 1))
+	req := httptest.NewRequest(http.MethodPost, "/ds/sessions/"+other.ID+"/remove", nil)
+	req, csrf := authenticateTestSession(t, store, req, user)
+	req.Header.Set("X-Csrf-Token", csrf)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("expected 302, got %d: %s", w.Code, w.Body.String())
+	}
+	if session, err := store.WebSessionByID(other.ID); err != nil || session != nil {
+		t.Errorf("session must be removed, got %v (err %v)", session, err)
+	}
+}
+
+// TestRemoveSessionKeepsCurrentSession verifies the page never revokes the
+// session that issued the request.
+func TestRemoveSessionKeepsCurrentSession(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	session, secret := model.NewWebSession("test-agent", "127.0.0.1")
+	if err := store.CreateWebSession(session); err != nil {
+		t.Fatalf("unable to create session: %v", err)
+	}
+	session.SetUser(user)
+	oldID, newSecret := session.Rotate()
+	if err := store.RotateWebSession(oldID, session); err != nil {
+		t.Fatalf("unable to persist session user: %v", err)
+	}
+	_ = secret
+
+	handler := Serve(store, worker.NewPool(store, 1))
+	req := httptest.NewRequest(http.MethodPost, "/ds/sessions/"+session.ID+"/remove", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: session.ID + "." + newSecret})
+	req.Header.Set("X-Csrf-Token", session.CSRF())
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("expected 302, got %d: %s", w.Code, w.Body.String())
+	}
+	if stored, err := store.WebSessionByID(session.ID); err != nil || stored == nil {
+		t.Errorf("current session must survive, got %v (err %v)", stored, err)
+	}
+}
+
+// TestAppHasLogoutAction verifies the app chrome exposes a logout form that
+// posts to the shared logout route with a CSRF token.
+func TestAppHasLogoutAction(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	handler := Serve(store, worker.NewPool(store, 1))
+	req := httptest.NewRequest(http.MethodGet, "/ds/unread", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	body := w.Body.String()
+	if !strings.Contains(body, `action="/logout"`) {
+		t.Error("expected a logout form in the app chrome")
+	}
+	if !strings.Contains(body, `name="csrf"`) {
+		t.Error("logout form must carry the CSRF token")
+	}
+}

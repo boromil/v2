@@ -1,0 +1,10 @@
+{{define "page_nav"}}
+<div class="top-nav">
+    <a href="/ds/settings" class="nav-title no-underline">&larr; {{t "page.settings.title"}}</a>
+    <span class="nav-title" style="margin-left:1rem;font-weight:500;">{{.PageHeading}}</span>
+    <form action="/logout" method="post" style="display:inline;margin:0 0 0 auto;">
+        <input type="hidden" name="csrf" value="{{.CSRFToken}}">
+        <button type="submit" class="toolbar-btn">{{t "menu.logout"}}</button>
+    </form>
+</div>
+{{end}}

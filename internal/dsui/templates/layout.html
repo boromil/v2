@@ -28,7 +28,9 @@
     <div id="toast-info" class="toast toast-info" data-show="$refreshMessage" style="display:none" data-on:click="$refreshMessage = ''">
         <span data-text="$refreshMessage"></span>
     </div>
-    {{if .IsSettings}}
+    {{if .PageContent}}
+        {{.PageContent}}
+    {{else if .IsSettings}}
         {{template "settings" .}}
     {{else}}
         {{template "app" .}}

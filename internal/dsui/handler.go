@@ -74,8 +74,12 @@ func Serve(store *storage.Storage, pool *worker.Pool) http.Handler {
 	mux.HandleFunc("GET /ds/unread", h.showApp)
 	mux.HandleFunc("GET /ds/starred", h.showApp)
 	mux.HandleFunc("GET /ds/history", h.showApp)
+	mux.HandleFunc("GET /ds/shares", h.showApp)
 	mux.HandleFunc("GET /ds/search", h.showApp)
 	mux.HandleFunc("GET /ds/settings", h.showSettings)
+	mux.HandleFunc("GET /ds/about", h.showAbout)
+	mux.HandleFunc("GET /ds/sessions", h.showSessions)
+	mux.HandleFunc("POST /ds/sessions/{sessionID}/remove", h.removeSession)
 	mux.HandleFunc("GET /ds/feed/{feedID}", h.showApp)
 	mux.HandleFunc("GET /ds/category/{categoryID}", h.showApp)
 
@@ -133,12 +137,15 @@ func parseTemplates() *template.Template {
 		"templates/layout.html",
 		"templates/app.html",
 		"templates/settings.html",
+		"templates/about.html",
+		"templates/sessions.html",
 		"templates/components/subscription_list.html",
 		"templates/components/entry_list.html",
 		"templates/components/entry_row.html",
 		"templates/components/entry_content.html",
 		"templates/components/article_toolbar.html",
 		"templates/components/feed_node.html",
+		"templates/components/page_nav.html",
 		"templates/components/pagination.html",
 		"templates/components/shortcuts_overlay.html",
 	))
@@ -204,6 +211,9 @@ type appViewModel struct {
 	MenuSections       []menuSection
 	IsSettings         bool
 	KeyboardShortcuts  bool
+	IsAdmin            bool
+	APIEnabled         bool
+	PageContent        template.HTML
 	FlashError         string
 	Form               *settingsFormData
 	Themes             []selectOption
@@ -338,6 +348,8 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 		ComponentsChecksum: dsstatic.JavascriptBundles["components"].Checksum,
 		CanMarkAllRead:     viewName == "unread" || viewName == "feed" || viewName == "category",
 		KeyboardShortcuts:  user.KeyboardShortcuts,
+		IsAdmin:            user.IsAdmin,
+		APIEnabled:         config.Opts.HasAPI(),
 	}
 
 	vm.ListTitle = listTitleForView(viewName, feedID, categoryID, h.store, user.ID, user.Language)
@@ -486,6 +498,8 @@ func (h *handler) settingsViewModel(user *model.User, form *settingsFormData, fl
 		Title:              printerFor(user.Language).Print("page.settings.title") + " — Miniflux",
 		IsSettings:         true,
 		KeyboardShortcuts:  user.KeyboardShortcuts,
+		IsAdmin:            user.IsAdmin,
+		APIEnabled:         config.Opts.HasAPI(),
 		FlashError:         flashError,
 		Form:               form,
 		Themes:             themeOptions(),
@@ -1761,6 +1775,8 @@ func (h *handler) queryEntriesSorted(userID int64, view string, feedID, category
 		builder.WithStarred(true)
 	case "history":
 		builder.WithStatuses(model.EntryStatusRead)
+	case "shares":
+		builder.WithShareCodeNotEmpty()
 	case "search":
 		if searchQuery != "" {
 			builder.WithSearchQuery(searchQuery)
@@ -1807,6 +1823,7 @@ func (h *handler) buildMenu(user *model.User, activeView string, activeFeedID, a
 			{Label: printer.Print("page.unread.title"), URL: "/ds/unread", SSEURL: "/ds/sse/entries", UnreadCount: fmt.Sprintf("%d", nav.CountUnread), Selected: activeView == "unread"},
 			{Label: printer.Print("page.starred.title"), URL: "/ds/starred", SSEURL: "/ds/sse/entries?view=starred", Selected: activeView == "starred"},
 			{Label: printer.Print("page.history.title"), URL: "/ds/history", SSEURL: "/ds/sse/entries?view=history", Selected: activeView == "history"},
+			{Label: printer.Print("menu.shared_entries"), URL: "/ds/shares", SSEURL: "/ds/sse/entries?view=shares", Selected: activeView == "shares"},
 		},
 	})
 
@@ -1880,6 +1897,8 @@ func parseAppRoute(r *http.Request) (view string, feedID, categoryID int64) {
 		return "starred", 0, 0
 	case strings.HasPrefix(path, "/ds/history"):
 		return "history", 0, 0
+	case strings.HasPrefix(path, "/ds/shares"):
+		return "shares", 0, 0
 	case strings.HasPrefix(path, "/ds/search"):
 		return "search", 0, 0
 	case strings.HasPrefix(path, "/ds/feed/"):
@@ -1900,6 +1919,8 @@ func listTitleForView(view string, feedID, categoryID int64, store *storage.Stor
 		return printer.Print("page.starred.title")
 	case "history":
 		return printer.Print("page.history.title")
+	case "shares":
+		return printer.Print("menu.shared_entries")
 	case "search":
 		return printer.Print("page.search.title")
 	case "feed":
@@ -1927,6 +1948,8 @@ func emptyMessageForView(printer *locale.Printer, view string) string {
 		return printer.Print("alert.no_starred")
 	case "history":
 		return printer.Print("alert.no_history")
+	case "shares":
+		return printer.Print("alert.no_shared_entry")
 	case "search":
 		return printer.Print("alert.no_search_result")
 	case "feed":

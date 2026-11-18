@@ -492,8 +492,11 @@
       if (content) {
         links.forEach(function(link) {
           link.addEventListener('click', function(e) {
+            // Only in-page anchors are intercepted; page links navigate away.
+            var href = this.getAttribute('href') || '';
+            if (href.charAt(0) !== '#') return;
             e.preventDefault();
-            var target = document.querySelector(this.getAttribute('href'));
+            var target = document.querySelector(href);
             if (target) target.scrollIntoView({behavior:'smooth', block:'start'});
             links.forEach(function(l) { l.classList.remove('active'); });
             this.classList.add('active');

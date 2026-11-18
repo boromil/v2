@@ -18,6 +18,12 @@
             <a href="#import" class="settings-nav-item">{{t "menu.import"}} &amp; {{t "menu.export"}}</a>
             <a href="#account" class="settings-nav-item">{{t "page.settings.title"}}</a>
             <a href="#password" class="settings-nav-item">{{t "form.user.label.password"}}</a>
+            <a href="/ds/sessions" class="settings-nav-item">{{t "menu.sessions"}}</a>
+            <a href="/ds/about" class="settings-nav-item">{{t "menu.about"}}</a>
+            <a href="/integrations" class="settings-nav-item">{{t "menu.integrations"}}</a>
+            <a href="/authentication" class="settings-nav-item">{{t "menu.authentication"}}</a>
+            {{if .APIEnabled}}<a href="/keys" class="settings-nav-item">{{t "menu.api_keys"}}</a>{{end}}
+            {{if .IsAdmin}}<a href="/users" class="settings-nav-item">{{t "menu.users"}}</a>{{end}}
         </nav>
 
         <!-- Content area -->

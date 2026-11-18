@@ -1,0 +1,50 @@
+{{define "about"}}
+<div class="settings-page">
+    {{template "page_nav" .}}
+    <div class="settings-content">
+        <section class="settings-section">
+            <h3 class="settings-heading">Miniflux</h3>
+            <ul class="page-list">
+                <li>
+                    <strong>{{t "page.about.version"}}</strong>
+                    {{if .About.VersionURL}}<a href="{{.About.VersionURL}}">{{.About.Version}}</a>{{else}}{{.About.Version}}{{end}}
+                </li>
+                {{if .About.Commit}}
+                <li>
+                    <strong>{{t "page.about.git_commit"}}</strong>
+                    {{if .About.CommitURL}}<a href="{{.About.CommitURL}}">{{.About.Commit}}</a>{{else}}{{.About.Commit}}{{end}}
+                </li>
+                {{end}}
+                <li><strong>{{t "page.about.build_date"}}</strong> {{.About.BuildDate}}</li>
+                <li><strong>{{t "page.about.go_version"}}</strong> {{.About.GoVersion}}</li>
+                {{if .About.IsAdmin}}
+                <li>
+                    <strong>{{if eq .About.DatabaseType "SQLite"}}{{t "page.about.sqlite_version"}}{{else}}{{t "page.about.postgres_version"}}{{end}}</strong>
+                    {{.About.DatabaseVersion}}
+                </li>
+                <li><strong>{{t "page.about.db_usage"}}</strong> {{.About.DBUsage}}</li>
+                {{end}}
+            </ul>
+        </section>
+
+        <section class="settings-section">
+            <h3 class="settings-heading">{{t "page.about.credits"}}</h3>
+            <ul class="page-list">
+                <li><strong>{{t "page.about.authors_label"}}</strong> <a href="https://github.com/miniflux/v2/graphs/contributors">{{t "page.about.authors_value"}}</a></li>
+                <li><strong>{{t "page.about.license"}}</strong> <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache 2.0</a></li>
+            </ul>
+        </section>
+
+        {{if .About.GlobalConfig}}
+        <section class="settings-section">
+            <h3 class="settings-heading">{{t "page.about.global_config_options"}}</h3>
+            <ul class="page-list page-list-mono">
+                {{range .About.GlobalConfig}}
+                <li><code><strong>{{.Key}}</strong>={{.Value}}</code></li>
+                {{end}}
+            </ul>
+        </section>
+        {{end}}
+    </div>
+</div>
+{{end}}

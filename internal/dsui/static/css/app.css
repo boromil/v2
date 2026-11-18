@@ -2115,3 +2115,55 @@ html:not([data-theme="light"]) .speed-indicator,
 html[data-theme="dark"] .speed-indicator {
   color: #8888aa;
 }
+
+/* Standalone pages (about, sessions) */
+.page-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.8125rem;
+  line-height: 1.9;
+}
+.page-list-mono code {
+  font-size: 0.75rem;
+}
+.page-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+.page-table th,
+.page-table td {
+  text-align: left;
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--color-gray-200);
+  vertical-align: middle;
+}
+.page-table th {
+  font-weight: 600;
+  color: var(--color-gray-600);
+}
+.page-cell-truncate {
+  max-width: 22rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) .page-table th,
+  html:not([data-theme="light"]) .page-table td {
+    border-bottom-color: #33334d;
+  }
+  html:not([data-theme="light"]) .page-table th {
+    color: #8888aa;
+  }
+}
+
+html[data-theme="dark"] .page-table th,
+html[data-theme="dark"] .page-table td {
+  border-bottom-color: #33334d;
+}
+html[data-theme="dark"] .page-table th {
+  color: #8888aa;
+}
