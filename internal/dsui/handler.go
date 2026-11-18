@@ -31,6 +31,7 @@ import (
 	"miniflux.app/v2/internal/reader/opml"
 	"miniflux.app/v2/internal/reader/processor"
 	"miniflux.app/v2/internal/storage"
+	"miniflux.app/v2/internal/validator"
 	"miniflux.app/v2/internal/worker"
 
 	"github.com/starfederation/datastar-go/datastar"
@@ -104,6 +105,7 @@ func Serve(store *storage.Storage, pool *worker.Pool) http.Handler {
 	mux.HandleFunc("POST /ds/sse/fetch-content/{entryID}", h.sseFetchContent)
 	mux.HandleFunc("POST /ds/sse/share/{entryID}", h.sseToggleShare)
 	mux.HandleFunc("POST /ds/sse/settings", h.sseSaveSettings)
+	mux.HandleFunc("POST /ds/sse/password", h.sseSavePassword)
 
 	// Apply middleware chain: secure headers -> session -> CSRF -> handlers.
 	return secureHeadersMiddleware(sessionMiddleware(store)(newCSRFMiddleware().handle(mux)))
@@ -510,17 +512,13 @@ func (h *handler) sseSaveSettings(w http.ResponseWriter, r *http.Request) {
 
 	// Read settings from form values.
 	form := parseSettingsForm(r)
-	if form.Password != "" && form.Password != form.Confirmation {
-		sse := datastar.NewSSE(w, r)
-		sse.MarshalAndPatchSignals(map[string]any{"importError": "Passwords do not match"})
-		return
-	}
-
 	form.applyToUser(user)
 	if err := h.store.UpdateUser(user); err != nil {
 		slog.Error("dsui: UpdateUser failed", slog.Int64("user_id", user.ID), slog.Any("error", err))
 		sse := datastar.NewSSE(w, r)
-		sse.MarshalAndPatchSignals(map[string]any{"importError": "Failed to save settings"})
+		sse.MarshalAndPatchSignals(map[string]any{
+			"importError": printerFor(user.Language).Printf("error.database_error", err),
+		})
 		return
 	}
 
@@ -534,7 +532,9 @@ func (h *handler) sseSaveSettings(w http.ResponseWriter, r *http.Request) {
 	var buf bytes.Buffer
 	if err := h.tplFor(user.Language).ExecuteTemplate(&buf, "settings", vm); err != nil {
 		slog.Error("dsui: settings re-render failed", slog.Int64("user_id", user.ID), slog.Any("error", err))
-		sse.MarshalAndPatchSignals(map[string]any{"importSuccess": "Settings saved"})
+		sse.MarshalAndPatchSignals(map[string]any{
+			"importSuccess": printerFor(user.Language).Print("alert.prefs_saved"),
+		})
 		return
 	}
 	if err := sse.PatchElements(buf.String(), datastar.WithSelector(".settings-page"), datastar.WithMode(datastar.ElementPatchModeInner)); err != nil {
@@ -542,15 +542,110 @@ func (h *handler) sseSaveSettings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sse.MarshalAndPatchSignals(map[string]any{
-		"uiTheme": themeClass(user.Theme),
-		"uiFont":  themeFont(user.Theme),
-		"uiLang":  strings.ReplaceAll(user.Language, "_", "-"),
-		"uiDir":   "ltr",
-		"importSuccess": func() string {
-			printer := locale.NewPrinter(user.Language)
-			return printer.Print("alert.prefs_saved")
-		}(),
+		"uiTheme":       themeClass(user.Theme),
+		"uiFont":        themeFont(user.Theme),
+		"uiLang":        strings.ReplaceAll(user.Language, "_", "-"),
+		"uiDir":         "ltr",
+		"importSuccess": printerFor(user.Language).Print("alert.prefs_saved"),
 	})
+}
+
+// sseSavePassword updates the user password from the dedicated settings
+// password form.
+//
+// It is a separate endpoint from sseSaveSettings on purpose: the password form
+// does not carry the preference fields, and applying a partial form through
+// applyToUser used to reset every boolean preference to false. The flow also
+// mirrors the classic authentication page: the current password is required
+// (when one is set), the new password goes through the same validator, and
+// every other session of the user is signed out.
+func (h *handler) sseSavePassword(w http.ResponseWriter, r *http.Request) {
+	user, err := h.store.UserByID(request.UserID(r))
+	if err != nil {
+		response.HTMLServerError(w, r, err)
+		return
+	}
+
+	printer := printerFor(user.Language)
+	sse := datastar.NewSSE(w, r)
+
+	if config.Opts.DisableLocalAuth() {
+		sse.MarshalAndPatchSignals(map[string]any{"importError": printer.Print("error.local_auth_disabled")})
+		return
+	}
+
+	password := r.FormValue("password")
+	confirmation := r.FormValue("confirmation")
+
+	if password == "" && confirmation == "" {
+		sse.MarshalAndPatchSignals(map[string]any{"importError": printer.Print("error.fields_mandatory")})
+		return
+	}
+
+	if password != confirmation {
+		sse.MarshalAndPatchSignals(map[string]any{"importError": printer.Print("error.different_passwords")})
+		return
+	}
+
+	hasPassword, err := h.store.HasPassword(user.ID)
+	if err != nil {
+		response.HTMLServerError(w, r, err)
+		return
+	}
+
+	// Users created through OAuth2 have no password yet, so there is nothing
+	// to confirm.
+	if hasPassword {
+		if err := h.store.CheckPassword(user.Username, r.FormValue("current_password")); err != nil {
+			slog.Warn("dsui: incorrect current password on password change",
+				slog.Bool("authentication_failed", true),
+				slog.String("client_ip", request.ClientIP(r)),
+				slog.String("user_agent", r.UserAgent()),
+				slog.String("username", user.Username),
+			)
+			sse.MarshalAndPatchSignals(map[string]any{"importError": printer.Print("error.invalid_current_password")})
+			return
+		}
+	}
+
+	if validationErr := validator.ValidateUserModification(h.store, user.ID, &model.UserModificationRequest{
+		Password: model.OptionalString(password),
+	}); validationErr != nil {
+		sse.MarshalAndPatchSignals(map[string]any{"importError": validationErr.Translate(user.Language)})
+		return
+	}
+
+	user.Password = password
+	if err := h.store.UpdateUser(user); err != nil {
+		slog.Error("dsui: unable to update password", slog.Int64("user_id", user.ID), slog.Any("error", err))
+		sse.MarshalAndPatchSignals(map[string]any{"importError": printer.Printf("error.database_error", err)})
+		return
+	}
+
+	session := request.WebSession(r)
+
+	// Sign out every other session, and give this one a new identity in case
+	// its cookie leaked along with the old password.
+	if err := h.store.RemoveUserWebSessionsExcept(user.ID, session.ID); err != nil {
+		slog.Error("dsui: unable to remove other sessions", slog.Int64("user_id", user.ID), slog.Any("error", err))
+	}
+	oldID, secret := session.Rotate()
+	if err := h.store.RotateWebSession(oldID, session); err != nil {
+		slog.Error("dsui: unable to rotate session", slog.Int64("user_id", user.ID), slog.Any("error", err))
+	} else {
+		setSessionCookie(w, session, secret)
+	}
+
+	// Re-render the password section so the fields are cleared after a
+	// successful change.
+	var buf bytes.Buffer
+	if err := h.tplFor(user.Language).ExecuteTemplate(&buf, "password_section", map[string]any{
+		"CSRFToken": request.WebSession(r).CSRF(),
+	}); err == nil {
+		sse.PatchElements(buf.String(), datastar.WithSelector("#password"))
+	}
+
+	sse.MarshalAndPatchSignals(map[string]any{"importSuccess": printer.Print("alert.prefs_saved")})
 }
 
 func (h *handler) fetchOPML(w http.ResponseWriter, r *http.Request) {

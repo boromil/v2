@@ -23,8 +23,6 @@ type selectOption struct {
 // JSON tags match Datastar signal names (camelCase from data-bind).
 type settingsFormData struct {
 	Username                       string  `json:"username"`
-	Password                       string  `json:"password"`
-	Confirmation                   string  `json:"confirmation"`
 	Theme                          string  `json:"theme"`
 	Language                       string  `json:"language"`
 	Timezone                       string  `json:"timezone"`
@@ -89,8 +87,6 @@ func settingsFormFromUser(user *model.User) *settingsFormData {
 func parseSettingsForm(r *http.Request) *settingsFormData {
 	f := &settingsFormData{}
 	f.Username = r.FormValue("username")
-	f.Password = r.FormValue("password")
-	f.Confirmation = r.FormValue("confirmation")
 	f.Theme = r.FormValue("theme")
 	f.Language = r.FormValue("language")
 	f.Timezone = r.FormValue("timezone")
@@ -124,9 +120,6 @@ func parseSettingsForm(r *http.Request) *settingsFormData {
 func (f *settingsFormData) applyToUser(user *model.User) {
 	if f.Username != "" {
 		user.Username = f.Username
-	}
-	if f.Password != "" {
-		user.Password = f.Password
 	}
 	if f.Theme != "" {
 		user.Theme = f.Theme

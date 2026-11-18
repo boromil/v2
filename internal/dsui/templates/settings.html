@@ -260,31 +260,38 @@
             </section>
 
             <!-- Password -->
-            <section id="password" class="settings-section">
-                <h3 class="settings-heading">{{t "form.user.label.password"}}</h3>
-                <form action="/ds/sse/settings" method="post"
-                    enctype="multipart/form-data"
-                    data-on:submit__prevent="@post('/ds/sse/settings', {contentType: 'form'})">
-                    <input type="hidden" name="csrf" value="{{.CSRFToken}}">
-                    <div class="settings-grid">
-                        <label class="settings-field">
-                            <span class="settings-field-label">{{t "form.user.label.password"}}</span>
-                            <input type="password" name="password" class="settings-input" placeholder="{{t "error.password_min_length"}}">
-                        </label>
-                        <label class="settings-field">
-                            <span class="settings-field-label">{{t "form.user.label.confirmation"}}</span>
-                            <input type="password" name="confirmation" class="settings-input" placeholder="{{t "form.user.label.confirmation"}}">
-                        </label>
-                    </div>
-                    <div class="mt-2">
-                        <button type="submit" class="toolbar-btn">
-                            {{t "action.update"}}
-                        </button>
-                    </div>
-                </form>
-            </section>
+            {{template "password_section" .}}
 
         </div>
     </div>
 </div>
+{{end}}
+
+{{define "password_section"}}
+<section id="password" class="settings-section">
+    <h3 class="settings-heading">{{t "form.user.label.password"}}</h3>
+    <form action="/ds/sse/password" method="post"
+        data-on:submit__prevent="@post('/ds/sse/password', {contentType: 'form'})">
+        <input type="hidden" name="csrf" value="{{.CSRFToken}}">
+        <div class="settings-grid">
+            <label class="settings-field">
+                <span class="settings-field-label">{{t "form.user.label.current_password"}}</span>
+                <input type="password" name="current_password" class="settings-input" autocomplete="current-password">
+            </label>
+            <label class="settings-field">
+                <span class="settings-field-label">{{t "form.user.label.password"}}</span>
+                <input type="password" name="password" class="settings-input" autocomplete="new-password" placeholder="{{t "error.password_min_length"}}">
+            </label>
+            <label class="settings-field">
+                <span class="settings-field-label">{{t "form.user.label.confirmation"}}</span>
+                <input type="password" name="confirmation" class="settings-input" autocomplete="new-password" placeholder="{{t "form.user.label.confirmation"}}">
+            </label>
+        </div>
+        <div class="mt-2">
+            <button type="submit" class="toolbar-btn">
+                {{t "action.update"}}
+            </button>
+        </div>
+    </form>
+</section>
 {{end}}

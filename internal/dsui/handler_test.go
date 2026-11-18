@@ -779,12 +779,21 @@ func postSettings(t *testing.T, store interface {
 	RotateWebSession(string, *model.WebSession) error
 }, user *model.User, form map[string]string) *httptest.ResponseRecorder {
 	t.Helper()
+	return postForm(t, store, user, "/ds/sse/settings", form)
+}
 
+// postForm submits an urlencoded form to a dsui endpoint with a valid CSRF
+// token, mirroring Datastar's `contentType: 'form'` requests.
+func postForm(t *testing.T, store interface {
+	CreateWebSession(*model.WebSession) error
+	RotateWebSession(string, *model.WebSession) error
+}, user *model.User, path string, form map[string]string) *httptest.ResponseRecorder {
+	t.Helper()
 	values := url.Values{}
 	for k, v := range form {
 		values.Set(k, v)
 	}
-	req := httptest.NewRequest(http.MethodPost, "/ds/sse/settings", strings.NewReader(values.Encode()))
+	req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(values.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	req, csrf := authenticateTestSession(t, store, req, user)
@@ -799,9 +808,9 @@ func postSettings(t *testing.T, store interface {
 }
 
 // TestSSESaveSettingsPasswordChange reproduces the password-form submit: the
-// password and confirmation arrive as form-urlencoded fields (Datastar's
-// contentType: 'form' adapter collects named inputs). It asserts the user's
-// stored password is actually updated.
+// current password, the new password and its confirmation arrive as
+// form-urlencoded fields (Datastar's contentType: 'form' adapter collects named
+// inputs). It asserts the user's stored password is actually updated.
 func TestSSESaveSettingsPasswordChange(t *testing.T) {
 	store := mtest.SetupTestDB(t, dialect.SQLite)
 	user := mtest.CreateTestUser(t, store)
@@ -811,9 +820,10 @@ func TestSSESaveSettingsPasswordChange(t *testing.T) {
 		t.Fatalf("expected default test password to be valid before update: %v", err)
 	}
 
-	w := postSettings(t, store, user, map[string]string{
-		"password":     "NewPassword123",
-		"confirmation": "NewPassword123",
+	w := postForm(t, store, user, "/ds/sse/password", map[string]string{
+		"current_password": "testpassword",
+		"password":         "NewPassword123",
+		"confirmation":     "NewPassword123",
 	})
 
 	if w.Code != http.StatusOK {
@@ -841,9 +851,10 @@ func TestSSESaveSettingsPasswordMismatch(t *testing.T) {
 	store := mtest.SetupTestDB(t, dialect.SQLite)
 	user := mtest.CreateTestUser(t, store)
 
-	w := postSettings(t, store, user, map[string]string{
-		"password":     "NewPassword123",
-		"confirmation": "DifferentPassword",
+	w := postForm(t, store, user, "/ds/sse/password", map[string]string{
+		"current_password": "testpassword",
+		"password":         "NewPassword123",
+		"confirmation":     "DifferentPassword",
 	})
 
 	if w.Code != http.StatusOK {
@@ -859,6 +870,69 @@ func TestSSESaveSettingsPasswordMismatch(t *testing.T) {
 	}
 	if err := store.CheckPassword(user.Username, "NewPassword123"); err == nil {
 		t.Error("mismatched new password must not be applied")
+	}
+}
+
+// TestSSESavePasswordRequiresCurrentPassword verifies that a session alone
+// cannot change the password: the current password must be supplied, like the
+// classic authentication page.
+func TestSSESavePasswordRequiresCurrentPassword(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	w := postForm(t, store, user, "/ds/sse/password", map[string]string{
+		"current_password": "wrong-password",
+		"password":         "NewPassword123",
+		"confirmation":     "NewPassword123",
+	})
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 (SSE error patch), got %d: %s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "importError") {
+		t.Errorf("expected importError signal for a wrong current password, got: %s", w.Body.String())
+	}
+	if err := store.CheckPassword(user.Username, "testpassword"); err != nil {
+		t.Errorf("original password should be unaffected: %v", err)
+	}
+	if err := store.CheckPassword(user.Username, "NewPassword123"); err == nil {
+		t.Error("password must not change without the current password")
+	}
+}
+
+// TestSSESavePasswordKeepsPreferences guards against the regression where the
+// password form (which carries no preference fields) was posted to the settings
+// endpoint, whose partial-form apply reset every boolean preference to false.
+func TestSSESavePasswordKeepsPreferences(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	user.ShowReadingTime = true
+	user.KeyboardShortcuts = true
+	user.StripContentBeforeFirstHeading = true
+	user.MarkReadOnView = true
+	if err := store.UpdateUser(user); err != nil {
+		t.Fatalf("unable to seed preferences: %v", err)
+	}
+
+	w := postForm(t, store, user, "/ds/sse/password", map[string]string{
+		"current_password": "testpassword",
+		"password":         "NewPassword123",
+		"confirmation":     "NewPassword123",
+	})
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	saved, err := store.UserByID(user.ID)
+	if err != nil {
+		t.Fatalf("fetch user: %v", err)
+	}
+	if !saved.ShowReadingTime || !saved.KeyboardShortcuts || !saved.StripContentBeforeFirstHeading || !saved.MarkReadOnView {
+		t.Errorf("password change must not reset preferences: %+v", saved)
+	}
+	if err := store.CheckPassword(saved.Username, "NewPassword123"); err != nil {
+		t.Errorf("new password should be valid: %v", err)
 	}
 }
 
