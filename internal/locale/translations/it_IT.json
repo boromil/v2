@@ -34,6 +34,7 @@
         "Hai richiesto troppi aggiornamenti dei feed. Attendi %d minuto prima di riprovare.",
         "Hai richiesto troppi aggiornamenti dei feed. Attendi %d minuti prima di riprovare."
     ],
+    "alert.url_copied": "URL copiato negli appunti.",
     "confirm.loading": "In corso...",
     "confirm.no": "no",
     "confirm.question": "Sei sicuro?",
@@ -68,6 +69,7 @@
     "entry.scraper.label": "Scarica",
     "entry.scraper.title": "Scarica il contenuto integrale",
     "entry.share.label": "Condividi",
+    "entry.share.link_label": "link",
     "entry.share.title": "Condividi questo articolo",
     "entry.shared_entry.label": "Condivisione",
     "entry.shared_entry.title": "Apri il link pubblico",

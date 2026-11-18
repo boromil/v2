@@ -33,6 +33,7 @@
     "alert.too_many_feeds_refresh": [
         "您触发了太多次订阅源刷新。请在 %d 分钟后重试。"
     ],
+    "alert.url_copied": "链接已复制到剪贴板。",
     "confirm.loading": "进行中…",
     "confirm.no": "否",
     "confirm.question": "您确定吗？",
@@ -66,6 +67,7 @@
     "entry.scraper.label": "下载",
     "entry.scraper.title": "获取原始内容",
     "entry.share.label": "分享",
+    "entry.share.link_label": "链接",
     "entry.share.title": "分享此条目",
     "entry.shared_entry.label": "分享",
     "entry.shared_entry.title": "打开公开链接",

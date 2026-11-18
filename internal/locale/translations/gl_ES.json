@@ -34,6 +34,7 @@
         "Intentaches demasiadas actualizacións da canle. Agarda %d minuto antes de volver intentalo.",
         "Intentaches demasiadas actualizacións da canle. Agarda %d minutos antes de volver intentalo."
     ],
+    "alert.url_copied": "URL copiada ao portapapeis.",
     "confirm.loading": "En proceso…",
     "confirm.no": "non",
     "confirm.question": "Confirmas a acción?",
@@ -68,6 +69,7 @@
     "entry.scraper.label": "Descargar",
     "entry.scraper.title": "Obter contido orixinal",
     "entry.share.label": "Compartir",
+    "entry.share.link_label": "ligazón",
     "entry.share.title": "Compartir este artigo",
     "entry.shared_entry.label": "Compartir",
     "entry.shared_entry.title": "Abrir ligazón pública",

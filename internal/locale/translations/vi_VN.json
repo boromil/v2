@@ -33,6 +33,7 @@
     "alert.too_many_feeds_refresh": [
         "Bạn đã yêu cầu làm mới nguồn tin quá nhiều lần. Vui lòng đợi %d phút rồi thử lại."
     ],
+    "alert.url_copied": "Đã sao chép URL vào bộ nhớ tạm.",
     "confirm.loading": "Đang xử lý…",
     "confirm.no": "không",
     "confirm.question": "Bạn có chắc chắn không?",
@@ -66,6 +67,7 @@
     "entry.scraper.label": "Tải xuống",
     "entry.scraper.title": "Tải nội dung gốc",
     "entry.share.label": "Chia sẻ",
+    "entry.share.link_label": "liên kết",
     "entry.share.title": "Chia sẻ bài viết này",
     "entry.shared_entry.label": "Chia sẻ",
     "entry.shared_entry.title": "Mở liên kết công khai",

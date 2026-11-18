@@ -33,6 +33,7 @@
     "alert.too_many_feeds_refresh": [
         "您已觸發過太多次 Feed 更新，請等待 %d 分鐘後再嘗試。"
     ],
+    "alert.url_copied": "連結已複製到剪貼簿。",
     "confirm.loading": "執行中…",
     "confirm.no": "否",
     "confirm.question": "您確定嗎？",
@@ -66,6 +67,7 @@
     "entry.scraper.label": "下載原文",
     "entry.scraper.title": "下載原文內容",
     "entry.share.label": "分享",
+    "entry.share.link_label": "連結",
     "entry.share.title": "分享這篇文章",
     "entry.shared_entry.label": "分享",
     "entry.shared_entry.title": "開啟公共連結",

@@ -34,6 +34,7 @@
         "Je hebt te veel feed-vernieuwingen getriggered. Wacht aub %d minuut voor opnieuw proberen.",
         "Je hebt te veel feed-vernieuwingen getriggered. Wacht aub %d minuten voor opnieuw proberen."
     ],
+    "alert.url_copied": "URL gekopieerd naar het klembord.",
     "confirm.loading": "Bezig...",
     "confirm.no": "nee",
     "confirm.question": "Weet je het zeker?",
@@ -68,6 +69,7 @@
     "entry.scraper.label": "Downloaden",
     "entry.scraper.title": "Originele inhoud ophalen",
     "entry.share.label": "Delen",
+    "entry.share.link_label": "link",
     "entry.share.title": "Deel dit artikel",
     "entry.shared_entry.label": "Delen",
     "entry.shared_entry.title": "Open de openbare link",

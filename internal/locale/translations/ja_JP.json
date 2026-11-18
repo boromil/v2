@@ -33,6 +33,7 @@
     "alert.too_many_feeds_refresh": [
         "フィードの更新を要求しすぎました。%d 分後に再度お試しください。"
     ],
+    "alert.url_copied": "URLをクリップボードにコピーしました。",
     "confirm.loading": "実行中…",
     "confirm.no": "いいえ",
     "confirm.question": "よろしいですか?",
@@ -66,6 +67,7 @@
     "entry.scraper.label": "ダウンロード",
     "entry.scraper.title": "オリジナルの内容を取得",
     "entry.share.label": "共有",
+    "entry.share.link_label": "リンク",
     "entry.share.title": "この記事を共有する",
     "entry.shared_entry.label": "共有する",
     "entry.shared_entry.title": "公開リンクを開く",

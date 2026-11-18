@@ -34,6 +34,7 @@
         "Olet käynnistänyt liian monta syötteen päivitystä. Odota %d minuutti ennen kuin yrität uudelleen.",
         "Olet käynnistänyt liian monta syötteen päivitystä. Odota %d minuuttia ennen kuin yrität uudelleen."
     ],
+    "alert.url_copied": "URL kopioitu leikepöydälle.",
     "confirm.loading": "Käynnissä...",
     "confirm.no": "ei",
     "confirm.question": "Oletko varma?",
@@ -68,6 +69,7 @@
     "entry.scraper.label": "Lataa",
     "entry.scraper.title": "Nouda alkuperäinen sisältö",
     "entry.share.label": "Jaa",
+    "entry.share.link_label": "linkki",
     "entry.share.title": "Jaa tämä artikkeli",
     "entry.shared_entry.label": "Jaa",
     "entry.shared_entry.title": "Avaa julkinen linkki",

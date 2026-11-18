@@ -33,6 +33,7 @@
     "alert.too_many_feeds_refresh": [
         "Anda terlalu banyak menyegarkan umpan. Mohon tunggu %d menit sebelum mencoba lagi."
     ],
+    "alert.url_copied": "URL disalin ke papan klip.",
     "confirm.loading": "Sedang progres...",
     "confirm.no": "tidak",
     "confirm.question": "Apakah Anda yakin?",
@@ -66,6 +67,7 @@
     "entry.scraper.label": "Unduh",
     "entry.scraper.title": "Ambil konten asli",
     "entry.share.label": "Bagikan",
+    "entry.share.link_label": "tautan",
     "entry.share.title": "Bagikan artikel ini",
     "entry.shared_entry.label": "Bagikan",
     "entry.shared_entry.title": "Buka tautan publik",

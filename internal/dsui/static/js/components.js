@@ -183,24 +183,70 @@ if (!customElements.get("entry-row")) {
   }).observe(pane, { childList: true, subtree: true, characterData: true });
 })();
 
-// Share link: clicking the public URL field copies it and flashes the field.
+// Share link: clicking copies the public URL and confirms with a toast.
 (function () {
   "use strict";
 
-  document.addEventListener("click", function (event) {
-    var field = event.target && event.target.closest && event.target.closest(".share-url");
-    if (!field) return;
-
-    field.select();
-
-    // Flash immediately: the field is selected either way, and the clipboard
-    // API is unavailable on insecure origins.
-    field.classList.add("copied");
-    setTimeout(function () { field.classList.remove("copied"); }, 1200);
-
-    if (!navigator.clipboard || !navigator.clipboard.writeText) return;
-    navigator.clipboard.writeText(field.value).catch(function () {
-      field.classList.remove("copied");
+  function showToast(message) {
+    if (!message) return;
+    document.querySelectorAll(".toast.share-toast").forEach(function (toast) {
+      toast.remove();
     });
+    var toast = document.createElement("div");
+    toast.className = "toast toast-info share-toast";
+    toast.setAttribute("role", "status");
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(function () { toast.remove(); }, 2500);
+  }
+
+  // execCommand fallback: works on insecure origins and when the async
+  // Clipboard API is blocked, as long as the click is a user gesture.
+  function legacyCopy(text) {
+    var field = document.createElement("textarea");
+    field.value = text;
+    field.setAttribute("readonly", "");
+    field.style.position = "fixed";
+    field.style.top = "-1000px";
+    field.style.opacity = "0";
+    document.body.appendChild(field);
+    field.select();
+    var copied = false;
+    try {
+      copied = document.execCommand("copy");
+    } catch (error) {
+      copied = false;
+    }
+    field.remove();
+    return copied;
+  }
+
+  document.addEventListener("click", function (event) {
+    var link = event.target && event.target.closest && event.target.closest(".share-link");
+    if (!link) return;
+
+    var url = link.getAttribute("data-share-url") || link.href;
+    var label = link.getAttribute("data-copied-label");
+
+    event.preventDefault();
+
+    var copied = function () {
+      showToast(label);
+    };
+    var fallback = function () {
+      if (legacyCopy(url)) {
+        copied();
+      } else {
+        // Last resort: open the public page so the URL can be copied from the
+        // address bar.
+        window.open(url, "_blank", "noopener");
+      }
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(copied).catch(fallback);
+    } else {
+      fallback();
+    }
   });
 })();

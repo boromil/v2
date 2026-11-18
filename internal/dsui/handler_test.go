@@ -2113,7 +2113,7 @@ func TestSSEToggleShareUpdatesToolbarButton(t *testing.T) {
 	if want := printer.Print("entry.unshare.label"); !strings.Contains(body, want) {
 		t.Errorf("shared state must show the %q button\nbody:\n%s", want, body)
 	}
-	if !strings.Contains(body, `class="share-url"`) || !strings.Contains(body, "/share/") {
+	if !strings.Contains(body, `class="share-link"`) || !strings.Contains(body, "/share/") {
 		t.Errorf("shared state must expose the public share link\nbody:\n%s", body)
 	}
 

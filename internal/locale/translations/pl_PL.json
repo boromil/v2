@@ -35,6 +35,7 @@
         "Wykonano zbyt wiele odświeżeń kanału. Poczekaj %d minuty przed ponowną próbą.",
         "Wykonano zbyt wiele odświeżeń kanału. Poczekaj %d minut przed ponowną próbą."
     ],
+    "alert.url_copied": "URL skopiowany do schowka.",
     "confirm.loading": "W toku…",
     "confirm.no": "nie",
     "confirm.question": "Czy na pewno?",
@@ -70,6 +71,7 @@
     "entry.scraper.label": "Pobierz treść",
     "entry.scraper.title": "Pobierz oryginalną treść",
     "entry.share.label": "Udostępnij",
+    "entry.share.link_label": "link",
     "entry.share.title": "Udostępnij ten wpis",
     "entry.shared_entry.label": "Udostępnij",
     "entry.shared_entry.title": "Otwórz publiczne łącze",

@@ -33,6 +33,7 @@
     "alert.too_many_feeds_refresh": [
         "피드 새로고침 요청이 너무 많습니다. %d분 후 다시 시도해 주세요."
     ],
+    "alert.url_copied": "URL이 클립보드에 복사되었습니다.",
     "confirm.loading": "실행 중…",
     "confirm.no": "아니요",
     "confirm.question": "진행하시겠습니까?",
@@ -66,6 +67,7 @@
     "entry.scraper.label": "다운로드",
     "entry.scraper.title": "원본 내용 가져오기",
     "entry.share.label": "공유",
+    "entry.share.link_label": "링크",
     "entry.share.title": "이 게시물 공유",
     "entry.shared_entry.label": "공유하기",
     "entry.shared_entry.title": "공개 링크 열기",

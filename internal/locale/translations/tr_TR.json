@@ -34,6 +34,7 @@
         "Çok fazla besleme yenilemesi başlattınız. Tekrar denemeden önce lütfen %d dakika bekleyin.",
         "Çok fazla besleme yenilemesi başlattınız. Tekrar denemeden önce lütfen %d dakika bekleyin."
     ],
+    "alert.url_copied": "URL panoya kopyalandı.",
     "confirm.loading": "Devam ediyor...",
     "confirm.no": "hayır",
     "confirm.question": "Emin misiniz?",
@@ -68,6 +69,7 @@
     "entry.scraper.label": "İndir",
     "entry.scraper.title": "Orijinal içeriği çek",
     "entry.share.label": "Paylaş",
+    "entry.share.link_label": "bağlantı",
     "entry.share.title": "Bu makeleyi paylaş",
     "entry.shared_entry.label": "Paylaş",
     "entry.shared_entry.title": "Herkese açık bağlantıyı aç",

@@ -33,6 +33,7 @@
     "alert.too_many_feeds_refresh": [
         "Lí í-keng ín-khí siuⁿ chōe pái siau-sit lâi-goân ōaⁿ-sin, chhiáⁿ tán-hāu %d hun-cheng āu koh chhì-khòaⁿ-māi."
     ],
+    "alert.url_copied": "URL í-keng khó-pih tī chián-thiap-pán.",
     "confirm.loading": "Tng leh chip-hêng…",
     "confirm.no": "Hóⁿ",
     "confirm.question": "Kám ū khak-tēng?",
@@ -66,6 +67,7 @@
     "entry.scraper.label": "Lia̍h--lo̍h-lâi",
     "entry.scraper.title": "Lia̍h goân-tóe lōe-iông",
     "entry.share.label": "Hun-hióng",
+    "entry.share.link_label": "liân-kiat",
     "entry.share.title": "Hun-hióng chit ê siau-sit",
     "entry.shared_entry.label": "Hun-hióng",
     "entry.shared_entry.title": "Phah khui kong-khai ê liân-kiat",

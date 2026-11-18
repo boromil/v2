@@ -34,6 +34,7 @@
         "You have triggered too many feed refreshes. Please wait %d minute before trying again.",
         "You have triggered too many feed refreshes. Please wait %d minutes before trying again."
     ],
+    "alert.url_copied": "URL copied to the clipboard.",
     "confirm.loading": "In progress…",
     "confirm.no": "no",
     "confirm.question": "Are you sure?",
@@ -68,6 +69,7 @@
     "entry.scraper.label": "Download",
     "entry.scraper.title": "Fetch original content",
     "entry.share.label": "Share",
+    "entry.share.link_label": "link",
     "entry.share.title": "Share this entry",
     "entry.shared_entry.label": "Share",
     "entry.shared_entry.title": "Open the public link",

@@ -74,13 +74,16 @@ Sharing worked but showed nothing useful: the toolbar replaced the "Share" butto
 another button labelled "Share" (the public-link label) plus "Unshare", so the reader
 could not see or copy the URL.
 
-- The shared state now shows the **public link itself** in a read-only monospace field,
-  followed by "Unshare". Clicking the field selects the URL and copies it to the
-  clipboard; the field flashes green as confirmation. On insecure origins (plain HTTP on
-  a LAN address) the Clipboard API is unavailable, so the click still selects the text and
-  the reader can copy it manually.
+- The shared state now shows a **hyperlink-styled "link"** next to "Unshare", with the
+  full public URL in its tooltip.
+- Clicking it copies the URL to the clipboard and shows a "URL copied to the clipboard."
+  toast. The copy falls back to `document.execCommand("copy")` on insecure origins or when
+  the async Clipboard API is blocked, and if both fail the link opens the public page so
+  the URL can still be copied from the address bar.
 - `entryDetailView` carries `ShareURL` (absolute URL built from `ROOT_URL`) so the SSE
   re-render and the first render agree.
+- New locale keys: `entry.share.link_label` and `alert.url_copied`, translated in all 24
+  locales.
 
 ## Settings integration, round 14 — native admin pages (2026-11-18)
 

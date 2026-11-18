@@ -35,6 +35,7 @@
         "Вы запустили слишком много обновлений подписок. Подождите %d минут для нового запуска",
         "Вы запустили слишком много обновлений подписок. Подождите %d минут для нового запуска"
     ],
+    "alert.url_copied": "URL скопирован в буфер обмена.",
     "confirm.loading": "В процессе…",
     "confirm.no": "нет",
     "confirm.question": "Вы уверены?",
@@ -70,6 +71,7 @@
     "entry.scraper.label": "Скачать",
     "entry.scraper.title": "Извлечь оригинальное содержимое",
     "entry.share.label": "Поделиться",
+    "entry.share.link_label": "ссылка",
     "entry.share.title": "Поделиться этой статьёй",
     "entry.shared_entry.label": "Поделиться",
     "entry.shared_entry.title": "Открыть публичную ссылку",

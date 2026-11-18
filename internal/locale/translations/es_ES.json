@@ -34,6 +34,7 @@
         "Has activado demasiadas actualizaciones del feed. Espere %d minuto antes de volver a intentarlo.",
         "Has activado demasiadas actualizaciones del feed. Espere %d minutos antes de volver a intentarlo."
     ],
+    "alert.url_copied": "URL copiada al portapapeles.",
     "confirm.loading": "En progreso...",
     "confirm.no": "no",
     "confirm.question": "¿Estás seguro?",
@@ -68,6 +69,7 @@
     "entry.scraper.label": "Descargar",
     "entry.scraper.title": "Obtener contenido original",
     "entry.share.label": "Compartir",
+    "entry.share.link_label": "enlace",
     "entry.share.title": "Compartir este artículo",
     "entry.shared_entry.label": "Compartir",
     "entry.shared_entry.title": "Abrir el enlace público",

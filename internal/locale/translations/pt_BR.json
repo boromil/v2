@@ -34,6 +34,7 @@
         "Você acionou muitas atualizações de fontes. Por favor, aguarde %d minuto antes de tentar novamente.",
         "Você acionou muitas atualizações de fontes. Por favor, aguarde %d minutos antes de tentar novamente."
     ],
+    "alert.url_copied": "URL copiada para a área de transferência.",
     "confirm.loading": "Carregando...",
     "confirm.no": "Não",
     "confirm.question": "Tem certeza?",
@@ -68,6 +69,7 @@
     "entry.scraper.label": "Baixar",
     "entry.scraper.title": "Obter conteúdo completo",
     "entry.share.label": "Compartilhar",
+    "entry.share.link_label": "link",
     "entry.share.title": "Compartilhar esse item",
     "entry.shared_entry.label": "Compartilhar",
     "entry.shared_entry.title": "Abrir link público",

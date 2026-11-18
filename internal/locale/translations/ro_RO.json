@@ -35,6 +35,7 @@
         "Ați activat actualizarea a prea multe fluxuri de informații. Vă rog să așteptați %d minute înainte de a reîncerca.",
         "Ați activat actualizarea a prea multe fluxuri de informații. Vă rog să așteptați %d minute înainte de a reîncerca."
     ],
+    "alert.url_copied": "URL copiat în clipboard.",
     "confirm.loading": "În progres…",
     "confirm.no": "nu",
     "confirm.question": "Suneți sigur?",
@@ -70,6 +71,7 @@
     "entry.scraper.label": "Descărcare",
     "entry.scraper.title": "Descarcă conținutul original",
     "entry.share.label": "Partajare",
+    "entry.share.link_label": "link",
     "entry.share.title": "Partajează această înregistrare",
     "entry.shared_entry.label": "Partajare",
     "entry.shared_entry.title": "Deschide legătura publică",

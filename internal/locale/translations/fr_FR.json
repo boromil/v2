@@ -34,6 +34,7 @@
         "Vous avez déclenché trop d'actualisations de flux. Veuillez attendre %d minute avant de réessayer.",
         "Vous avez déclenché trop d'actualisations de flux. Veuillez attendre %d minutes avant de réessayer."
     ],
+    "alert.url_copied": "URL copiée dans le presse-papiers.",
     "confirm.loading": "En cours...",
     "confirm.no": "non",
     "confirm.question": "Êtes-vous sûr ?",
@@ -68,6 +69,7 @@
     "entry.scraper.label": "Télécharger",
     "entry.scraper.title": "Récupérer le contenu original",
     "entry.share.label": "Partager",
+    "entry.share.link_label": "lien",
     "entry.share.title": "Partager cet article",
     "entry.shared_entry.label": "Partage",
     "entry.shared_entry.title": "Ouvrir le lien public",

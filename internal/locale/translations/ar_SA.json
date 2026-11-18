@@ -38,6 +38,7 @@
         "لقد طلبت تحديث عدد كبير جداً من المصادر. يرجى الانتظار %d دقيقة قبل المحاولة مرة أخرى.",
         "لقد طلبت تحديث عدد كبير جداً من المصادر. يرجى الانتظار %d دقيقة قبل المحاولة مرة أخرى."
     ],
+    "alert.url_copied": "تم نسخ الرابط إلى الحافظة.",
     "confirm.loading": "جارٍ التحميل...",
     "confirm.no": "لا",
     "confirm.question": "هل أنت متأكد؟",
@@ -76,6 +77,7 @@
     "entry.scraper.label": "تحميل",
     "entry.scraper.title": "جلب المحتوى الأصلي",
     "entry.share.label": "مشاركة",
+    "entry.share.link_label": "رابط",
     "entry.share.title": "مشاركة هذا المقال",
     "entry.shared_entry.label": "مشاركة",
     "entry.shared_entry.title": "فتح الرابط العام",

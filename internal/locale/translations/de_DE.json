@@ -34,6 +34,7 @@
         "Sie haben zu viele Aktualisierungen ausgelöst. Bitte warten Sie %d Minute, bevor Sie es erneut versuchen.",
         "Sie haben zu viele Aktualisierungen ausgelöst. Bitte warten Sie %d Minuten, bevor Sie es erneut versuchen."
     ],
+    "alert.url_copied": "URL in die Zwischenablage kopiert.",
     "confirm.loading": "In Arbeit...",
     "confirm.no": "nein",
     "confirm.question": "Sind Sie sicher?",
@@ -68,6 +69,7 @@
     "entry.scraper.label": "Herunterladen",
     "entry.scraper.title": "Inhalt herunterladen",
     "entry.share.label": "Teilen",
+    "entry.share.link_label": "Link",
     "entry.share.title": "Diesen Artikel teilen",
     "entry.shared_entry.label": "Teilen",
     "entry.shared_entry.title": "Öffnen Sie den öffentlichen Link",
