@@ -82,6 +82,18 @@ func Serve(store *storage.Storage, pool *worker.Pool) http.Handler {
 	mux.HandleFunc("GET /ds/about", h.showAbout)
 	mux.HandleFunc("GET /ds/sessions", h.showSessions)
 	mux.HandleFunc("POST /ds/sessions/{sessionID}/remove", h.removeSession)
+	mux.HandleFunc("GET /ds/integrations", h.showIntegrations)
+	mux.HandleFunc("POST /ds/integrations", h.saveIntegrations)
+	mux.HandleFunc("GET /ds/authentication", h.showAuthentication)
+	mux.HandleFunc("POST /ds/passkeys/{handle}/rename", h.renamePasskey)
+	mux.HandleFunc("POST /ds/passkeys/{handle}/remove", h.removePasskey)
+	mux.HandleFunc("GET /ds/keys", h.showAPIKeys)
+	mux.HandleFunc("POST /ds/keys", h.createAPIKey)
+	mux.HandleFunc("POST /ds/keys/{keyID}/remove", h.removeAPIKey)
+	mux.HandleFunc("GET /ds/users", h.showUsers)
+	mux.HandleFunc("POST /ds/users", h.createUser)
+	mux.HandleFunc("POST /ds/users/{userID}", h.updateUser)
+	mux.HandleFunc("POST /ds/users/{userID}/remove", h.removeUser)
 	mux.HandleFunc("GET /ds/feed/{feedID}", h.showApp)
 	mux.HandleFunc("GET /ds/category/{categoryID}", h.showApp)
 
@@ -141,12 +153,17 @@ func parseTemplates() *template.Template {
 		"templates/settings.html",
 		"templates/about.html",
 		"templates/sessions.html",
+		"templates/integrations.html",
+		"templates/authentication.html",
+		"templates/api_keys.html",
+		"templates/users.html",
 		"templates/components/subscription_list.html",
 		"templates/components/entry_list.html",
 		"templates/components/entry_row.html",
 		"templates/components/entry_content.html",
 		"templates/components/article_toolbar.html",
 		"templates/components/feed_node.html",
+		"templates/components/flash.html",
 		"templates/components/page_nav.html",
 		"templates/components/pagination.html",
 		"templates/components/shortcuts_overlay.html",
@@ -217,6 +234,7 @@ type appViewModel struct {
 	APIEnabled         bool
 	PageContent        template.HTML
 	FlashError         string
+	FlashSuccess       string
 	Form               *settingsFormData
 	Themes             []selectOption
 	Languages          []selectOption
@@ -446,7 +464,7 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 
 // settingsViewModel builds the view model shared by the settings page render
 // and the post-save SSE re-render.
-func (h *handler) settingsViewModel(user *model.User, form *settingsFormData, flashError string, r *http.Request) appViewModel {
+func (h *handler) settingsViewModel(user *model.User, form *settingsFormData, flashError, flashSuccess string, r *http.Request) appViewModel {
 	feeds, err := h.store.Feeds(user.ID)
 	if err != nil {
 		slog.Error("dsui: unable to list feeds for settings", slog.Int64("user_id", user.ID), slog.Any("error", err))
@@ -509,6 +527,7 @@ func (h *handler) settingsViewModel(user *model.User, form *settingsFormData, fl
 		IsAdmin:            user.IsAdmin,
 		APIEnabled:         config.Opts.HasAPI(),
 		FlashError:         flashError,
+		FlashSuccess:       flashSuccess,
 		Form:               form,
 		Themes:             themeOptions(),
 		Languages:          languageOptions(),
@@ -527,12 +546,12 @@ func (h *handler) showSettings(w http.ResponseWriter, r *http.Request) {
 
 	form := settingsFormFromUser(user)
 
-	flashError, clearFlash := takeFlashError(r)
+	flashError, flashSuccess, clearFlash := takeFlash(r)
 	if clearFlash != nil {
 		http.SetCookie(w, clearFlash)
 	}
 
-	vm := h.settingsViewModel(user, form, flashError, r)
+	vm := h.settingsViewModel(user, form, flashError, flashSuccess, r)
 
 	var buf bytes.Buffer
 	if err := h.tplFor(user.Language).ExecuteTemplate(&buf, "layout", vm); err != nil {
@@ -573,7 +592,7 @@ func (h *handler) sseSaveSettings(w http.ResponseWriter, r *http.Request) {
 	// also reset the scroll position of the content pane, which made the view
 	// jump to another section after saving.
 	if user.Language != previousLanguage {
-		vm := h.settingsViewModel(user, settingsFormFromUser(user), "", r)
+		vm := h.settingsViewModel(user, settingsFormFromUser(user), "", "", r)
 		var buf bytes.Buffer
 		if err := h.tplFor(user.Language).ExecuteTemplate(&buf, "settings", vm); err != nil {
 			slog.Error("dsui: settings re-render failed", slog.Int64("user_id", user.ID), slog.Any("error", err))
@@ -2182,11 +2201,20 @@ func elapsedLocalized(printer *locale.Printer, t time.Time) string {
 // setFlashError stores a short-lived flash message cookie that the next
 // settings render consumes (see takeFlashError).
 func setFlashError(w http.ResponseWriter, msg string) {
+	setFlashCookie(w, "dsui_flash_error", msg)
+}
+
+// setFlashSuccess stores a short-lived success message for the next render.
+func setFlashSuccess(w http.ResponseWriter, msg string) {
+	setFlashCookie(w, "dsui_flash_success", msg)
+}
+
+func setFlashCookie(w http.ResponseWriter, name, msg string) {
 	if msg == "" {
 		return
 	}
 	http.SetCookie(w, &http.Cookie{
-		Name:     "dsui_flash_error",
+		Name:     name,
 		Value:    url.QueryEscape(msg),
 		Path:     "/",
 		MaxAge:   30,
@@ -2195,11 +2223,29 @@ func setFlashError(w http.ResponseWriter, msg string) {
 	})
 }
 
+// takeFlash reads the flash cookies and returns the messages together with a
+// cookie value that expires them (the caller must set it on the response so the
+// banner shows exactly once).
+func takeFlash(r *http.Request) (errorMessage, successMessage string, clear *http.Cookie) {
+	errorMessage, errorClear := takeFlashError(r)
+	successMessage, successClear := takeFlashCookie(r, "dsui_flash_success")
+	if errorClear != nil {
+		clear = errorClear
+	} else if successClear != nil {
+		clear = successClear
+	}
+	return errorMessage, successMessage, clear
+}
+
 // takeFlashError reads the flash error cookie and returns the message
 // together with a cookie value that expires it (the caller must set it on the
 // response so the banner shows exactly once).
 func takeFlashError(r *http.Request) (string, *http.Cookie) {
-	c, err := r.Cookie("dsui_flash_error")
+	return takeFlashCookie(r, "dsui_flash_error")
+}
+
+func takeFlashCookie(r *http.Request, name string) (string, *http.Cookie) {
+	c, err := r.Cookie(name)
 	if err != nil || c.Value == "" {
 		return "", nil
 	}
@@ -2208,7 +2254,7 @@ func takeFlashError(r *http.Request) (string, *http.Cookie) {
 		return "", nil
 	}
 	clear := &http.Cookie{
-		Name:     "dsui_flash_error",
+		Name:     name,
 		Value:    "",
 		Path:     "/",
 		MaxAge:   -1,

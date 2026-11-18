@@ -1,0 +1,46 @@
+{{define "integrations"}}
+<div class="settings-page">
+    {{template "page_nav" .}}
+    <div class="settings-content">
+        {{template "flash_banners" .}}
+        <form action="/ds/integrations" method="post">
+            <input type="hidden" name="csrf" value="{{.CSRFToken}}">
+            {{range .Integrations}}
+            <details class="integration-block"{{if .Enabled}} open{{end}}>
+                <summary class="integration-summary{{if .Enabled}} is-enabled{{end}}">{{.Title}}</summary>
+                <div class="settings-grid integration-fields">
+                    <label class="settings-field settings-field-checkbox">
+                        <input type="checkbox" name="{{.EnableName}}" value="1"{{if .Enabled}} checked{{end}}>
+                        <span class="settings-field-label">{{.Title}}</span>
+                    </label>
+                    {{range .Fields}}
+                        {{if eq .Type "checkbox"}}
+                        <label class="settings-field settings-field-checkbox">
+                            <input type="checkbox" name="{{.Name}}" value="1"{{if .Checked}} checked{{end}}>
+                            <span class="settings-field-label">{{.Label}}</span>
+                        </label>
+                        {{else if eq .Type "select"}}
+                        <label class="settings-field">
+                            <span class="settings-field-label">{{.Label}}</span>
+                            <select name="{{.Name}}" class="settings-select">
+                                {{range .Options}}<option value="{{.Value}}"{{if .Selected}} selected{{end}}>{{.Label}}</option>{{end}}
+                            </select>
+                        </label>
+                        {{else}}
+                        <label class="settings-field">
+                            <span class="settings-field-label">{{.Label}}</span>
+                            <input type="{{.Type}}" name="{{.Name}}" class="settings-input" value="{{.Value}}" spellcheck="false" autocomplete="off"{{if .ReadOnly}} readonly{{end}}>
+                        </label>
+                        {{end}}
+                    {{end}}
+                </div>
+                {{if .Hint}}<p class="settings-help integration-hint">{{.Hint}}</p>{{end}}
+            </details>
+            {{end}}
+            <div class="settings-save-bar">
+                <button type="submit" class="toolbar-btn primary">{{t "action.save"}}</button>
+            </div>
+        </form>
+    </div>
+</div>
+{{end}}

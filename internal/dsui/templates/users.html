@@ -1,0 +1,97 @@
+{{define "users"}}
+<div class="settings-page">
+    {{template "page_nav" .}}
+    <div class="settings-content">
+        {{template "flash_banners" .}}
+
+        <section class="settings-section">
+            <h3 class="settings-heading">{{t "menu.add_user"}}</h3>
+            <form action="/ds/users" method="post">
+                <input type="hidden" name="csrf" value="{{.CSRFToken}}">
+                <div class="settings-grid">
+                    <label class="settings-field">
+                        <span class="settings-field-label">{{t "form.user.label.username"}}</span>
+                        <input type="text" name="username" class="settings-input" required autocomplete="off">
+                    </label>
+                    <label class="settings-field">
+                        <span class="settings-field-label">{{t "form.user.label.password"}}</span>
+                        <input type="password" name="password" class="settings-input" required autocomplete="new-password">
+                    </label>
+                    <label class="settings-field">
+                        <span class="settings-field-label">{{t "form.user.label.confirmation"}}</span>
+                        <input type="password" name="confirmation" class="settings-input" required autocomplete="new-password">
+                    </label>
+                    <label class="settings-field settings-field-checkbox">
+                        <input type="checkbox" name="is_admin" value="1">
+                        <span class="settings-field-label">{{t "page.users.is_admin"}}</span>
+                    </label>
+                </div>
+                <div class="mt-2">
+                    <button type="submit" class="toolbar-btn primary">{{t "action.save"}}</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="settings-section">
+            <h3 class="settings-heading">{{t "page.users.title"}}</h3>
+            <table class="page-table">
+                <thead>
+                    <tr>
+                        <th>{{t "page.users.username"}}</th>
+                        <th>{{t "page.users.is_admin"}}</th>
+                        <th>{{t "page.users.last_login"}}</th>
+                        <th>{{t "page.users.actions"}}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .Users}}
+                    <tr data-user-row="{{.ID}}">
+                        <td>
+                            {{.Username}}
+                            {{if .IsCurrent}}<span class="user-current">({{t "page.sessions.table.current_session"}})</span>{{end}}
+                        </td>
+                        <td>{{if .IsAdmin}}{{t "page.users.admin.yes"}}{{else}}{{t "page.users.admin.no"}}{{end}}</td>
+                        <td>{{if .HasLoggedIn}}{{elapsed .LastLoginAt}}{{else}}{{t "page.users.never_logged"}}{{end}}</td>
+                        <td>
+                            {{if not .IsCurrent}}
+                            <details class="user-edit">
+                                <summary class="toolbar-btn">{{t "action.edit"}}</summary>
+                                <form action="/ds/users/{{.ID}}" method="post" class="user-edit-form">
+                                    <input type="hidden" name="csrf" value="{{$.CSRFToken}}">
+                                    <div class="settings-grid">
+                                        <label class="settings-field">
+                                            <span class="settings-field-label">{{t "form.user.label.username"}}</span>
+                                            <input type="text" name="username" value="{{.Username}}" required class="settings-input">
+                                        </label>
+                                        <label class="settings-field">
+                                            <span class="settings-field-label">{{t "form.user.label.password"}}</span>
+                                            <input type="password" name="password" class="settings-input" autocomplete="new-password" placeholder="{{t "error.password_min_length"}}">
+                                        </label>
+                                        <label class="settings-field">
+                                            <span class="settings-field-label">{{t "form.user.label.confirmation"}}</span>
+                                            <input type="password" name="confirmation" class="settings-input" autocomplete="new-password">
+                                        </label>
+                                        <label class="settings-field settings-field-checkbox">
+                                            <input type="checkbox" name="is_admin" value="1"{{if .IsAdmin}} checked{{end}}>
+                                            <span class="settings-field-label">{{t "page.users.is_admin"}}</span>
+                                        </label>
+                                    </div>
+                                    <div class="mt-2">
+                                        <button type="submit" class="toolbar-btn">{{t "action.update"}}</button>
+                                    </div>
+                                </form>
+                            </details>
+                            <form action="/ds/users/{{.ID}}/remove" method="post" style="display:inline;margin:0;">
+                                <input type="hidden" name="csrf" value="{{$.CSRFToken}}">
+                                <button type="submit" class="toolbar-btn">{{t "action.remove"}}</button>
+                            </form>
+                            {{end}}
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </section>
+    </div>
+</div>
+{{end}}

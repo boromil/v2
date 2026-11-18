@@ -29,6 +29,18 @@ type pageViewModel struct {
 	About            *aboutView
 	Sessions         []sessionView
 	CurrentSessionID string
+	FlashError       string
+	FlashSuccess     string
+	Integrations     []integrationSectionView
+	APIKeys          []apiKeyView
+	Users            []userView
+	HasPassword      bool
+	Passkeys         []passkeyView
+	WebAuthnEnabled  bool
+	OAuth2Provider   string
+	OIDCProviderName string
+	HasGoogleID      bool
+	HasOIDCID        bool
 }
 
 type aboutView struct {

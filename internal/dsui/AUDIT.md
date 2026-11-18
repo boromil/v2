@@ -68,6 +68,56 @@ Each stage lands as separate Conventional Commits, one logical change each, with
 - Live server regression: login → unread → entry open (mark-on-view, media proxy URLs, title) → star → status toggle → search → feed click (D1 check: correct list) → offset overflow (D5 check) → sorting pref flip (D4 check)
 - Commit after each verified logical change
 
+## Settings integration, round 14 — native admin pages (2026-11-18)
+
+The settings nav used to link Integrations, Authentication, API keys, and Users to the
+classic UI, so those four clicks dropped the reader look entirely (classic sidebar,
+classic typography, classic forms). They are now native pages in the same shell:
+`page_nav` header, `.settings-section` blocks, shared flash banners, sticky save bar.
+
+### Pages
+
+| Page | Route | Notes |
+|------|-------|-------|
+| Integrations | `/ds/integrations` (GET, POST) | All 32 services with their fields, rendered from one data table (`integrationSections`) instead of a 750-line template. Each service is a collapsible block whose first field is the enable checkbox; enabled services open by default and show a dot in the summary. Fever and Google Reader show their endpoint, LinkTaco its visibility hint. |
+| API keys | `/ds/keys` (GET, POST, POST `/ds/keys/{id}/remove`) | Create form plus a table (description, token, last used, created, remove). Hidden when the API is disabled. |
+| Users | `/ds/users` (GET, POST, POST `/ds/users/{id}`, POST `/ds/users/{id}/remove`) | Admin only. Create form, table with per-user inline edit (username, password, administrator flag) and remove. Your own account shows "(Current Session)" and no actions: password changes go through Authentication, which asks for the current password. |
+| Authentication | `/ds/authentication` (GET, POST `/ds/passkeys/{handle}/rename`, POST `/ds/passkeys/{handle}/remove`) | Password change, linked Google/OIDC accounts (link and unlink through the existing OAuth2 routes), and passkey list with rename and remove. |
+
+### Shared logic, not a copy
+
+The integration update rules (Fever token derivation, Google Reader password hashing,
+webhook secret generation, duplicate username checks, LinkTaco validation) moved into
+`form.IntegrationForm.Apply`, which the classic `updateIntegration` handler now calls too.
+There is one implementation; the two UIs only differ in markup.
+
+### Cleanup
+
+- The password section moved out of `/ds/settings` and lives on the Authentication page,
+  matching the classic UI's split (settings for preferences, authentication for
+  credentials).
+- Flash messages are shared: `setFlashError`/`setFlashSuccess` and one `flash_banners`
+  partial render both the error and success banners on settings, integrations, keys,
+  users, and authentication.
+- The settings sidebar now only links to `/ds/*` pages.
+
+### Known exception
+
+Registering a **new** passkey still opens the classic Authentication page: the WebAuthn
+ceremony needs browser-side credential creation (`navigator.credentials.create`) that is
+not ported to the Datastar UI yet. Listing, renaming, and deleting passkeys are native.
+
+### Verification
+
+- `go build ./...`, `go vet ./...`, `go test ./...`, `make test` (race), `gofmt -l .` clean.
+- New tests: integrations page renders every service, integration save persists and
+  flashes, API keys list/create/remove, users page admin-only plus user creation,
+  authentication page renders the password form.
+- Live: `/ds/integrations` renders all services and saves with a green "Preferences
+  saved!" banner; `/ds/keys` lists a seeded key and its remove button; `/ds/users` shows
+  the current account without actions and a second account with Edit/Remove; the
+  settings sidebar links only to `/ds/*`.
+
 ## Refinement pass, round 13 — look, feel, usage (2026-11-18)
 
 Polish pass on top of the visual audit, driven by screenshots of the unread, search,

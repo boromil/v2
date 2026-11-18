@@ -1,0 +1,53 @@
+{{define "api_keys"}}
+<div class="settings-page">
+    {{template "page_nav" .}}
+    <div class="settings-content">
+        {{template "flash_banners" .}}
+
+        <section class="settings-section">
+            <h3 class="settings-heading">{{t "menu.create_api_key"}}</h3>
+            <form action="/ds/keys" method="post">
+                <input type="hidden" name="csrf" value="{{.CSRFToken}}">
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                    <input type="text" name="description" required maxlength="255" class="settings-input" style="flex:1;"
+                        placeholder="{{t "page.api_keys.table.description"}}" autocomplete="off">
+                    <button type="submit" class="toolbar-btn primary">{{t "action.save"}}</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="settings-section">
+            <h3 class="settings-heading">{{t "page.api_keys.title"}}</h3>
+            {{if .APIKeys}}
+            <table class="page-table">
+                <thead>
+                    <tr>
+                        <th>{{t "page.api_keys.table.description"}}</th>
+                        <th>{{t "page.api_keys.table.token"}}</th>
+                        <th>{{t "page.api_keys.table.last_used_at"}}</th>
+                        <th>{{t "page.api_keys.table.created_at"}}</th>
+                        <th>{{t "page.api_keys.table.actions"}}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .APIKeys}}
+                    <tr data-api-key-row="{{.ID}}">
+                        <td>{{.Description}}</td>
+                        <td><code class="api-key-token">{{.Token}}</code></td>
+                        <td>{{if .HasBeenUsed}}{{elapsed .LastUsedAt}}{{else}}{{t "page.api_keys.never_used"}}{{end}}</td>
+                        <td>{{elapsed .CreatedAt}}</td>
+                        <td>
+                            <form action="/ds/keys/{{.ID}}/remove" method="post" style="display:inline;margin:0;">
+                                <input type="hidden" name="csrf" value="{{$.CSRFToken}}">
+                                <button type="submit" class="toolbar-btn">{{t "action.remove"}}</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+            {{end}}
+        </section>
+    </div>
+</div>
+{{end}}

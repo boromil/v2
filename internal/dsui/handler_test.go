@@ -3488,3 +3488,187 @@ func TestEmptySearchFallsBackToUnread(t *testing.T) {
 		t.Error("read entries must not be listed by an empty search")
 	}
 }
+
+// TestShowIntegrationsPage verifies the native integrations page renders the
+// services and their enable checkboxes.
+func TestShowIntegrationsPage(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	handler := Serve(store, worker.NewPool(store, 1))
+	req := httptest.NewRequest(http.MethodGet, "/ds/integrations", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	body := w.Body.String()
+	for _, marker := range []string{
+		`action="/ds/integrations"`,
+		`name="gotify_enabled"`,
+		`name="gotify_url"`,
+		`name="ntfy_topic"`,
+		`name="webhook_enabled"`,
+		"Push entries to Gotify",
+	} {
+		if !strings.Contains(body, marker) {
+			t.Errorf("expected %q in the integrations page", marker)
+		}
+	}
+	if !strings.Contains(body, "<title>Integrations — Miniflux</title>") {
+		t.Error("expected the integrations page title")
+	}
+}
+
+// TestSaveIntegrations verifies the integration form persists and flashes.
+func TestSaveIntegrations(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	w := postForm(t, store, user, "/ds/integrations", map[string]string{
+		"gotify_enabled":  "1",
+		"gotify_url":      "https://gotify.example.com",
+		"gotify_token":    "secret-token",
+		"gotify_priority": "5",
+	})
+	if w.Code != http.StatusFound {
+		t.Fatalf("expected 302, got %d: %s", w.Code, w.Body.String())
+	}
+
+	integration, err := store.Integration(user.ID)
+	if err != nil {
+		t.Fatalf("fetch integration: %v", err)
+	}
+	if !integration.GotifyEnabled || integration.GotifyURL != "https://gotify.example.com" || integration.GotifyPriority != 5 {
+		t.Errorf("expected the gotify settings to be persisted, got %+v", integration)
+	}
+
+	var flashed bool
+	for _, cookie := range w.Result().Cookies() {
+		if cookie.Name == "dsui_flash_success" && cookie.Value != "" {
+			flashed = true
+		}
+	}
+	if !flashed {
+		t.Error("saving integrations must flash a success message")
+	}
+}
+
+// TestShowAPIKeysPage verifies the API keys page renders and creates a key.
+func TestShowAPIKeysPage(t *testing.T) {
+	ensureTestConfig(t)
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	handler := Serve(store, worker.NewPool(store, 1))
+	req := httptest.NewRequest(http.MethodGet, "/ds/keys", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), `action="/ds/keys"`) {
+		t.Error("expected the API key creation form")
+	}
+
+	create := postForm(t, store, user, "/ds/keys", map[string]string{"description": "laptop"})
+	if create.Code != http.StatusFound {
+		t.Fatalf("expected 302, got %d: %s", create.Code, create.Body.String())
+	}
+
+	keys, err := store.APIKeys(user.ID)
+	if err != nil {
+		t.Fatalf("list api keys: %v", err)
+	}
+	if len(keys) != 1 || keys[0].Description != "laptop" {
+		t.Fatalf("expected one API key named laptop, got %+v", keys)
+	}
+
+	remove := postForm(t, store, user, "/ds/keys/"+itoa(keys[0].ID)+"/remove", nil)
+	if remove.Code != http.StatusFound {
+		t.Fatalf("expected 302, got %d", remove.Code)
+	}
+	keys, _ = store.APIKeys(user.ID)
+	if len(keys) != 0 {
+		t.Errorf("expected the API key to be removed, got %+v", keys)
+	}
+}
+
+// TestShowUsersPage verifies the admin-only user management page.
+func TestShowUsersPage(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	admin := mtest.CreateTestAdminUser(t, store)
+
+	handler := Serve(store, worker.NewPool(store, 1))
+	req := httptest.NewRequest(http.MethodGet, "/ds/users", nil)
+	req, _ = authenticateTestSession(t, store, req, admin)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, `action="/ds/users"`) || !strings.Contains(body, admin.Username) {
+		t.Error("expected the user creation form and the user list")
+	}
+
+	// Creating a user from the page.
+	create := postForm(t, store, admin, "/ds/users", map[string]string{
+		"username":     "reader",
+		"password":     "password123",
+		"confirmation": "password123",
+	})
+	if create.Code != http.StatusFound {
+		t.Fatalf("expected 302, got %d: %s", create.Code, create.Body.String())
+	}
+	created, err := store.UserByUsername("reader")
+	if err != nil || created == nil {
+		t.Fatalf("expected the user to be created: %v", err)
+	}
+}
+
+// TestShowUsersPageRequiresAdmin verifies regular users cannot manage accounts.
+func TestShowUsersPageRequiresAdmin(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	handler := Serve(store, worker.NewPool(store, 1))
+	req := httptest.NewRequest(http.MethodGet, "/ds/users", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("expected 403, got %d", w.Code)
+	}
+}
+
+// TestShowAuthenticationPage verifies the native authentication page renders
+// the password form.
+func TestShowAuthenticationPage(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+
+	handler := Serve(store, worker.NewPool(store, 1))
+	req := httptest.NewRequest(http.MethodGet, "/ds/authentication", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, `action="/ds/sse/password"`) {
+		t.Error("expected the password form")
+	}
+	if !strings.Contains(body, `name="current_password"`) {
+		t.Error("expected the current password field")
+	}
+}

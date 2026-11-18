@@ -1,0 +1,8 @@
+{{define "flash_banners"}}
+{{if .FlashError}}
+<div class="flash-banner flash-error" role="alert">{{.FlashError}}</div>
+{{end}}
+{{if .FlashSuccess}}
+<div class="flash-banner flash-success" role="status">{{.FlashSuccess}}</div>
+{{end}}
+{{end}}

@@ -1,0 +1,80 @@
+{{define "authentication"}}
+<div class="settings-page">
+    {{template "page_nav" .}}
+    <div class="settings-content">
+        {{template "flash_banners" .}}
+
+        {{template "password_section" .}}
+
+        {{if or .HasGoogleID (eq .OAuth2Provider "google")}}
+        <section id="google" class="settings-section">
+            <h3 class="settings-heading">{{t "form.prefs.fieldset.google_authentication"}}</h3>
+            {{if .HasGoogleID}}
+            <form action="/oauth2/google/unlink" method="post">
+                <input type="hidden" name="csrf" value="{{.CSRFToken}}">
+                <button type="submit" class="toolbar-btn danger">{{t "page.settings.unlink_google_account"}}</button>
+            </form>
+            {{else}}
+            <a href="/oauth2/google/redirect" class="toolbar-btn no-underline">{{t "page.settings.link_google_account"}}</a>
+            {{end}}
+        </section>
+        {{end}}
+
+        {{if or .HasOIDCID (eq .OAuth2Provider "oidc")}}
+        <section id="oidc" class="settings-section">
+            <h3 class="settings-heading">{{t "form.prefs.fieldset.oidc_authentication" .OIDCProviderName}}</h3>
+            {{if .HasOIDCID}}
+            <form action="/oauth2/oidc/unlink" method="post">
+                <input type="hidden" name="csrf" value="{{.CSRFToken}}">
+                <button type="submit" class="toolbar-btn danger">{{t "page.settings.unlink_oidc_account" .OIDCProviderName}}</button>
+            </form>
+            {{else}}
+            <a href="/oauth2/oidc/redirect" class="toolbar-btn no-underline">{{t "page.settings.link_oidc_account" .OIDCProviderName}}</a>
+            {{end}}
+        </section>
+        {{end}}
+
+        {{if .WebAuthnEnabled}}
+        <section id="passkeys" class="settings-section">
+            <h3 class="settings-heading">{{t "page.settings.webauthn.passkeys"}}</h3>
+            {{if .Passkeys}}
+            <table class="page-table">
+                <thead>
+                    <tr>
+                        <th>{{t "page.settings.webauthn.passkey_name"}}</th>
+                        <th>{{t "page.settings.webauthn.added_on"}}</th>
+                        <th>{{t "page.settings.webauthn.last_seen_on"}}</th>
+                        <th>{{t "page.settings.webauthn.actions"}}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .Passkeys}}
+                    <tr data-passkey-row="{{.Handle}}">
+                        <td>
+                            <form action="/ds/passkeys/{{.Handle}}/rename" method="post" style="display:flex; gap:0.5rem; align-items:center;">
+                                <input type="hidden" name="csrf" value="{{$.CSRFToken}}">
+                                <input type="text" name="name" value="{{.Name}}" required maxlength="100" class="settings-input" style="max-width:14rem;">
+                                <button type="submit" class="toolbar-btn">{{t "action.update"}}</button>
+                            </form>
+                        </td>
+                        <td>{{if .AddedOn.IsZero}}-{{else}}{{elapsed .AddedOn}}{{end}}</td>
+                        <td>{{if .HasBeenUsed}}{{elapsed .LastSeenOn}}{{else}}-{{end}}</td>
+                        <td>
+                            <form action="/ds/passkeys/{{.Handle}}/remove" method="post" style="display:inline;margin:0;">
+                                <input type="hidden" name="csrf" value="{{$.CSRFToken}}">
+                                <button type="submit" class="toolbar-btn">{{t "action.remove"}}</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+            {{end}}
+            <p class="settings-help">
+                <a href="/authentication" class="toolbar-btn no-underline">{{t "page.settings.webauthn.register"}}</a>
+            </p>
+        </section>
+        {{end}}
+    </div>
+</div>
+{{end}}
