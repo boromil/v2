@@ -155,9 +155,9 @@ func (s *Storage) createEnclosure(tx *sql.Tx, enclosure *model.Enclosure) error 
 			(url, size, mime_type, entry_id, user_id, media_progression)
 		VALUES
 			($1, $2, $3, $4, $5, $6)
-		ON CONFLICT (user_id, entry_id, sha256(url::bytea)) DO NOTHING
+		ON CONFLICT (%s) DO NOTHING
 		%s
-	`, s.dialect.Returning("id"))
+	`, s.dialect.EnclosureConflictTarget(), s.dialect.Returning("id"))
 	if err := tx.QueryRow(
 		query,
 		enclosureURL,

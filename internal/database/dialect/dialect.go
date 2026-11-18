@@ -43,6 +43,9 @@ type Dialect interface {
 	ILIKE(column, value string) string
 	ExtractEpoch(column string) string
 	MD5(column string) string
+	// EnclosureConflictTarget returns the ON CONFLICT target matching the
+	// unique index on enclosures (user_id, entry_id, url hash).
+	EnclosureConflictTarget() string
 	JSONTypeof(column string) string
 	JSONExtract(column, path string) string
 	DateTrunc(unit, column string) string
@@ -168,6 +171,11 @@ func (d *PostgreSQLDialect) ExtractEpoch(column string) string {
 // MD5 returns the PostgreSQL MD5 function call.
 func (d *PostgreSQLDialect) MD5(column string) string {
 	return fmt.Sprintf("md5(%s)", column)
+}
+
+// EnclosureConflictTarget returns the PostgreSQL ON CONFLICT target for enclosures.
+func (d *PostgreSQLDialect) EnclosureConflictTarget() string {
+	return "user_id, entry_id, sha256(url::bytea)"
 }
 
 // JSONTypeof returns the PostgreSQL JSON type check.
@@ -425,6 +433,11 @@ func (d *SQLiteDialect) ExtractEpoch(column string) string {
 // MD5 returns the SQLite MD5 function call (requires custom function).
 func (d *SQLiteDialect) MD5(column string) string {
 	return fmt.Sprintf("hex(md5(%s))", column)
+}
+
+// EnclosureConflictTarget returns the SQLite ON CONFLICT target for enclosures.
+func (d *SQLiteDialect) EnclosureConflictTarget() string {
+	return "user_id, entry_id, md5(url)"
 }
 
 // JSONTypeof returns the SQLite JSON type check.

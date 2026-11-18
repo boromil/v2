@@ -63,7 +63,7 @@ func fuzzHTML(r *rand.Rand) string {
 func TestFuzzParseRulesNeverPanics(t *testing.T) {
 	r := rand.New(rand.NewPCG(61, 62))
 	for i := 0; i < 5000; i++ {
-		rules := parseRules(fuzzRuleText(r))
+		rules, _ := parseRules(fuzzRuleText(r))
 		for _, rule := range rules {
 			if rule.name == "" {
 				t.Fatalf("iter=%d: produced rule with empty name", i)
@@ -176,7 +176,7 @@ func FuzzParseRules(f *testing.F) {
 	f.Add("remove \"#a > .x, .y\"")
 	f.Add("\"unterminated")
 	f.Fuzz(func(t *testing.T, rulesText string) {
-		_ = parseRules(rulesText)
+		_, _ = parseRules(rulesText)
 	})
 }
 

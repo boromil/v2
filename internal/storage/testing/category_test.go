@@ -48,10 +48,18 @@ func TestCategoryIDExists(t *testing.T) {
 			user := CreateTestUser(t, s)
 			category := CreateTestCategory(t, s, user.ID)
 
-			if !s.CategoryIDExists(user.ID, category.ID) {
+			exists, err := s.CategoryIDExists(user.ID, category.ID)
+			if err != nil {
+				t.Fatalf("CategoryIDExists failed: %v", err)
+			}
+			if !exists {
 				t.Error("expected category ID to exist")
 			}
-			if s.CategoryIDExists(user.ID, 99999) {
+			exists, err = s.CategoryIDExists(user.ID, 99999)
+			if err != nil {
+				t.Fatalf("CategoryIDExists failed: %v", err)
+			}
+			if exists {
 				t.Error("expected nonexistent category ID to not exist")
 			}
 		})
@@ -179,7 +187,11 @@ func TestRemoveCategory(t *testing.T) {
 			if err := s.RemoveCategory(user.ID, category.ID); err != nil {
 				t.Fatalf("RemoveCategory failed: %v", err)
 			}
-			if s.CategoryIDExists(user.ID, category.ID) {
+			exists, err := s.CategoryIDExists(user.ID, category.ID)
+			if err != nil {
+				t.Fatalf("CategoryIDExists failed: %v", err)
+			}
+			if exists {
 				t.Error("expected category to be removed")
 			}
 		})

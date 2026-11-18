@@ -34,10 +34,18 @@ func TestFeedExists(t *testing.T) {
 			category := CreateTestCategory(t, s, user.ID)
 			feed := CreateTestFeed(t, s, user.ID, category.ID)
 
-			if !s.FeedExists(user.ID, feed.ID) {
+			exists, err := s.FeedExists(user.ID, feed.ID)
+			if err != nil {
+				t.Fatalf("FeedExists failed: %v", err)
+			}
+			if !exists {
 				t.Error("expected feed to exist")
 			}
-			if s.FeedExists(user.ID, 99999) {
+			exists, err = s.FeedExists(user.ID, 99999)
+			if err != nil {
+				t.Fatalf("FeedExists failed: %v", err)
+			}
+			if exists {
 				t.Error("expected feed 99999 to not exist")
 			}
 		})
@@ -190,7 +198,11 @@ func TestRemoveFeed(t *testing.T) {
 			if err := s.RemoveFeed(user.ID, feed.ID); err != nil {
 				t.Fatalf("RemoveFeed failed: %v", err)
 			}
-			if s.FeedExists(user.ID, feed.ID) {
+			exists, err := s.FeedExists(user.ID, feed.ID)
+			if err != nil {
+				t.Fatalf("FeedExists failed: %v", err)
+			}
+			if exists {
 				t.Error("expected feed to be removed")
 			}
 		})
@@ -285,11 +297,19 @@ func TestCategoryFeedExists(t *testing.T) {
 			category := CreateTestCategory(t, s, user.ID)
 			feed := CreateTestFeed(t, s, user.ID, category.ID)
 
-			if !s.CategoryFeedExists(user.ID, category.ID, feed.ID) {
+			exists, err := s.CategoryFeedExists(user.ID, category.ID, feed.ID)
+			if err != nil {
+				t.Fatalf("CategoryFeedExists failed: %v", err)
+			}
+			if !exists {
 				t.Error("expected category feed to exist")
 			}
 			otherCategory := CreateTestCategoryWithTitle(t, s, user.ID, "Other Category")
-			if s.CategoryFeedExists(user.ID, otherCategory.ID, feed.ID) {
+			exists, err = s.CategoryFeedExists(user.ID, otherCategory.ID, feed.ID)
+			if err != nil {
+				t.Fatalf("CategoryFeedExists failed: %v", err)
+			}
+			if exists {
 				t.Error("expected feed to not exist in wrong category")
 			}
 		})
