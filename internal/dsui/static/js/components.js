@@ -182,3 +182,25 @@ if (!customElements.get("entry-row")) {
     pane.scrollTop = 0;
   }).observe(pane, { childList: true, subtree: true, characterData: true });
 })();
+
+// Share link: clicking the public URL field copies it and flashes the field.
+(function () {
+  "use strict";
+
+  document.addEventListener("click", function (event) {
+    var field = event.target && event.target.closest && event.target.closest(".share-url");
+    if (!field) return;
+
+    field.select();
+
+    // Flash immediately: the field is selected either way, and the clipboard
+    // API is unavailable on insecure origins.
+    field.classList.add("copied");
+    setTimeout(function () { field.classList.remove("copied"); }, 1200);
+
+    if (!navigator.clipboard || !navigator.clipboard.writeText) return;
+    navigator.clipboard.writeText(field.value).catch(function () {
+      field.classList.remove("copied");
+    });
+  });
+})();

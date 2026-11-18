@@ -68,6 +68,20 @@ Each stage lands as separate Conventional Commits, one logical change each, with
 - Live server regression: login → unread → entry open (mark-on-view, media proxy URLs, title) → star → status toggle → search → feed click (D1 check: correct list) → offset overflow (D5 check) → sorting pref flip (D4 check)
 - Commit after each verified logical change
 
+## Share link, round 15 (2026-11-18)
+
+Sharing worked but showed nothing useful: the toolbar replaced the "Share" button with
+another button labelled "Share" (the public-link label) plus "Unshare", so the reader
+could not see or copy the URL.
+
+- The shared state now shows the **public link itself** in a read-only monospace field,
+  followed by "Unshare". Clicking the field selects the URL and copies it to the
+  clipboard; the field flashes green as confirmation. On insecure origins (plain HTTP on
+  a LAN address) the Clipboard API is unavailable, so the click still selects the text and
+  the reader can copy it manually.
+- `entryDetailView` carries `ShareURL` (absolute URL built from `ROOT_URL`) so the SSE
+  re-render and the first render agree.
+
 ## Settings integration, round 14 — native admin pages (2026-11-18)
 
 The settings nav used to link Integrations, Authentication, API keys, and Users to the

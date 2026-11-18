@@ -2113,7 +2113,7 @@ func TestSSEToggleShareUpdatesToolbarButton(t *testing.T) {
 	if want := printer.Print("entry.unshare.label"); !strings.Contains(body, want) {
 		t.Errorf("shared state must show the %q button\nbody:\n%s", want, body)
 	}
-	if !strings.Contains(body, `href="/share/`) {
+	if !strings.Contains(body, `class="share-url"`) || !strings.Contains(body, "/share/") {
 		t.Errorf("shared state must expose the public share link\nbody:\n%s", body)
 	}
 
@@ -3670,5 +3670,22 @@ func TestShowAuthenticationPage(t *testing.T) {
 	}
 	if !strings.Contains(body, `name="current_password"`) {
 		t.Error("expected the current password field")
+	}
+}
+
+// TestShareURL verifies the absolute public link shown in the toolbar.
+func TestShareURL(t *testing.T) {
+	ensureTestConfig(t)
+
+	if got := shareURL(""); got != "" {
+		t.Errorf("expected no URL without a share code, got %q", got)
+	}
+
+	got := shareURL("abc123")
+	if !strings.HasSuffix(got, "/share/abc123") {
+		t.Errorf("expected the share path in %q", got)
+	}
+	if strings.HasSuffix(config.Opts.RootURL(), "/") && strings.Contains(got, "//share/") {
+		t.Errorf("expected no double slash in %q", got)
 	}
 }

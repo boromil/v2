@@ -37,9 +37,9 @@
 {{define "toolbar_share_button"}}
 <span class="inline-flex items-center" id="toolbar-share-btn-{{.ID}}">
 {{if .ShareCode}}
-<a href="/share/{{.ShareCode}}" target="_blank" rel="noopener" class="toolbar-btn no-underline"
-    title="{{t "entry.shared_entry.title"}}"
-    data-action="shared-link">{{t "entry.shared_entry.label"}}</a>
+<input type="text" class="share-url" value="{{.ShareURL}}" readonly
+    title="{{.ShareURL}}"
+    data-action="shared-link">
 <button class="toolbar-btn"
     data-action="toggle-share"
     data-on:click="@post('/ds/sse/share/{{.ID}}')">{{t "entry.unshare.label"}}</button>

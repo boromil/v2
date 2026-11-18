@@ -2514,3 +2514,45 @@ html[data-theme="dark"] .toolbar-btn.danger {
 html[data-theme="dark"] .toolbar-btn.danger:hover {
   background-color: #3b1d24;
 }
+
+/* Public share link shown in the entry toolbar once an entry is shared. */
+.share-url {
+  width: 20rem;
+  max-width: 40vw;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  color: var(--color-gray-700);
+  background: var(--color-white);
+  border: 1px solid var(--color-gray-300);
+  border-radius: 0.25rem;
+  cursor: copy;
+  transition: border-color 120ms, background-color 120ms, color 120ms;
+}
+.share-url:hover {
+  border-color: var(--color-blue-400);
+}
+.share-url:focus {
+  outline: 2px solid var(--color-blue-500);
+  outline-offset: 1px;
+}
+/* Clicking the field copies the link: flash it green as confirmation. */
+.share-url.copied {
+  border-color: var(--color-green-500);
+  background: #ecfdf5;
+  color: #047857;
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) .share-url {
+    color: #c0c0d0;
+    background: #1a1a2e;
+    border-color: #33334d;
+  }
+}
+
+html[data-theme="dark"] .share-url {
+  color: #c0c0d0;
+  background: #1a1a2e;
+  border-color: #33334d;
+}

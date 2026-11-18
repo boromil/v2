@@ -287,6 +287,7 @@ type entryDetailView struct {
 	Feed            *feedRef
 	Status          string
 	ShareCode       string
+	ShareURL        string
 	Enclosures      []enclosureView
 	Tags            []string
 	CommentsURL     string
@@ -1740,6 +1741,7 @@ func (h *handler) sseToggleShare(w http.ResponseWriter, r *http.Request) {
 	shareData := map[string]any{
 		"ID":        entry.ID,
 		"ShareCode": entry.ShareCode,
+		"ShareURL":  shareURL(entry.ShareCode),
 	}
 	var shareBuf bytes.Buffer
 	if err := h.tplFor(user.Language).ExecuteTemplate(&shareBuf, "toolbar_share_button", shareData); err != nil {
@@ -1756,6 +1758,15 @@ func (h *handler) sseToggleShare(w http.ResponseWriter, r *http.Request) {
 
 // ─── Query helpers ───────────────────────────────────────────────────────
 
+// shareURL returns the absolute public link of a shared entry, so the reader
+// can show and copy it.
+func shareURL(shareCode string) string {
+	if shareCode == "" {
+		return ""
+	}
+	return strings.TrimSuffix(config.Opts.RootURL(), "/") + "/share/" + shareCode
+}
+
 func entryToDetailView(entry *model.Entry, user *model.User) *entryDetailView {
 	d := &entryDetailView{
 		ID:     entry.ID,
@@ -1770,6 +1781,7 @@ func entryToDetailView(entry *model.Entry, user *model.User) *entryDetailView {
 		URL:             entry.URL,
 		Status:          entry.Status,
 		ShareCode:       entry.ShareCode,
+		ShareURL:        shareURL(entry.ShareCode),
 		Tags:            entry.Tags,
 		CommentsURL:     entry.CommentsURL,
 		ReadingTime:     entry.ReadingTime,
