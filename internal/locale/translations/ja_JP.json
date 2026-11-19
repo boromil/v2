@@ -487,6 +487,7 @@
     ],
     "page.categories.feeds": "フィード一覧",
     "page.categories.no_feed": "フィードはありません。",
+    "page.categories.confirm_remove": "このカテゴリを削除しますか?",
     "page.categories.title": "カテゴリ",
     "page.categories_count": [
         "%d 件のカテゴリ"
@@ -507,6 +508,10 @@
     "page.feeds.last_check": "最終チェック:",
     "page.feeds.next_check": "次回チェック:",
     "page.feeds.read_counter": "既読記事の数",
+    "page.feeds.confirm_remove": "このフィードとすべてのエントリーを削除しますか?",
+    "page.feeds.filter_placeholder": "フィードを絞り込む",
+    "page.feeds.no_filter_match": "このフィルターに一致するフィードはありません。",
+    "page.feeds.only_errors": "エラーのあるフィードのみ",
     "page.feeds.title": "フィード一覧",
     "page.footer.elevator": "トップに戻る",
     "page.history.title": "履歴",

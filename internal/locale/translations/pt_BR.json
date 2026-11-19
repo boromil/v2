@@ -491,6 +491,7 @@
     ],
     "page.categories.feeds": "Inscrições",
     "page.categories.no_feed": "Sem fonte.",
+    "page.categories.confirm_remove": "Remover esta categoria?",
     "page.categories.title": "Categorias",
     "page.categories_count": [
         "%d categoria",
@@ -513,6 +514,10 @@
     "page.feeds.last_check": "Última verificação:",
     "page.feeds.next_check": "Próxima verificação:",
     "page.feeds.read_counter": "Número de itens lidos",
+    "page.feeds.confirm_remove": "Remover esta fonte e todas as suas entradas?",
+    "page.feeds.filter_placeholder": "Filtrar fontes",
+    "page.feeds.no_filter_match": "Nenhuma fonte corresponde a este filtro.",
+    "page.feeds.only_errors": "Somente fontes com erros",
     "page.feeds.title": "Fontes",
     "page.footer.elevator": "Voltar ao topo",
     "page.history.title": "Histórico",

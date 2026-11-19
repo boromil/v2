@@ -68,6 +68,41 @@ Each stage lands as separate Conventional Commits, one logical change each, with
 - Live server regression: login → unread → entry open (mark-on-view, media proxy URLs, title) → star → status toggle → search → feed click (D1 check: correct list) → offset overflow (D5 check) → sorting pref flip (D4 check)
 - Commit after each verified logical change
 
+## Feeds settings UX, round 16 (2026-11-19)
+
+The "Kanały" section of `/ds/settings` was a flat dump: one unstyled list, no counts,
+no way to find a feed among many, a red error string wedged into the meta row, and a
+"Remove" button that deleted a feed and all its entries on the first click.
+
+Options weighed for each problem:
+
+| Problem | Options | Chosen |
+|---|---|---|
+| Where feeds live | keep the section inline / move to a dedicated `/ds/feeds` page like the other native settings pages | inline, restructured. A dedicated page is the natural follow-up once feeds get per-feed editing, which needs its own page anyway |
+| Finding a feed | server-side search form / client-side filter / jump-to-letter | client-side filter over a server-built haystack (title, host, feed URL, category). Instant, no round trip, works while offline-ish |
+| Error state | red text in the meta row / warning icon only / badge + message line / inline banner per feed | badge next to the title (count) + message on its own muted line + section-level "N errors" in the header |
+| Deleting | native `confirm()` / modal / undo-after-delete / two-step inline | two-step inline: the row stays put, only the action area becomes "Remove this feed and all of its entries? [Remove] [cancel]". No modal machinery, no lost context, Escape cancels, and the form still submits without JS |
+
+Implemented:
+
+- Header row with the feed count and an error count badge.
+- Add-feed form and the filter bar share one row rhythm; the filter shows `shown / total`
+  while active and an empty state when nothing matches.
+- Feed rows: title links to the reader view, host as the site link, category chip, unread
+  count (hidden when zero), and a `.feed-row-actions` remove form.
+- Categories: the name reads as text until hovered or focused (borderless input), "Update"
+  is disabled until the name actually changes, count as plain text, remove asks first.
+- `FeedsWithCounters` feeds the unread counts; the view model carries `Host`, `SearchText`
+  and `FeedErrorCount` so no template-side URL parsing is needed.
+- Five new locale keys (`page.feeds.filter_placeholder`, `page.feeds.only_errors`,
+  `page.feeds.no_filter_match`, `page.feeds.confirm_remove`,
+  `page.categories.confirm_remove`) in all 24 locales.
+- Dark mode for every new surface; `.toolbar-btn:disabled` finally has a visible state.
+
+Verified live (7 seeded feeds, 3 with parsing errors): filter by text → `1 / 7`, errors-only
+→ `3 / 7`, no match → empty state, first Remove click → no navigation + inline question,
+Escape → restored, confirm → feed gone.
+
 ## Share link, round 15 (2026-11-18)
 
 Sharing worked but showed nothing useful: the toolbar replaced the "Share" button with

@@ -495,6 +495,7 @@
     ],
     "page.categories.feeds": "Kanały",
     "page.categories.no_feed": "Brak kanałów.",
+    "page.categories.confirm_remove": "Usunąć tę kategorię?",
     "page.categories.title": "Kategorie",
     "page.categories_count": [
         "%d kategoria",
@@ -519,6 +520,10 @@
     "page.feeds.last_check": "Ostatnia aktualizacja:",
     "page.feeds.next_check": "Następna aktualizacja:",
     "page.feeds.read_counter": "Liczba przeczytanych wpisów",
+    "page.feeds.confirm_remove": "Usunąć ten kanał wraz ze wszystkimi wpisami?",
+    "page.feeds.filter_placeholder": "Filtruj kanały",
+    "page.feeds.no_filter_match": "Żaden kanał nie pasuje do filtra.",
+    "page.feeds.only_errors": "Tylko kanały z błędami",
     "page.feeds.title": "Kanały",
     "page.footer.elevator": "Wróć do góry",
     "page.history.title": "Historia",

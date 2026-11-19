@@ -240,6 +240,7 @@ type appViewModel struct {
 	Languages          []selectOption
 	Timezones          []selectOption
 	Feeds              []settingsFeedView
+	FeedErrorCount     int
 	Categories         []settingsCategoryView
 }
 
@@ -247,11 +248,16 @@ type settingsFeedView struct {
 	ID                int64
 	Title             string
 	SiteURL           string
+	Host              string
 	FeedURL           string
 	Category          string
 	CategoryID        int64
+	UnreadCount       int
 	ParsingErrorCount int
 	ParsingErrorMsg   string
+	// SearchText is the lowercased haystack the client-side filter matches
+	// against, so the JS does not have to scrape row text.
+	SearchText string
 }
 
 type settingsCategoryView struct {
@@ -466,12 +472,13 @@ func (h *handler) showApp(w http.ResponseWriter, r *http.Request) {
 // settingsViewModel builds the view model shared by the settings page render
 // and the post-save SSE re-render.
 func (h *handler) settingsViewModel(user *model.User, form *settingsFormData, flashError, flashSuccess string, r *http.Request) appViewModel {
-	feeds, err := h.store.Feeds(user.ID)
+	feeds, err := h.store.FeedsWithCounters(user.ID)
 	if err != nil {
 		slog.Error("dsui: unable to list feeds for settings", slog.Int64("user_id", user.ID), slog.Any("error", err))
 		feeds = nil
 	}
 	feedViews := make([]settingsFeedView, 0, len(feeds))
+	feedErrorCount := 0
 	for _, f := range feeds {
 		categoryTitle := ""
 		if f.Category != nil {
@@ -481,15 +488,25 @@ func (h *handler) settingsViewModel(user *model.User, form *settingsFormData, fl
 		if f.Category != nil {
 			categoryID = f.Category.ID
 		}
+		if f.ParsingErrorCount > 0 {
+			feedErrorCount++
+		}
+		host := urlHost(f.SiteURL)
+		if host == "" {
+			host = urlHost(f.FeedURL)
+		}
 		feedViews = append(feedViews, settingsFeedView{
 			ID:                f.ID,
 			Title:             f.Title,
 			SiteURL:           f.SiteURL,
+			Host:              host,
 			FeedURL:           f.FeedURL,
 			Category:          categoryTitle,
 			CategoryID:        categoryID,
+			UnreadCount:       f.UnreadCount,
 			ParsingErrorCount: f.ParsingErrorCount,
 			ParsingErrorMsg:   f.ParsingErrorMsg,
+			SearchText:        strings.ToLower(f.Title + " " + host + " " + f.FeedURL + " " + categoryTitle),
 		})
 	}
 
@@ -534,6 +551,7 @@ func (h *handler) settingsViewModel(user *model.User, form *settingsFormData, fl
 		Languages:          languageOptions(),
 		Timezones:          timezoneOptions(),
 		Feeds:              feedViews,
+		FeedErrorCount:     feedErrorCount,
 		Categories:         categoryViews,
 	}
 }
@@ -1766,6 +1784,17 @@ func shareURL(shareCode string) string {
 		return ""
 	}
 	return strings.TrimSuffix(config.Opts.BaseURL(), "/") + "/share/" + shareCode
+}
+
+// urlHost returns the hostname of a URL, without the scheme or path, so a feed
+// row can show a short recognizable origin. Returns "" when the URL is empty or
+// unparsable.
+func urlHost(rawURL string) string {
+	parsed, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil {
+		return ""
+	}
+	return parsed.Hostname()
 }
 
 func entryToDetailView(entry *model.Entry, user *model.User) *entryDetailView {

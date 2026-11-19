@@ -487,6 +487,7 @@
     ],
     "page.categories.feeds": "檢視 Feeds",
     "page.categories.no_feed": "沒有 Feed",
+    "page.categories.confirm_remove": "刪除此分類?",
     "page.categories.title": "分類",
     "page.categories_count": [
         "%d 個分類"
@@ -507,6 +508,10 @@
     "page.feeds.last_check": "最後檢查時間：",
     "page.feeds.next_check": "下次檢查時間：",
     "page.feeds.read_counter": "已讀文章數",
+    "page.feeds.confirm_remove": "刪除此訂閱源及其所有文章?",
+    "page.feeds.filter_placeholder": "篩選訂閱源",
+    "page.feeds.no_filter_match": "沒有訂閱源符合此篩選條件。",
+    "page.feeds.only_errors": "僅顯示有錯誤的訂閱源",
     "page.feeds.title": "Feeds",
     "page.footer.elevator": "返回頂部",
     "page.history.title": "歷史",

@@ -491,6 +491,7 @@
     ],
     "page.categories.feeds": "Feeds",
     "page.categories.no_feed": "Geen feed.",
+    "page.categories.confirm_remove": "Deze categorie verwijderen?",
     "page.categories.title": "Categorieën",
     "page.categories_count": [
         "%d categorie",
@@ -513,6 +514,10 @@
     "page.feeds.last_check": "Laatste controle:",
     "page.feeds.next_check": "Volgende controle:",
     "page.feeds.read_counter": "Aantal gelezen artikelen",
+    "page.feeds.confirm_remove": "Deze feed en al zijn items verwijderen?",
+    "page.feeds.filter_placeholder": "Feeds filteren",
+    "page.feeds.no_filter_match": "Geen feed komt overeen met dit filter.",
+    "page.feeds.only_errors": "Alleen feeds met fouten",
     "page.feeds.title": "Feeds",
     "page.footer.elevator": "Terug naar boven",
     "page.history.title": "Geschiedenis",

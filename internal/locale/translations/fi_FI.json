@@ -491,6 +491,7 @@
     ],
     "page.categories.feeds": "Tilaukset",
     "page.categories.no_feed": "Ei syötettä.",
+    "page.categories.confirm_remove": "Poistetaanko tämä luokka?",
     "page.categories.title": "Kategoriat",
     "page.categories_count": [
         "%d kategoria",
@@ -513,6 +514,10 @@
     "page.feeds.last_check": "Viimeisin tarkistus:",
     "page.feeds.next_check": "Seuraava tarkistus:",
     "page.feeds.read_counter": "Luettujen artikkeleiden määrä",
+    "page.feeds.confirm_remove": "Poistetaanko tämä syöte ja kaikki sen merkinnät?",
+    "page.feeds.filter_placeholder": "Suodata syötteet",
+    "page.feeds.no_filter_match": "Mikään syöte ei vastaa suodatinta.",
+    "page.feeds.only_errors": "Vain syötteet, joissa on virheitä",
     "page.feeds.title": "Syötteet",
     "page.footer.elevator": "Takaisin ylös",
     "page.history.title": "Historia",

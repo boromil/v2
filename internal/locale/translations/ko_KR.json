@@ -487,6 +487,7 @@
     ],
     "page.categories.feeds": "피드 목록",
     "page.categories.no_feed": "피드가 없습니다.",
+    "page.categories.confirm_remove": "이 카테고리를 삭제할까요?",
     "page.categories.title": "카테고리",
     "page.categories_count": [
         "카테고리 %d개"
@@ -507,6 +508,10 @@
     "page.feeds.last_check": "마지막 확인:",
     "page.feeds.next_check": "다음 확인:",
     "page.feeds.read_counter": "읽은 게시물 수",
+    "page.feeds.confirm_remove": "이 피드와 모든 항목을 삭제할까요?",
+    "page.feeds.filter_placeholder": "피드 필터",
+    "page.feeds.no_filter_match": "이 필터와 일치하는 피드가 없습니다.",
+    "page.feeds.only_errors": "오류가 있는 피드만",
     "page.feeds.title": "피드 목록",
     "page.footer.elevator": "페이지 맨 위로 올라가기",
     "page.history.title": "기록",

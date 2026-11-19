@@ -491,6 +491,7 @@
     ],
     "page.categories.feeds": "सदस्यता ले",
     "page.categories.no_feed": "कोई फ़ीड नहीं है।",
+    "page.categories.confirm_remove": "यह श्रेणी हटाएँ?",
     "page.categories.title": "श्रेणियाँ",
     "page.categories_count": [
         "%d श्रेणी",
@@ -513,6 +514,10 @@
     "page.feeds.last_check": "आखरी जाँच",
     "page.feeds.next_check": "अगली जाँच:",
     "page.feeds.read_counter": "पड़े हुए विषयवस्तुया",
+    "page.feeds.confirm_remove": "यह फ़ीड और इसकी सभी प्रविष्टियाँ हटाएँ?",
+    "page.feeds.filter_placeholder": "फ़ीड फ़िल्टर करें",
+    "page.feeds.no_filter_match": "इस फ़िल्टर से कोई फ़ीड मेल नहीं खाती।",
+    "page.feeds.only_errors": "केवल त्रुटि वाली फ़ीड",
     "page.feeds.title": "फ़ीड",
     "page.footer.elevator": "ऊपर जाएँ",
     "page.history.title": "इतिहास",

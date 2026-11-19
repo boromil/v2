@@ -491,6 +491,7 @@
     ],
     "page.categories.feeds": "Feeds",
     "page.categories.no_feed": "No feed.",
+    "page.categories.confirm_remove": "Remove this category?",
     "page.categories.title": "Categories",
     "page.categories_count": [
         "%d category",
@@ -513,6 +514,10 @@
     "page.feeds.last_check": "Last check:",
     "page.feeds.next_check": "Next check:",
     "page.feeds.read_counter": "Number of read entries",
+    "page.feeds.confirm_remove": "Remove this feed and all of its entries?",
+    "page.feeds.filter_placeholder": "Filter feeds",
+    "page.feeds.no_filter_match": "No feed matches this filter.",
+    "page.feeds.only_errors": "Only feeds with errors",
     "page.feeds.title": "Feeds",
     "page.footer.elevator": "Back to top",
     "page.history.title": "History",

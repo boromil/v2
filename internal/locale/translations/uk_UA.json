@@ -495,6 +495,7 @@
     ],
     "page.categories.feeds": "Підписки",
     "page.categories.no_feed": "Немає стрічки.",
+    "page.categories.confirm_remove": "Видалити цю категорію?",
     "page.categories.title": "Категорії",
     "page.categories_count": [
         "%d категорія",
@@ -519,6 +520,10 @@
     "page.feeds.last_check": "Остання перевірка:",
     "page.feeds.next_check": "Наступна перевірка:",
     "page.feeds.read_counter": "Кількість прочитаних записів",
+    "page.feeds.confirm_remove": "Видалити цю стрічку та всі її записи?",
+    "page.feeds.filter_placeholder": "Фільтр стрічок",
+    "page.feeds.no_filter_match": "Жодна стрічка не відповідає фільтру.",
+    "page.feeds.only_errors": "Лише стрічки з помилками",
     "page.feeds.title": "Стрічки",
     "page.footer.elevator": "Повернутися нагору",
     "page.history.title": "Історія",

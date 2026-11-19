@@ -491,6 +491,7 @@
     ],
     "page.categories.feeds": "Abbonamenti",
     "page.categories.no_feed": "Nessun feed.",
+    "page.categories.confirm_remove": "Rimuovere questa categoria?",
     "page.categories.title": "Categorie",
     "page.categories_count": [
         "%d categoria",
@@ -513,6 +514,10 @@
     "page.feeds.last_check": "Ultimo controllo:",
     "page.feeds.next_check": "Prossimo controllo:",
     "page.feeds.read_counter": "Numero di voci lette",
+    "page.feeds.confirm_remove": "Rimuovere questo feed e tutte le sue voci?",
+    "page.feeds.filter_placeholder": "Filtra i feed",
+    "page.feeds.no_filter_match": "Nessun feed corrisponde a questo filtro.",
+    "page.feeds.only_errors": "Solo feed con errori",
     "page.feeds.title": "Feed",
     "page.footer.elevator": "Torna su",
     "page.history.title": "Cronologia",

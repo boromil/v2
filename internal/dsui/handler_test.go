@@ -2241,6 +2241,82 @@ func TestSettingsListsFeedsWithRemoveForms(t *testing.T) {
 	if !strings.Contains(body, `data-feed-row="`+itoa(feed.ID)+`"`) {
 		t.Errorf("settings must mark the feed row with data-feed-row %d\nbody:\n%s", feed.ID, body)
 	}
+
+	// Filtering is client-side, so the row must carry its own haystack and the
+	// section must expose the filter controls.
+	for _, marker := range []string{`data-feed-filter`, `data-feed-filter-errors`, `data-feed-list`, `data-feed-empty`} {
+		if !strings.Contains(body, marker) {
+			t.Errorf("settings must render the feed filter control %q\nbody:\n%s", marker, body)
+		}
+	}
+	if !strings.Contains(body, `data-feed-search="`+strings.ToLower(feed.Title)) {
+		t.Errorf("feed row must carry a lowercased search haystack\nbody:\n%s", body)
+	}
+
+	// Removal must ask first: the form carries the question and the cancel label
+	// for the inline confirmation.
+	printer := locale.NewPrinter(user.Language)
+	if want := `data-confirm="` + printer.Print("page.feeds.confirm_remove") + `"`; !strings.Contains(body, want) {
+		t.Errorf("remove form must carry the confirmation question %s\nbody:\n%s", want, body)
+	}
+	if want := `data-cancel="` + printer.Print("action.cancel") + `"`; !strings.Contains(body, want) {
+		t.Errorf("remove form must carry the cancel label %s\nbody:\n%s", want, body)
+	}
+}
+
+// TestSettingsFeedErrorIsABadgeNotInlineText verifies a feed with parsing
+// errors gets its own badge and message line instead of red prose squeezed into
+// the meta row, and that a clean feed shows no error affordance at all.
+func TestSettingsFeedErrorIsABadgeNotInlineText(t *testing.T) {
+	store := mtest.SetupTestDB(t, dialect.SQLite)
+	user := mtest.CreateTestUser(t, store)
+	cat := mtest.CreateTestCategory(t, store, user.ID)
+	broken := mtest.CreateTestFeed(t, store, user.ID, cat.ID)
+	clean := mtest.CreateTestFeedWithURL(t, store, user.ID, cat.ID, "https://example.com/clean_"+t.Name()+".xml")
+	if clean.ID == 0 {
+		t.Fatal("failed to create the clean feed")
+	}
+
+	const errMsg = "server returned 403 Forbidden"
+	broken.ParsingErrorMsg = errMsg
+	broken.ParsingErrorCount = 3
+	if err := store.UpdateFeedError(broken); err != nil {
+		t.Fatalf("unable to set the parsing error: %v", err)
+	}
+
+	pool := worker.NewPool(store, 1)
+	handler := Serve(store, pool)
+
+	req := httptest.NewRequest(http.MethodGet, "/ds/settings", nil)
+	req, _ = authenticateTestSession(t, store, req, user)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+
+	if !strings.Contains(body, `data-feed-error="1"`) {
+		t.Errorf("the errored feed row must be marked for the errors-only filter\nbody:\n%s", body)
+	}
+	if !strings.Contains(body, `class="feed-badge feed-badge-error"`) {
+		t.Errorf("the error must render as a badge\nbody:\n%s", body)
+	}
+	if !strings.Contains(body, `class="feed-row-error"`) || !strings.Contains(body, errMsg) {
+		t.Errorf("the error message must render on its own line\nbody:\n%s", body)
+	}
+
+	// The header summarises the problem instead of leaving it to the rows.
+	printer := locale.NewPrinter(user.Language)
+	if want := printer.Plural("page.feeds.error_count", 1, 1); !strings.Contains(body, want) {
+		t.Errorf("the section header must count feeds with errors (%q)\nbody:\n%s", want, body)
+	}
+
+	// Exactly one row is flagged: the header badge is not a row marker.
+	if got := strings.Count(body, `data-feed-error="1"`); got != 1 {
+		t.Errorf("expected exactly one errored row, got %d\nbody:\n%s", got, body)
+	}
 }
 
 // TestRemoveFeedDeletesFeed verifies POST /ds/remove-feed/{ID} removes the

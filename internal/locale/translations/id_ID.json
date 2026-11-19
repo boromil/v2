@@ -487,6 +487,7 @@
     ],
     "page.categories.feeds": "Langganan",
     "page.categories.no_feed": "Tidak ada umpan.",
+    "page.categories.confirm_remove": "Hapus kategori ini?",
     "page.categories.title": "Kategori",
     "page.categories_count": [
         "%d kategori"
@@ -507,6 +508,10 @@
     "page.feeds.last_check": "Terakhir diperiksa:",
     "page.feeds.next_check": "Akan diperiksa kembali:",
     "page.feeds.read_counter": "Jumlah entri yang telah dibaca",
+    "page.feeds.confirm_remove": "Hapus umpan ini beserta semua entrinya?",
+    "page.feeds.filter_placeholder": "Saring umpan",
+    "page.feeds.no_filter_match": "Tidak ada umpan yang cocok dengan saringan ini.",
+    "page.feeds.only_errors": "Hanya umpan dengan galat",
     "page.feeds.title": "Umpan",
     "page.footer.elevator": "Kembali ke atas",
     "page.history.title": "Riwayat",

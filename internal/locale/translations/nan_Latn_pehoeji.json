@@ -487,6 +487,7 @@
     ],
     "page.categories.feeds": "Siau-sit lâi-goân",
     "page.categories.no_feed": "Ah-bô siau-sit lâi-goân",
+    "page.categories.confirm_remove": "Beh thâi tiāu chit ê lūi-pia̍t?",
     "page.categories.title": "Lūi-pia̍t",
     "page.categories_count": [
         "%d ê lūi-pia̍t"
@@ -507,6 +508,10 @@
     "page.feeds.last_check": "Siōng-bóe kiám-cha sî-kan:",
     "page.feeds.next_check": "Āu-pái kiám-cha sî-kan:",
     "page.feeds.read_counter": "Tha̍k kè--ê siau-sit sò͘",
+    "page.feeds.confirm_remove": "Beh thâi tiāu chit ê siau-sit lâi-goân kap i ê só͘-ū bûn-chiuⁿ?",
+    "page.feeds.filter_placeholder": "Chhiau-chhē siau-sit lâi-goân",
+    "page.feeds.no_filter_match": "Bô siau-sit lâi-goân ha̍h chit ê chhiau-chhē.",
+    "page.feeds.only_errors": "Kan-na ū būn-tôe ê siau-sit lâi-goân",
     "page.feeds.title": "Siau-sit lâi-goân",
     "page.footer.elevator": "Thâu-tiō siōng-ló͘",
     "page.history.title": "Kì-lo̍k",

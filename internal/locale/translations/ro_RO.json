@@ -495,6 +495,7 @@
     ],
     "page.categories.feeds": "Fluxuri",
     "page.categories.no_feed": "Nici un flux.",
+    "page.categories.confirm_remove": "Eliminați această categorie?",
     "page.categories.title": "Categorii",
     "page.categories_count": [
         "%d categorie",
@@ -519,6 +520,10 @@
     "page.feeds.last_check": "Ultima verificare:",
     "page.feeds.next_check": "Următoarea verificare:",
     "page.feeds.read_counter": "Numărul de intrări citite",
+    "page.feeds.confirm_remove": "Eliminați acest flux și toate intrările sale?",
+    "page.feeds.filter_placeholder": "Filtrați fluxurile",
+    "page.feeds.no_filter_match": "Niciun flux nu corespunde acestui filtru.",
+    "page.feeds.only_errors": "Doar fluxuri cu erori",
     "page.feeds.title": "Fluxuri",
     "page.footer.elevator": "Înapoi sus",
     "page.history.title": "Istoric",

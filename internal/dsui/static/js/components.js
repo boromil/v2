@@ -264,3 +264,135 @@ if (!customElements.get("entry-row")) {
     });
   });
 })();
+
+// Settings > Feeds: filter the feed list in the browser. The haystack comes
+// from the server (title, host, feed URL, category) so no row text has to be
+// scraped and the "Remove" label never matches.
+(function () {
+  "use strict";
+
+  var input = document.querySelector("[data-feed-filter]");
+  if (!input) return;
+
+  var errorsOnly = document.querySelector("[data-feed-filter-errors]");
+  var countEl = document.querySelector("[data-feed-filter-count]");
+  var emptyEl = document.querySelector("[data-feed-empty]");
+  var rows = Array.prototype.slice.call(document.querySelectorAll("[data-feed-row]"));
+
+  function apply() {
+    var terms = input.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    var onlyErrors = !!(errorsOnly && errorsOnly.checked);
+    var visible = 0;
+
+    rows.forEach(function (row) {
+      var haystack = row.getAttribute("data-feed-search") || "";
+      var matches = terms.every(function (term) {
+        return haystack.indexOf(term) !== -1;
+      });
+      if (matches && onlyErrors) matches = row.hasAttribute("data-feed-error");
+      row.hidden = !matches;
+      if (matches) visible++;
+    });
+
+    var filtering = terms.length > 0 || onlyErrors;
+    if (countEl) {
+      countEl.hidden = !filtering;
+      countEl.textContent = visible + " / " + rows.length;
+    }
+    if (emptyEl) emptyEl.hidden = !filtering || visible > 0;
+  }
+
+  input.addEventListener("input", apply);
+  if (errorsOnly) errorsOnly.addEventListener("change", apply);
+  input.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && input.value !== "") {
+      input.value = "";
+      apply();
+      event.stopPropagation();
+    }
+  });
+
+  apply();
+})();
+
+// Destructive settings actions ask once, in place, instead of submitting on the
+// first click. Without JS the form still submits, so nothing is lost.
+(function () {
+  "use strict";
+
+  document.addEventListener("submit", function (event) {
+    var form = event.target;
+    if (!form || !form.hasAttribute || !form.hasAttribute("data-confirm")) return;
+    if (form.getAttribute("data-confirmed") === "1") return;
+
+    event.preventDefault();
+
+    var submitButton = form.querySelector("button[type='submit']");
+    var row = form.closest(".feed-row");
+
+    var bar = document.createElement("div");
+    bar.className = "confirm-bar";
+    bar.setAttribute("role", "group");
+
+    var question = document.createElement("span");
+    question.className = "confirm-bar-text";
+    question.textContent = form.getAttribute("data-confirm") || "";
+
+    var confirmButton = document.createElement("button");
+    confirmButton.type = "button";
+    confirmButton.className = "toolbar-btn confirm-remove";
+    confirmButton.textContent = submitButton ? submitButton.textContent.trim() : "OK";
+
+    var cancelButton = document.createElement("button");
+    cancelButton.type = "button";
+    cancelButton.className = "toolbar-btn";
+    cancelButton.textContent = form.getAttribute("data-cancel") || "Cancel";
+
+    function dismiss() {
+      bar.remove();
+      if (submitButton) submitButton.style.display = "";
+      if (row) row.classList.remove("is-confirming");
+    }
+
+    confirmButton.addEventListener("click", function () {
+      form.setAttribute("data-confirmed", "1");
+      form.submit();
+    });
+    cancelButton.addEventListener("click", dismiss);
+
+    bar.appendChild(question);
+    bar.appendChild(confirmButton);
+    bar.appendChild(cancelButton);
+    form.appendChild(bar);
+    if (submitButton) submitButton.style.display = "none";
+    if (row) row.classList.add("is-confirming");
+    confirmButton.focus();
+  });
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key !== "Escape") return;
+    var bar = document.querySelector(".confirm-bar");
+    if (!bar) return;
+    var cancelButton = bar.querySelector("button:last-child");
+    if (cancelButton) cancelButton.click();
+    event.stopPropagation();
+  });
+})();
+
+// Settings > Categories: "Update" only lights up once the name actually
+// changed, so the row reads as a label with an action rather than a form.
+(function () {
+  "use strict";
+
+  document.querySelectorAll("form.category-rename").forEach(function (form) {
+    var input = form.querySelector("input[name='title']");
+    var button = form.querySelector("button[type='submit']");
+    if (!input || !button) return;
+
+    var initial = input.value;
+    button.disabled = true;
+    input.addEventListener("input", function () {
+      button.disabled = input.value.trim() === initial.trim();
+    });
+  });
+})();

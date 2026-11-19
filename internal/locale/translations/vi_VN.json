@@ -487,6 +487,7 @@
     ],
     "page.categories.feeds": "Nguồn tin",
     "page.categories.no_feed": "Không có nguồn tin.",
+    "page.categories.confirm_remove": "Xóa danh mục này?",
     "page.categories.title": "Danh mục",
     "page.categories_count": [
         "%d danh mục"
@@ -507,6 +508,10 @@
     "page.feeds.last_check": "Lần kiểm tra cuối:",
     "page.feeds.next_check": "Lần kiểm tra tiếp theo:",
     "page.feeds.read_counter": "Số bài viết đã đọc",
+    "page.feeds.confirm_remove": "Xóa nguồn tin này và tất cả mục của nó?",
+    "page.feeds.filter_placeholder": "Lọc nguồn tin",
+    "page.feeds.no_filter_match": "Không có nguồn tin nào khớp với bộ lọc.",
+    "page.feeds.only_errors": "Chỉ nguồn tin có lỗi",
     "page.feeds.title": "Nguồn tin",
     "page.footer.elevator": "Lên đầu trang",
     "page.history.title": "Lịch sử",

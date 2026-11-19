@@ -491,6 +491,7 @@
     ],
     "page.categories.feeds": "Canles",
     "page.categories.no_feed": "No hai canles.",
+    "page.categories.confirm_remove": "Eliminar esta categoría?",
     "page.categories.title": "Categorías",
     "page.categories_count": [
         "%d categoría",
@@ -513,6 +514,10 @@
     "page.feeds.last_check": "Última comprobación:",
     "page.feeds.next_check": "Próxima comprobación:",
     "page.feeds.read_counter": "Número de entradas lidas",
+    "page.feeds.confirm_remove": "Eliminar esta fonte e todas as súas entradas?",
+    "page.feeds.filter_placeholder": "Filtrar fontes",
+    "page.feeds.no_filter_match": "Ningunha fonte coincide con este filtro.",
+    "page.feeds.only_errors": "Só fontes con erros",
     "page.feeds.title": "Canles",
     "page.footer.elevator": "Volver arriba",
     "page.history.title": "Historial",

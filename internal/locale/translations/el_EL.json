@@ -491,6 +491,7 @@
     ],
     "page.categories.feeds": "Συνδρομές",
     "page.categories.no_feed": "Καμία ροή.",
+    "page.categories.confirm_remove": "Αφαίρεση αυτής της κατηγορίας;",
     "page.categories.title": "Κατηγορίες",
     "page.categories_count": [
         "%d κατηγορία",
@@ -513,6 +514,10 @@
     "page.feeds.last_check": "Τελευταίος έλεγχος:",
     "page.feeds.next_check": "Επόμενος έλεγχος:",
     "page.feeds.read_counter": "Αριθμός αναγνωσμένων καταχωρήσεων",
+    "page.feeds.confirm_remove": "Αφαίρεση αυτής της ροής και όλων των καταχωρίσεών της;",
+    "page.feeds.filter_placeholder": "Φιλτράρισμα ροών",
+    "page.feeds.no_filter_match": "Καμία ροή δεν ταιριάζει με αυτό το φίλτρο.",
+    "page.feeds.only_errors": "Μόνο ροές με σφάλματα",
     "page.feeds.title": "Ροές",
     "page.footer.elevator": "Επιστροφή στην κορυφή",
     "page.history.title": "Ιστορικό",

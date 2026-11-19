@@ -507,6 +507,7 @@
     ],
     "page.categories.feeds": "المصادر",
     "page.categories.no_feed": "لا يوجد مصدر.",
+    "page.categories.confirm_remove": "هل تريد إزالة هذا التصنيف؟",
     "page.categories.title": "الفئات",
     "page.categories_count": [
         "%d فئة",
@@ -537,6 +538,10 @@
     "page.feeds.last_check": "آخر فحص:",
     "page.feeds.next_check": "الفحص التالي:",
     "page.feeds.read_counter": "عدد المقالات المقروءة",
+    "page.feeds.confirm_remove": "هل تريد إزالة هذه الخلاصة وكل مقالاتها؟",
+    "page.feeds.filter_placeholder": "تصفية الخلاصات",
+    "page.feeds.no_filter_match": "لا توجد خلاصة تطابق هذا التصفية.",
+    "page.feeds.only_errors": "الخلاصات التي بها أخطاء فقط",
     "page.feeds.title": "المصادر",
     "page.footer.elevator": "العودة للأعلى",
     "page.history.title": "السجل",

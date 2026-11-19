@@ -491,6 +491,7 @@
     ],
     "page.categories.feeds": "Abonnements",
     "page.categories.no_feed": "Aucun abonnement.",
+    "page.categories.confirm_remove": "Supprimer cette catégorie ?",
     "page.categories.title": "Catégories",
     "page.categories_count": [
         "%d catégorie",
@@ -513,6 +514,10 @@
     "page.feeds.last_check": "Dernière vérification :",
     "page.feeds.next_check": "Prochaine vérification :",
     "page.feeds.read_counter": "Nombre d'entrées lues",
+    "page.feeds.confirm_remove": "Supprimer cet abonnement et toutes ses entrées ?",
+    "page.feeds.filter_placeholder": "Filtrer les abonnements",
+    "page.feeds.no_filter_match": "Aucun abonnement ne correspond à ce filtre.",
+    "page.feeds.only_errors": "Seulement les abonnements en erreur",
     "page.feeds.title": "Abonnements",
     "page.footer.elevator": "Retour en haut",
     "page.history.title": "Historique",

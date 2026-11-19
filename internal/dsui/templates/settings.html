@@ -162,58 +162,99 @@
 
             <!-- Subscriptions management -->
             <section id="feeds" class="settings-section">
-                <h3 class="settings-heading">{{t "menu.feeds"}}</h3>
-                <form action="/ds/add-feed" method="post" class="mb-2">
+                <div class="settings-heading-row">
+                    <h3 class="settings-heading">{{t "menu.feeds"}}</h3>
+                    {{if .Feeds}}
+                    <span class="settings-heading-meta">
+                        {{plural "page.categories.feed_count" (len .Feeds) (len .Feeds)}}
+                        {{if .FeedErrorCount}}
+                        <span class="feed-badge feed-badge-error">{{plural "page.feeds.error_count" .FeedErrorCount .FeedErrorCount}}</span>
+                        {{end}}
+                    </span>
+                    {{end}}
+                </div>
+
+                <form action="/ds/add-feed" method="post" class="settings-inline-form">
                     <input type="hidden" name="csrf" value="{{.CSRFToken}}">
-                    <div style="display:flex; gap:0.5rem; align-items:center;">
-                        <input type="url" name="url" placeholder="https://example.com/feed.xml" required class="settings-input" style="flex:1;">
-                        <button type="submit" class="toolbar-btn">{{t "action.subscribe"}}</button>
-                    </div>
+                    <input type="url" name="url" placeholder="https://example.com/feed.xml" required
+                        class="settings-input" aria-label="{{t "form.feed.label.feed_url"}}">
+                    <button type="submit" class="toolbar-btn">{{t "action.subscribe"}}</button>
                 </form>
+
                 {{if .Feeds}}
-                <ul class="settings-feed-list" style="list-style:none; margin:0; padding:0;">
+                <div class="feed-filter-bar">
+                    <input type="search" class="settings-input feed-filter-input"
+                        placeholder="{{t "page.feeds.filter_placeholder"}}"
+                        aria-label="{{t "page.feeds.filter_placeholder"}}"
+                        autocomplete="off" spellcheck="false" data-feed-filter>
+                    <label class="feed-filter-toggle">
+                        <input type="checkbox" data-feed-filter-errors>
+                        <span>{{t "page.feeds.only_errors"}}</span>
+                    </label>
+                    <span class="feed-filter-count" data-feed-filter-count aria-live="polite" hidden></span>
+                </div>
+
+                <ul class="feed-list" data-feed-list>
                     {{range .Feeds}}
-                    <li class="settings-feed-item" style="display:flex; gap:0.5rem; align-items:center; padding:0.4rem 0; border-bottom:1px solid var(--color-gray-200, #e5e7eb);" data-feed-row="{{.ID}}">
-                        <div style="flex:1; min-width:0;">
-                            <div style="font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{.Title}}</div>
-                            <div style="font-size:0.75rem; color:var(--color-gray-500, #6b7280); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                                <a href="{{.SiteURL}}" target="_blank" rel="noopener noreferrer" class="no-underline">{{t "form.feed.label.site_url"}}</a>
-                                {{if .Category}} · {{.Category}}{{end}}
-                                {{if .ParsingErrorCount}} · <span class="feed-error" style="color:var(--color-red-600, #dc2626);">{{.ParsingErrorMsg}} ({{.ParsingErrorCount}})</span>{{end}}
+                    <li class="feed-row" data-feed-row="{{.ID}}" data-feed-search="{{.SearchText}}"{{if .ParsingErrorCount}} data-feed-error="1"{{end}}>
+                        <div class="feed-row-main">
+                            <div class="feed-row-title">
+                                <a href="/ds/feed/{{.ID}}" class="feed-row-link">{{.Title}}</a>
+                                {{if .ParsingErrorCount}}
+                                <span class="feed-badge feed-badge-error" title="{{.ParsingErrorMsg}}">
+                                    <span aria-hidden="true">&#9888;</span>
+                                    {{plural "page.feeds.error_count" .ParsingErrorCount .ParsingErrorCount}}
+                                </span>
+                                {{end}}
                             </div>
+                            <div class="feed-row-meta">
+                                {{if .Host}}<a href="{{.SiteURL}}" target="_blank" rel="noopener noreferrer" class="feed-row-host">{{.Host}}</a>{{end}}
+                                {{if .Category}}<span class="feed-chip">{{.Category}}</span>{{end}}
+                                {{if .UnreadCount}}<span class="feed-row-unread">{{plural "page.unread_entry_count" .UnreadCount .UnreadCount}}</span>{{end}}
+                            </div>
+                            {{if .ParsingErrorCount}}
+                            <p class="feed-row-error">{{t "alert.feed_error"}}: {{.ParsingErrorMsg}}</p>
+                            {{end}}
                         </div>
-                        <form action="/ds/remove-feed/{{.ID}}" method="post" data-remove-feed="{{.ID}}">
+                        <form action="/ds/remove-feed/{{.ID}}" method="post" class="feed-row-actions"
+                            data-confirm="{{t "page.feeds.confirm_remove"}}"
+                            data-cancel="{{t "action.cancel"}}">
                             <input type="hidden" name="csrf" value="{{$.CSRFToken}}">
-                            <button type="submit" class="toolbar-btn">{{t "action.remove"}}</button>
+                            <button type="submit" class="toolbar-btn danger">{{t "action.remove"}}</button>
                         </form>
                     </li>
                     {{end}}
                 </ul>
+                <p class="feed-list-empty" data-feed-empty hidden>{{t "page.feeds.no_filter_match"}}</p>
+                {{else}}
+                <p class="settings-help">{{t "alert.no_feed"}}</p>
                 {{end}}
 
-                <h3 class="settings-heading" style="margin-top:1.25rem;">{{t "menu.categories"}}</h3>
-                <form action="/ds/create-category" method="post" class="mb-2">
+                <h3 class="settings-heading settings-heading-sub">{{t "menu.categories"}}</h3>
+                <form action="/ds/create-category" method="post" class="settings-inline-form">
                     <input type="hidden" name="csrf" value="{{.CSRFToken}}">
-                    <div style="display:flex; gap:0.5rem; align-items:center;">
-                        <input type="text" name="title" placeholder="{{t "form.category.label.title"}}" required maxlength="200" class="settings-input" style="flex:1;">
-                        <button type="submit" class="toolbar-btn">{{t "action.save"}}</button>
-                    </div>
+                    <input type="text" name="title" placeholder="{{t "form.category.label.title"}}" required maxlength="200"
+                        class="settings-input" aria-label="{{t "form.category.label.title"}}">
+                    <button type="submit" class="toolbar-btn">{{t "action.save"}}</button>
                 </form>
                 {{if .Categories}}
-                <ul style="list-style:none; margin:0; padding:0;">
+                <ul class="feed-list">
                     {{range .Categories}}
-                    <li style="display:flex; gap:0.5rem; align-items:center; padding:0.4rem 0; border-bottom:1px solid var(--color-gray-200, #e5e7eb);" data-category-row="{{.ID}}">
-                        <div style="flex:1; min-width:0;">
-                            <form action="/ds/rename-category/{{.ID}}" method="post" data-rename-category="{{.ID}}" style="display:flex; gap:0.5rem; align-items:center;">
+                    <li class="feed-row" data-category-row="{{.ID}}">
+                        <div class="feed-row-main">
+                            <form action="/ds/rename-category/{{.ID}}" method="post" class="category-rename" data-rename-category="{{.ID}}">
                                 <input type="hidden" name="csrf" value="{{$.CSRFToken}}">
-                                <input type="text" name="title" value="{{.Title}}" required maxlength="200" class="settings-input" style="max-width:16rem;">
+                                <input type="text" name="title" value="{{.Title}}" required maxlength="200"
+                                    class="settings-input category-rename-input" aria-label="{{t "form.category.label.title"}}">
                                 <button type="submit" class="toolbar-btn">{{t "action.update"}}</button>
                             </form>
                         </div>
-                        <span style="font-size:0.75rem; color:var(--color-gray-500, #6b7280); white-space:nowrap;">{{plural "page.categories.feed_count" .FeedCount .FeedCount}}</span>
-                        <form action="/ds/remove-category/{{.ID}}" method="post" data-remove-category="{{.ID}}">
+                        <span class="feed-row-unread">{{plural "page.categories.feed_count" .FeedCount .FeedCount}}</span>
+                        <form action="/ds/remove-category/{{.ID}}" method="post" class="feed-row-actions"
+                            data-confirm="{{t "page.categories.confirm_remove"}}"
+                            data-cancel="{{t "action.cancel"}}">
                             <input type="hidden" name="csrf" value="{{$.CSRFToken}}">
-                            <button type="submit" class="toolbar-btn" {{if gt .FeedCount 0}}disabled title="{{t "page.categories.no_feed"}}"{{end}}>{{t "action.remove"}}</button>
+                            <button type="submit" class="toolbar-btn danger" {{if gt .FeedCount 0}}disabled title="{{t "page.categories.no_feed"}}"{{end}}>{{t "action.remove"}}</button>
                         </form>
                     </li>
                     {{end}}

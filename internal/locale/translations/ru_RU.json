@@ -495,6 +495,7 @@
     ],
     "page.categories.feeds": "Подписки",
     "page.categories.no_feed": "Нет подписок.",
+    "page.categories.confirm_remove": "Удалить эту категорию?",
     "page.categories.title": "Категории",
     "page.categories_count": [
         "%d категория",
@@ -519,6 +520,10 @@
     "page.feeds.last_check": "Последнее обновление:",
     "page.feeds.next_check": "Следующее обновление:",
     "page.feeds.read_counter": "Количество прочитанных статей",
+    "page.feeds.confirm_remove": "Удалить эту подписку и все её записи?",
+    "page.feeds.filter_placeholder": "Фильтр подписок",
+    "page.feeds.no_filter_match": "Ни одна подписка не соответствует фильтру.",
+    "page.feeds.only_errors": "Только подписки с ошибками",
     "page.feeds.title": "Подписки",
     "page.footer.elevator": "Вернуться наверх",
     "page.history.title": "История",

@@ -487,6 +487,7 @@
     ],
     "page.categories.feeds": "订阅源",
     "page.categories.no_feed": "无订阅源。",
+    "page.categories.confirm_remove": "删除此分类?",
     "page.categories.title": "分类",
     "page.categories_count": [
         "%d 个分类"
@@ -507,6 +508,10 @@
     "page.feeds.last_check": "最后检查：",
     "page.feeds.next_check": "下次检查：",
     "page.feeds.read_counter": "已读条目数",
+    "page.feeds.confirm_remove": "删除此订阅源及其所有条目?",
+    "page.feeds.filter_placeholder": "筛选订阅源",
+    "page.feeds.no_filter_match": "没有订阅源匹配此筛选条件。",
+    "page.feeds.only_errors": "仅显示有错误的订阅源",
     "page.feeds.title": "订阅源",
     "page.footer.elevator": "返回顶部",
     "page.history.title": "历史记录",

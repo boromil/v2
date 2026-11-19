@@ -491,6 +491,7 @@
     ],
     "page.categories.feeds": "Beslemeler",
     "page.categories.no_feed": "Besleme yok.",
+    "page.categories.confirm_remove": "Bu kategori kaldırılsın mı?",
     "page.categories.title": "Kategoriler",
     "page.categories_count": [
         "%d kategori",
@@ -513,6 +514,10 @@
     "page.feeds.last_check": "Son kontrol:",
     "page.feeds.next_check": "Sonraki kontrol:",
     "page.feeds.read_counter": "Okunmuş makalelerin sayısı",
+    "page.feeds.confirm_remove": "Bu besleme ve tüm girişleri kaldırılsın mı?",
+    "page.feeds.filter_placeholder": "Beslemeleri filtrele",
+    "page.feeds.no_filter_match": "Bu filtreyle eşleşen besleme yok.",
+    "page.feeds.only_errors": "Yalnızca hatalı beslemeler",
     "page.feeds.title": "Beslemeler",
     "page.footer.elevator": "Başa dön",
     "page.history.title": "Geçmiş",
