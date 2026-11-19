@@ -244,7 +244,7 @@
                         <div class="feed-row-main">
                             <form action="/ds/rename-category/{{.ID}}" method="post" class="category-rename" data-rename-category="{{.ID}}">
                                 <input type="hidden" name="csrf" value="{{$.CSRFToken}}">
-                                <input type="text" name="title" value="{{.Title}}" required maxlength="200"
+                                <input type="text" name="title" value="{{.Title}}" data-initial="{{.Title}}" required maxlength="200"
                                     class="settings-input category-rename-input" aria-label="{{t "form.category.label.title"}}">
                                 <button type="submit" class="toolbar-btn">{{t "action.update"}}</button>
                             </form>

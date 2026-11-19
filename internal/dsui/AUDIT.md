@@ -103,6 +103,20 @@ Verified live (7 seeded feeds, 3 with parsing errors): filter by text → `1 / 7
 → `3 / 7`, no match → empty state, first Remove click → no navigation + inline question,
 Escape → restored, confirm → feed gone.
 
+Review follow-ups on the same commit:
+
+- The filter and the category-rename state are delegated from `document` and look their
+  nodes up on every event. A language change patches `.settings-page` inner HTML, so
+  anything captured at load went stale (the filter and the disabled "Update" died until a
+  reload). Verified after switching to German: the filter still narrows to `1 / 6`.
+- An empty result now hides the list itself, instead of leaving a 2px bordered bar above
+  the empty state.
+- Cancelling the confirmation returns focus to the Remove button that opened it, and the
+  bar announces itself as `role="alertdialog"` with the question as its accessible name.
+- `FeedsWithCounters` sorts by error count and then unread count, which reshuffles a
+  management list while you read. The view model re-sorts: broken feeds first, then by
+  title.
+
 ## Share link, round 15 (2026-11-18)
 
 Sharing worked but showed nothing useful: the toolbar replaced the "Share" button with

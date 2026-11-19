@@ -2276,6 +2276,16 @@ func TestSettingsFeedErrorIsABadgeNotInlineText(t *testing.T) {
 	if clean.ID == 0 {
 		t.Fatal("failed to create the clean feed")
 	}
+	// Alphabetical order would put the clean feed first: the broken one must
+	// still come first, so a problem is not buried in the middle of the list.
+	broken.Title = "Zzz broken"
+	clean.Title = "Aaa clean"
+	if err := store.UpdateFeed(broken); err != nil {
+		t.Fatalf("unable to rename the broken feed: %v", err)
+	}
+	if err := store.UpdateFeed(clean); err != nil {
+		t.Fatalf("unable to rename the clean feed: %v", err)
+	}
 
 	const errMsg = "server returned 403 Forbidden"
 	broken.ParsingErrorMsg = errMsg
@@ -2316,6 +2326,10 @@ func TestSettingsFeedErrorIsABadgeNotInlineText(t *testing.T) {
 	// Exactly one row is flagged: the header badge is not a row marker.
 	if got := strings.Count(body, `data-feed-error="1"`); got != 1 {
 		t.Errorf("expected exactly one errored row, got %d\nbody:\n%s", got, body)
+	}
+
+	if brokenAt, cleanAt := strings.Index(body, broken.Title), strings.Index(body, clean.Title); brokenAt < 0 || cleanAt < 0 || brokenAt > cleanAt {
+		t.Errorf("the errored feed must be listed before the clean one (broken at %d, clean at %d)", brokenAt, cleanAt)
 	}
 }
 

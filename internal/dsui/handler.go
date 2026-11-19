@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -509,6 +510,17 @@ func (h *handler) settingsViewModel(user *model.User, form *settingsFormData, fl
 			SearchText:        strings.ToLower(f.Title + " " + host + " " + f.FeedURL + " " + categoryTitle),
 		})
 	}
+	// FeedsWithCounters sorts by error count and then by unread count, which is
+	// right for the reader tree but wrong for a management list: rows would
+	// reshuffle while you read. Keep broken feeds on top, then sort by name.
+	sort.SliceStable(feedViews, func(i, j int) bool {
+		iBroken := feedViews[i].ParsingErrorCount > 0
+		jBroken := feedViews[j].ParsingErrorCount > 0
+		if iBroken != jBroken {
+			return iBroken
+		}
+		return strings.ToLower(feedViews[i].Title) < strings.ToLower(feedViews[j].Title)
+	})
 
 	// Categories with feed counts for the management section.
 	categories, err := h.store.CategoriesWithFeedCount(user.ID, "title")

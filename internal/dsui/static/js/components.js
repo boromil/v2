@@ -268,23 +268,29 @@ if (!customElements.get("entry-row")) {
 // Settings > Feeds: filter the feed list in the browser. The haystack comes
 // from the server (title, host, feed URL, category) so no row text has to be
 // scraped and the "Remove" label never matches.
+//
+// Everything is looked up on demand and the listeners live on document: a
+// language change patches .settings-page inner HTML, which replaces these
+// nodes, so any reference captured at load would go stale.
 (function () {
   "use strict";
 
-  var input = document.querySelector("[data-feed-filter]");
-  if (!input) return;
+  function scopeOf(node) {
+    return node.closest(".settings-page") || document;
+  }
 
-  var errorsOnly = document.querySelector("[data-feed-filter-errors]");
-  var countEl = document.querySelector("[data-feed-filter-count]");
-  var emptyEl = document.querySelector("[data-feed-empty]");
-  var rows = Array.prototype.slice.call(document.querySelectorAll("[data-feed-row]"));
-
-  function apply() {
+  function applyFilter(input) {
+    var scope = scopeOf(input);
+    var errorsOnly = scope.querySelector("[data-feed-filter-errors]");
+    var countEl = scope.querySelector("[data-feed-filter-count]");
+    var emptyEl = scope.querySelector("[data-feed-empty]");
+    var list = scope.querySelector("[data-feed-list]");
+    var rows = scope.querySelectorAll("[data-feed-row]");
     var terms = input.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
     var onlyErrors = !!(errorsOnly && errorsOnly.checked);
     var visible = 0;
 
-    rows.forEach(function (row) {
+    Array.prototype.forEach.call(rows, function (row) {
       var haystack = row.getAttribute("data-feed-search") || "";
       var matches = terms.every(function (term) {
         return haystack.indexOf(term) !== -1;
@@ -299,20 +305,35 @@ if (!customElements.get("entry-row")) {
       countEl.hidden = !filtering;
       countEl.textContent = visible + " / " + rows.length;
     }
+    // An empty bordered list would leave a 2px bar behind the empty state.
+    if (list) list.hidden = visible === 0;
     if (emptyEl) emptyEl.hidden = !filtering || visible > 0;
   }
 
-  input.addEventListener("input", apply);
-  if (errorsOnly) errorsOnly.addEventListener("change", apply);
-  input.addEventListener("keydown", function (event) {
-    if (event.key === "Escape" && input.value !== "") {
+  document.addEventListener("input", function (event) {
+    var input = event.target;
+    if (input && input.matches && input.matches("[data-feed-filter]")) {
+      applyFilter(input);
+    }
+  });
+
+  document.addEventListener("change", function (event) {
+    var toggle = event.target;
+    if (!toggle || !toggle.matches || !toggle.matches("[data-feed-filter-errors]")) return;
+    var input = scopeOf(toggle).querySelector("[data-feed-filter]");
+    if (input) applyFilter(input);
+  });
+
+  document.addEventListener("keydown", function (event) {
+    var input = event.target;
+    if (event.key === "Escape" && input && input.matches && input.matches("[data-feed-filter]") && input.value !== "") {
       input.value = "";
-      apply();
+      applyFilter(input);
       event.stopPropagation();
     }
   });
 
-  apply();
+  document.querySelectorAll("[data-feed-filter]").forEach(applyFilter);
 })();
 
 // Destructive settings actions ask once, in place, instead of submitting on the
@@ -332,11 +353,12 @@ if (!customElements.get("entry-row")) {
 
     var bar = document.createElement("div");
     bar.className = "confirm-bar";
-    bar.setAttribute("role", "group");
+    bar.setAttribute("role", "alertdialog");
 
     var question = document.createElement("span");
     question.className = "confirm-bar-text";
     question.textContent = form.getAttribute("data-confirm") || "";
+    bar.setAttribute("aria-label", question.textContent);
 
     var confirmButton = document.createElement("button");
     confirmButton.type = "button";
@@ -350,7 +372,10 @@ if (!customElements.get("entry-row")) {
 
     function dismiss() {
       bar.remove();
-      if (submitButton) submitButton.style.display = "";
+      if (submitButton) {
+        submitButton.style.display = "";
+        submitButton.focus();
+      }
       if (row) row.classList.remove("is-confirming");
     }
 
@@ -381,18 +406,33 @@ if (!customElements.get("entry-row")) {
 
 // Settings > Categories: "Update" only lights up once the name actually
 // changed, so the row reads as a label with an action rather than a form.
+// Delegated for the same reason as the feed filter: the settings fragment is
+// replaced on a language change.
 (function () {
   "use strict";
 
-  document.querySelectorAll("form.category-rename").forEach(function (form) {
+  function sync(form) {
     var input = form.querySelector("input[name='title']");
     var button = form.querySelector("button[type='submit']");
     if (!input || !button) return;
+    var initial = input.getAttribute("data-initial");
+    if (initial === null) initial = input.value;
+    button.disabled = input.value.trim() === initial.trim();
+  }
 
-    var initial = input.value;
-    button.disabled = true;
-    input.addEventListener("input", function () {
-      button.disabled = input.value.trim() === initial.trim();
-    });
+  // A fragment patched in after a language change starts out unsynced, so the
+  // state is refreshed on first focus as well as on typing.
+  document.addEventListener("focusin", function (event) {
+    var input = event.target;
+    if (!input || !input.matches || !input.matches("form.category-rename input[name='title']")) return;
+    sync(input.form);
   });
+
+  document.addEventListener("input", function (event) {
+    var input = event.target;
+    if (!input || !input.matches || !input.matches("form.category-rename input[name='title']")) return;
+    sync(input.form);
+  });
+
+  document.querySelectorAll("form.category-rename").forEach(sync);
 })();
